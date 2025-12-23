@@ -3,14 +3,16 @@
 TEST_F(PostgresqlTest, ConnectionTest)
 {
     PGHandler   handler;
-    Connection *conn = PolicyFactory::instance()->createConnection(address, address, &handler);
+    Connection *conn = new PGConnection(address, address, &handler);
     ASSERT_EQ(handler.cur_state, PGHandler::DISCONNECTED);
     ASSERT_EQ(handler.count, 0);
     ASSERT_EQ(handler.dis_count, 0);
     conn->reset();
     while (conn->getStatus() != CONNECTION_OK) {
-        if (handler.check() < 1)
+        if (handler.check() < 1) {
+            delete conn;
             return;
+        }
     }
     ASSERT_EQ(handler.cur_state, PGHandler::CONNECTED);
     int conn_count    = handler.count;
@@ -22,8 +24,10 @@ TEST_F(PostgresqlTest, ConnectionTest)
     ASSERT_TRUE(handler.count == conn_count);
     ASSERT_TRUE(handler.dis_count > conn_discount);
     while (conn->getStatus() != CONNECTION_OK) {
-        if (handler.check() < 1)
+        if (handler.check() < 1) {
+            delete conn;
             return;
+        }
     }
     ASSERT_EQ(handler.cur_state, PGHandler::CONNECTED);
     ASSERT_TRUE(handler.count > conn_count);
@@ -35,7 +39,7 @@ TEST_F(PostgresqlTest, ReconnectTest)
 {
     PGHandler handler;
     std::string conn_str(POOL_ADDRESS_STR);
-    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, &handler);
+    IPGConnection *conn = new PGConnection(conn_info, conn_log_info, handler);
     conn->reset();
     while(conn->getStatus() != CONNECTION_OK) {
         handler.check();

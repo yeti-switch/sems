@@ -2,6 +2,8 @@
 
 #include "Query.h"
 
+using std::vector;
+
 class QueryParams : public Query {
     friend class ParameterizedQueryImpl;
     friend class ExecutePreparedQueryImpl;
@@ -9,12 +11,7 @@ class QueryParams : public Query {
     bool               prepared;
 
   public:
-    QueryParams(const string &cmd, bool single, bool prepared)
-        : Query(prepared ? PolicyFactory::instance()->createQueryPrepared(cmd, single, this)
-                         : PolicyFactory::instance()->createQueryParam(cmd, single, this))
-        , prepared(prepared)
-    {
-    }
+    QueryParams(const string &cmd, bool single, bool prepared);
     ~QueryParams() {}
     QueryParams &addParam(const QueryParam &param);
     void         addParams(const vector<QueryParam> &params);

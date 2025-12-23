@@ -1,4 +1,13 @@
 #include "QueryParams.h"
+#include "ParameterizedQueryImpl.h"
+#include "ExecutePreparedQueryImpl.h"
+
+QueryParams::QueryParams(const string &cmd, bool single, bool prepared)
+    : Query(prepared ? (IQueryImpl *)(new ExecutePreparedQueryImpl(cmd, single, this))
+                     : (IQueryImpl *)(new ParameterizedQueryImpl(cmd, single, this)))
+    , prepared(prepared)
+{
+}
 
 QueryParams &QueryParams::addParam(const QueryParam &param)
 {

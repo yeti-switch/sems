@@ -13,8 +13,7 @@
 #define WORKER_POOL_NAME     WORKER_HANDLER_QUEUE
 #define EPOLL_MAX_EVENTS     2048
 
-#define PARAM_EXT_POSTGRES_NAME "external"
-#define PARAM_PG_ADDR_NAME      "address"
+#define PARAM_PG_ADDR_NAME "address"
 
 #define STR_HELPER(x) #x
 #define STR_(x)       STR_HELPER(x)
@@ -38,9 +37,7 @@ class WorkerHandler : public AmEventFdQueue, public AmEventHandler {
     bool                  running;
     vector<PGEvent::Type> expected_events;
 
-    bool       external;
-    string     address;
-    TestServer server;
+    string address;
 
     WorkerHandler()
         : AmEventFdQueue(this)
@@ -49,20 +46,14 @@ class WorkerHandler : public AmEventFdQueue, public AmEventHandler {
         epoll_fd = epoll_create(10);
         epoll_link(epoll_fd, true);
 
-        cfg_opt_t postres[] = { CFG_BOOL(PARAM_EXT_POSTGRES_NAME, cfg_false, CFGF_NONE),
-                                CFG_STR(PARAM_PG_ADDR_NAME, POOL_ADDRESS_STR, CFGF_NONE), CFG_END() };
+        cfg_opt_t postres[] = { CFG_STR(PARAM_PG_ADDR_NAME, POOL_ADDRESS_STR, CFGF_NONE), CFG_END() };
         AmArg     data      = test_config::instance()->configureModule("postgresql_unit", postres);
-        external            = data[PARAM_EXT_POSTGRES_NAME].asBool();
         address             = data[PARAM_PG_ADDR_NAME].asCStr();
         TesterConfig::ConfigParameters config_parameters;
-        config_parameters.emplace<string, TesterConfig::parameter_var>(
-            PARAM_EXT_POSTGRES_NAME "-postgres", { .type = TesterConfig::parameter_var::Bool, .u = { &external } });
         config_parameters.emplace<string, TesterConfig::parameter_var>(
             PARAM_PG_ADDR_NAME "-postgres", { .type = TesterConfig::parameter_var::String, .u = { &address } });
         test_config::instance()->useCmdModule(config_parameters);
 
-        freePolicyFactory();
-        makePolicyFactory(!external, &server);
         PGPool pool    = GetPoolByAddress(address);
         pool.pool_size = 2;
         PostgreSQL::instance()->postEvent(new PGWorkerPoolCreate(WORKER_POOL_NAME, PGWorkerPoolCreate::Master, pool));

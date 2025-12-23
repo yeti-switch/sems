@@ -2,7 +2,6 @@
 
 #include <AmArg.h>
 #include <ampi/PostgreSqlAPI.h>
-#include "../PolicyFactory.h"
 
 #include "TransactionImpl.h"
 #include "ITransactionHandler.h"

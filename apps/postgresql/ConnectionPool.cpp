@@ -2,6 +2,7 @@
 #include "PostgreSQL.h"
 #include "PoolWorker.h"
 #include "pqtypes-int.h"
+#include "conn/PGConnection.h"
 
 #include <stdio.h>
 #include <sstream>
@@ -44,8 +45,7 @@ ConnectionPool::ConnectionPool(const PGPool &pool, PoolWorker *worker, PGWorkerP
     conn_log_info << pool.host << ":" << pool.port << "/" << pool.name;
 
     for (int i = 0; i < pool.pool_size; i++) {
-        connections.push_back(
-            PolicyFactory::instance()->createConnection(conn_info.str(), conn_log_info.str(), worker));
+        connections.push_back(new PGConnection(conn_info.str(), conn_log_info.str(), worker));
         connections.back()->reset();
     }
 

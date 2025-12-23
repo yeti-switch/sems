@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../conn/Connection.h"
+#include "../conn/PGConnection.h"
 #include "../trans/Transaction.h"
 #include "../ConnectionPool.h"
 #include "../PoolWorker.h"
@@ -13,17 +13,9 @@
 
 class PostgresqlTest : public ::testing::Test {
   public:
-    TestServer *server;
-    bool        external;
-    string      address;
-    PostgresqlTest()
-    {
-        address  = WorkerHandler::instance().address;
-        server   = &WorkerHandler::instance().server;
-        external = WorkerHandler::instance().external;
-    }
+    string address;
+    PostgresqlTest() { address = WorkerHandler::instance().address; }
     virtual ~PostgresqlTest() { WorkerHandler::dispose(); }
-    void SetUp() override { server->clear(); }
 };
 
 class PGHandler : public IConnectionHandler, public ITransactionHandler {

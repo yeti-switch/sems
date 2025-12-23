@@ -14,7 +14,7 @@ TEST_F(PostgresqlTest, NonTransactionSimpleTest)
 {
     PGHandler                   handler;
     std::string                 conn_str(address);
-    std::unique_ptr<Connection> conn(PolicyFactory::instance()->createConnection(conn_str, conn_str, &handler));
+    std::unique_ptr<Connection> conn(new PGConnection(conn_str, conn_str, &handler));
     conn->reset();
     NonTransaction pg_backend(&handler);
     pg_backend.exec(new Query("SELECT pg_backend_pid()", false));
@@ -40,7 +40,7 @@ TEST_F(PostgresqlTest, CancelTest)
 {
     PGHandler                   handler;
     std::string                 conn_str(address);
-    std::unique_ptr<Connection> conn(PolicyFactory::instance()->createConnection(conn_str, conn_str, &handler));
+    std::unique_ptr<Connection> conn(new PGConnection(conn_str, conn_str, &handler));
     conn->reset();
     NonTransaction pg_cancel(&handler);
     pg_cancel.exec(new Query("SELECT 3133 FROM PG_SLEEP(10)", false));
@@ -64,7 +64,7 @@ TEST_F(PostgresqlTest, QueryParamTest)
 {
     PGHandler                   handler;
     std::string                 conn_str(address);
-    std::unique_ptr<Connection> conn(PolicyFactory::instance()->createConnection(conn_str, conn_str, &handler));
+    std::unique_ptr<Connection> conn(new PGConnection(conn_str, conn_str, &handler));
     conn->reset();
     while (conn->getStatus() != CONNECTION_OK) {
         if (handler.check() < 1)
@@ -132,7 +132,7 @@ TEST_F(PostgresqlTest, QueryPreparedTest)
 {
     PGHandler                   handler;
     std::string                 conn_str(address);
-    std::unique_ptr<Connection> conn(PolicyFactory::instance()->createConnection(conn_str, conn_str, &handler));
+    std::unique_ptr<Connection> conn(new PGConnection(conn_str, conn_str, &handler));
     conn->reset();
     while (conn->getStatus() != CONNECTION_OK) {
         if (handler.check() < 1)
@@ -205,7 +205,7 @@ TEST_F(PostgresqlTest, DbTransactionTest)
 {
     PGHandler                   handler;
     std::string                 conn_str(address);
-    std::unique_ptr<Connection> conn(PolicyFactory::instance()->createConnection(conn_str, conn_str, &handler));
+    std::unique_ptr<Connection> conn(new PGConnection(conn_str, conn_str, &handler));
     conn->reset();
     while (conn->getStatus() != CONNECTION_OK) {
         if (handler.check() < 1)
@@ -238,7 +238,7 @@ TEST_F(PostgresqlTest, DbTransactionErrorTest)
 {
     PGHandler                   handler;
     std::string                 conn_str(address);
-    std::unique_ptr<Connection> conn(PolicyFactory::instance()->createConnection(conn_str, conn_str, &handler));
+    std::unique_ptr<Connection> conn(new PGConnection(conn_str, conn_str, &handler));
     conn->reset();
     while (conn->getStatus() != CONNECTION_OK) {
         if (handler.check() < 1)
@@ -248,7 +248,6 @@ TEST_F(PostgresqlTest, DbTransactionErrorTest)
     QueryChain *query = new QueryChain(
         new Query("CREATE TABLE IF NOT EXISTS test(id int, value float8, data varchar(50), str json);", false));
     string query_str("INSERT INTO test(id) VALUES(\"xa-xa\")");
-    server->addError(query_str, false);
     query->addQuery(new Query(query_str, false));
     pg_create.exec(query);
     conn->runTransaction(&pg_create);
@@ -266,7 +265,7 @@ TEST_F(PostgresqlTest, ChainQueryTest)
 {
     PGHandler                   handler;
     std::string                 conn_str(address);
-    std::unique_ptr<Connection> conn(PolicyFactory::instance()->createConnection(conn_str, conn_str, &handler));
+    std::unique_ptr<Connection> conn(new PGConnection(conn_str, conn_str, &handler));
     conn->reset();
     while (conn->getStatus() != CONNECTION_OK) {
         if (handler.check() < 1)
@@ -337,7 +336,7 @@ TEST_F(PostgresqlTest, DbPipelineTest)
 {
     PGHandler                   handler;
     std::string                 conn_str(address);
-    std::unique_ptr<Connection> conn(PolicyFactory::instance()->createConnection(conn_str, conn_str, &handler));
+    std::unique_ptr<Connection> conn(new PGConnection(conn_str, conn_str, &handler));
     conn->reset();
     while (conn->getStatus() != CONNECTION_OK) {
         if (handler.check() < 1)
@@ -367,7 +366,7 @@ TEST_F(PostgresqlTest, DbPipelineErrorTest)
 {
     PGHandler                   handler;
     std::string                 conn_str(address);
-    std::unique_ptr<Connection> conn(PolicyFactory::instance()->createConnection(conn_str, conn_str, &handler));
+    std::unique_ptr<Connection> conn(new PGConnection(conn_str, conn_str, &handler));
     conn->reset();
     while (conn->getStatus() != CONNECTION_OK) {
         if (handler.check() < 1)
@@ -381,7 +380,6 @@ TEST_F(PostgresqlTest, DbPipelineErrorTest)
     query->addQuery(new QueryParams("SELECT repeat('0', 10), pg_sleep(1)", false, false));
     query->addQuery(new QueryParams("SELECT repeat('0', 10), pg_sleep(1)", false, false));
     pg1.exec(query);
-    server->addError("SELECT TTT", false);
 
     conn->runTransaction(&pg1);
 
@@ -405,7 +403,7 @@ TEST_F(PostgresqlTest, DbPipelineSyncErrorTest)
 {
     PGHandler                   handler;
     std::string                 conn_str(address);
-    std::unique_ptr<Connection> conn(PolicyFactory::instance()->createConnection(conn_str, conn_str, &handler));
+    std::unique_ptr<Connection> conn(new PGConnection(conn_str, conn_str, &handler));
     conn->reset();
     while (conn->getStatus() != CONNECTION_OK) {
         if (handler.check() < 1)
@@ -418,7 +416,6 @@ TEST_F(PostgresqlTest, DbPipelineSyncErrorTest)
     query->addQuery(new QueryParams("SELECT repeat('0', 10), pg_sleep(1)", false, false));
     query->addQuery(new QueryParams("SELECT repeat('1', 10), pg_sleep(1)", false, false));
     pg1.exec(query);
-    server->setSyncError();
 
     conn->runTransaction(&pg1);
 
@@ -432,7 +429,7 @@ TEST_F(PostgresqlTest, DbPipelineAbortedTest)
 {
     PGHandler                   handler;
     std::string                 conn_str(address);
-    std::unique_ptr<Connection> conn(PolicyFactory::instance()->createConnection(conn_str, conn_str, &handler));
+    std::unique_ptr<Connection> conn(new PGConnection(conn_str, conn_str, &handler));
     conn->reset();
     while (conn->getStatus() != CONNECTION_OK) {
         if (handler.check() < 1)
@@ -446,7 +443,6 @@ TEST_F(PostgresqlTest, DbPipelineAbortedTest)
         "CREATE TABLE IF NOT EXISTS test(id int, value float8, data varchar(50), str json);", false, false));
     query->addQuery(new QueryParams("SELECT TTT", false, false));
     pg3.exec(query);
-    server->addError("SELECT TTT", false);
 
     conn->runTransaction(&pg3);
 
@@ -459,7 +455,6 @@ TEST_F(PostgresqlTest, DbPipelineAbortedTest)
     query = new QueryChain(new QueryParams("SELECT * FROM test;", false, false));
     query->addQuery(new QueryParams("DROP TABLE test;", false, false));
     pg4.exec(query);
-    server->addError("SELECT * FROM test;", false);
     conn->runTransaction(&pg4);
 
     while (pg4.get_status() != Transaction::FINISH) {
@@ -482,7 +477,7 @@ TEST_F(PostgresqlTest, DbPipelineTransactionTest)
 {
     PGHandler                   handler;
     std::string                 conn_str(address);
-    std::unique_ptr<Connection> conn(PolicyFactory::instance()->createConnection(conn_str, conn_str, &handler));
+    std::unique_ptr<Connection> conn(new PGConnection(conn_str, conn_str, &handler));
     conn->reset();
     while (conn->getStatus() != CONNECTION_OK) {
         if (handler.check() < 1)
@@ -512,7 +507,7 @@ TEST_F(PostgresqlTest, DISABLED_DbPipelineStressTest)
 {
     PGHandler                   handler;
     std::string                 conn_str(address);
-    std::unique_ptr<Connection> conn(PolicyFactory::instance()->createConnection(conn_str, conn_str, &handler));
+    std::unique_ptr<Connection> conn(new PGConnection(conn_str, conn_str, &handler));
     conn->reset();
     while (conn->getStatus() != CONNECTION_OK) {
         if (handler.check() < 1)
@@ -548,7 +543,7 @@ TEST_F(PostgresqlTest, DbPipelineTransErrorTest)
 {
     PGHandler                   handler;
     std::string                 conn_str(address);
-    std::unique_ptr<Connection> conn(PolicyFactory::instance()->createConnection(conn_str, conn_str, &handler));
+    std::unique_ptr<Connection> conn(new PGConnection(conn_str, conn_str, &handler));
     conn->reset();
     while (conn->getStatus() != CONNECTION_OK) {
         if (handler.check() < 1)
@@ -562,7 +557,6 @@ TEST_F(PostgresqlTest, DbPipelineTransErrorTest)
         "CREATE TABLE IF NOT EXISTS test(id int, value float8, data varchar(50), str json);", false, false));
     query->addQuery(new QueryParams("SELECT TTT", false, false));
     pg1->exec(query);
-    server->addError("SELECT TTT", false);
 
     conn->runTransaction(pg1);
 

@@ -6,6 +6,8 @@
 class Connection;
 class Transaction;
 
+enum TransactionType { TR_NON, TR_POLICY, TR_PREPARED, TR_CONFIG };
+
 class TransactionImpl {
   protected:
     friend class Transaction;

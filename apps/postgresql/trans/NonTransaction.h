@@ -7,10 +7,7 @@ class NonTransaction : public Transaction {
     PGTransactionData policy() override { return PGTransactionData(); }
 
   public:
-    NonTransaction(ITransactionHandler *handler)
-        : Transaction(PolicyFactory::instance()->createTransaction(this, TR_NON), handler)
-    {
-    }
+    NonTransaction(ITransactionHandler *handler);
     NonTransaction(const NonTransaction &trans);
     ~NonTransaction() {}
 };

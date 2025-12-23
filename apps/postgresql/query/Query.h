@@ -1,7 +1,5 @@
 #pragma once
 
-#include "../PolicyFactory.h"
-
 #include "QueryParam.h"
 #include "IQueryImpl.h"
 #include "IQuery.h"
@@ -12,17 +10,11 @@
 class Query : public IQuery {
   protected:
     IQueryImpl *impl;
-    Query(IQueryImpl *impl)
-        : impl(impl)
-    {
-    }
+    Query(IQueryImpl *impl);
 
   public:
-    Query(const string &cmd, bool single)
-        : impl(PolicyFactory::instance()->createSimpleQuery(cmd, single))
-    {
-    }
-    ~Query() { delete impl; }
+    Query(const string &cmd, bool single);
+    ~Query();
 
     int         exec() override;
     bool        is_single_mode() override { return impl->is_single_mode(); }
@@ -36,6 +28,6 @@ class Query : public IQuery {
     void        set_finished() override { impl->set_finished(); }
     Connection *getConnection() override { return impl->getConnection(); }
     void        put_result() override {}
-    uint32_t    get_result_got() override { return 1; };
-    void        set_last_error(const char *error) override { impl->set_last_error(error); };
+    uint32_t    get_result_got() override { return 1; }
+    void        set_last_error(const char *error) override { impl->set_last_error(error); }
 };

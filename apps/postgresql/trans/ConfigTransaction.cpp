@@ -3,11 +3,12 @@
 #include "../query/QueryParams.h"
 #include "../query/QueryChain.h"
 #include "../query/QueryPrepare.h"
+#include "../trans/PGTransactionImpl.h"
 
 ConfigTransaction::ConfigTransaction(const map<std::string, PGPrepareData> &prepareds,
                                      const vector<std::string>             &search_pathes,
                                      const vector<std::unique_ptr<IQuery>> &init_queries, ITransactionHandler *handler)
-    : Transaction(PolicyFactory::instance()->createTransaction(this, TR_CONFIG), handler)
+    : Transaction(new PGTransactionImpl(this, TR_CONFIG), handler)
 {
     if (prepareds.empty() && search_pathes.empty() && init_queries.empty()) {
         ERROR("either prepared list, search path, init_queries are empty. nothing to do");
@@ -55,7 +56,7 @@ ConfigTransaction::ConfigTransaction(const map<std::string, PGPrepareData> &prep
 }
 
 ConfigTransaction::ConfigTransaction(const ConfigTransaction &trans)
-    : Transaction(PolicyFactory::instance()->createTransaction(this, TR_CONFIG), trans.handler)
+    : Transaction(new PGTransactionImpl(this, TR_CONFIG), trans.handler)
 {
     if (trans.tr_impl->query)
         tr_impl->query = trans.tr_impl->query->clone();

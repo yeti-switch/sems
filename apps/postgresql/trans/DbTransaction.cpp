@@ -1,6 +1,7 @@
 #include "DbTransaction.h"
 #include "../query/QueryChain.h"
 #include "../conn/Connection.h"
+#include "../query/ParameterizedQueryImpl.h"
 
 template class DbTransaction<PGTransactionData::read_committed, PGTransactionData::write_policy::read_write>;
 template class DbTransaction<PGTransactionData::read_committed, PGTransactionData::write_policy::read_only>;
@@ -21,7 +22,7 @@ DECLARE_BEGIN_CMD(serializable, read_only)     = "BEGIN ISOLATION LEVEL SERIALIZ
 
 template <PGTransactionData::isolation_level isolation, PGTransactionData::write_policy rw>
 DbTransaction<isolation, rw>::DbTransaction(const DbTransaction<isolation, rw> &trans)
-    : Transaction(PolicyFactory::instance()->createTransaction(this, TR_POLICY), trans.handler)
+    : Transaction(new PGTransactionImpl(this, TR_POLICY), trans.handler)
     , dummyParent("", false, false)
     , il(isolation)
     , wp(rw)
@@ -38,7 +39,7 @@ int DbTransaction<isolation, rw>::begin()
         return -1;
     }
     if (state == BEGIN) {
-        auto begin_q = PolicyFactory::instance()->createQueryParam(begin_cmd, false, &dummyParent);
+        auto begin_q = new ParameterizedQueryImpl(begin_cmd, false, &dummyParent);
         begin_q->reset(get_conn());
         int ret = begin_q->exec();
         delete begin_q;
@@ -73,7 +74,7 @@ int DbTransaction<isolation, rw>::rollback()
         return -1;
     }
     if (state != BEGIN) {
-        auto end_q = PolicyFactory::instance()->createQueryParam("ROLLBACK", false, &dummyParent);
+        auto end_q = new ParameterizedQueryImpl("ROLLBACK", false, &dummyParent);
         end_q->reset(get_conn());
         int ret = end_q->exec();
         delete end_q;
@@ -132,7 +133,7 @@ int DbTransaction<isolation, rw>::end()
         return -1;
     }
     if (state == BODY) {
-        auto end_q = PolicyFactory::instance()->createQueryParam("END", false, &dummyParent);
+        auto end_q = new ParameterizedQueryImpl("END", false, &dummyParent);
         end_q->reset(get_conn());
         int ret = end_q->exec();
         delete end_q;

@@ -3,7 +3,6 @@
 #include "log.h"
 #include "AmEventDispatcher.h"
 
-#include "PolicyFactory.h"
 #include "PoolWorker.h"
 #include "postgresql_cfg.h"
 
@@ -87,7 +86,6 @@ PostgreSQL::PostgreSQL()
 PostgreSQL::~PostgreSQL()
 {
     AmEventDispatcher::instance()->delEventQueue(events_queue_name);
-    freePolicyFactory();
 }
 
 int PostgreSQL::onLoad()
@@ -161,7 +159,6 @@ int PostgreSQL::init()
     epoll_link(epoll_fd, true);
     stop_event.link(epoll_fd, true);
 
-    makePolicyFactory(false);
     init_rpc();
 
     DBG("PostgreSQL Client initialized");

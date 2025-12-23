@@ -1,9 +1,11 @@
 #pragma once
 
 #include "Transaction.h"
+#include "PGTransactionImpl.h"
 #include "../query/QueryParams.h"
 
 #include <ampi/PostgreSqlAPI.h>
+
 
 template <PGTransactionData::isolation_level isolation, PGTransactionData::write_policy rw>
 class DbTransaction : public Transaction {
@@ -29,14 +31,14 @@ class DbTransaction : public Transaction {
 
   public:
     DbTransaction(ITransactionHandler *handler)
-        : Transaction(PolicyFactory::instance()->createTransaction(this, TR_POLICY), handler)
+        : Transaction(new PGTransactionImpl(this, TR_POLICY), handler)
         , dummyParent("", false, false)
         , il(isolation)
         , wp(rw)
     {
     }
     DbTransaction(const DbTransaction<isolation, rw> &trans);
-    ~DbTransaction() {};
+    ~DbTransaction() {}
 };
 
 Transaction *createDbTransaction(ITransactionHandler *handler, PGTransactionData::isolation_level il,
