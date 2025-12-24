@@ -533,16 +533,22 @@ void AmMediaTransport::prepareIceCandidate(SdpIceCandidate &candidate)
     candidate.conn.addrType = (l_saddr.ss_family == AF_INET) ? AT_V4 : AT_V6;
     candidate.conn.address  = am_inet_ntop(&l_saddr);
     candidate.conn.port     = l_port;
+
+    auto &ice_cred = conn_factory.ice_cred;
+    if (!ice_cred.lpriority) {
+        candidate.update_random_related_fields();
+
+        ice_cred.lfoundation = candidate.foundation;
+        ice_cred.lpriority   = candidate.priority;
+    } else {
+        candidate.foundation = ice_cred.lfoundation;
+        candidate.priority   = ice_cred.lpriority;
+    }
 }
 
 sockaddr_storage *AmMediaTransport::getAllowedIceAddr()
 {
     return getIceContext()->getAllowedIceAddr(getLocalAddrFamily());
-}
-
-void AmMediaTransport::setIcePriority(unsigned int priority)
-{
-    conn_factory.ice_cred.lpriority = priority;
 }
 
 void AmMediaTransport::getInfo(AmArg &ret)

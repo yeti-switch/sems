@@ -1152,10 +1152,10 @@ void AmRtpStream::applyIceParams(SdpMedia &sdp_media)
             ice_ufrag.append(data.begin(), data.begin() + ICE_UFRAG_SIZE);
         }
         sdp_media.ice_ufrag = ice_ufrag;
+
         iterateTransports([&](auto tr) {
             SdpIceCandidate candidate;
             tr->prepareIceCandidate(candidate);
-            tr->setIcePriority(candidate.priority);
             sdp_media.ice_candidate.push_back(candidate);
         });
     } else {

@@ -211,10 +211,9 @@ struct SdpIceCandidate {
     std::map<string, string> attrs;
 
     SdpIceCandidate()
-        : foundation(int2str(rand()))
-        , comp_id(0)
+        : comp_id(0)
         , transport(ICTR_UDP)
-        , priority((ICT_HOST << 24) | ((rand() & 0xffff) << 8) | (256 - comp_id))
+        , priority(0)
         , // see rfc5245 4.1.2.1
         type(ICT_HOST)
     {
@@ -232,6 +231,7 @@ struct SdpIceCandidate {
     {
     }
 
+    void                    update_random_related_fields();
     string                  print() const;
     static IceCandidateType str2type(string str);
 };

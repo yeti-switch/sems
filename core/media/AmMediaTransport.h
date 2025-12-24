@@ -219,7 +219,6 @@ class AmMediaTransport : public AmMediaConnectionsHolder,
     void              getSdpAnswer(const SdpMedia &offer, SdpMedia &answer);
     void              prepareIceCandidate(SdpIceCandidate & candidate);
     sockaddr_storage *getAllowedIceAddr();
-    void              setIcePriority(unsigned int priority);
     void              getInfo(AmArg & ret);
 
     AmRtpStream *getRtpStream()
@@ -260,7 +259,6 @@ class AmMediaTransport : public AmMediaConnectionsHolder,
   protected:
     Mode  mode;
     Setup setup_mode;
-
 
     /** Stream owning this transport */
     AmRtpStream        *stream;

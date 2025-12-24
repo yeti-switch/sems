@@ -22,12 +22,18 @@ class AmMediaConnectionFactory {
                                              const srtp_master_keys &remote_keys, bool rtcp);
 
   public:
-    struct {
+    struct ice_cred_container {
         string       luser;
         string       lpassword;
         string       ruser;
         string       rpassword;
         unsigned int lpriority;
+        string       lfoundation;
+
+        ice_cred_container()
+            : lpriority(0)
+        {
+        }
     } ice_cred;
 
     struct {

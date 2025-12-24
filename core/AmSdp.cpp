@@ -162,6 +162,12 @@ string SdpCrypto::profile2str(CryptoProfile profile)
     return profile_t_2_str(profile, false);
 }
 
+void SdpIceCandidate::update_random_related_fields()
+{
+    foundation = int2str(rand());
+    priority   = (ICT_HOST << 24) | ((rand() & 0xffff) << 8) | (256 - comp_id);
+}
+
 string SdpIceCandidate::print() const
 {
     string data("a=candidate:");
