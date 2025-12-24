@@ -30,7 +30,6 @@ class RegistrarRedisClient : public virtual Configurable {
     friend RegistrarTest;
     friend RegistrarTestFactory;
 
-    bool   use_functions;
     string scripts_dir;
 
     struct Connection {

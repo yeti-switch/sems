@@ -55,7 +55,6 @@ int RegistrarRedisClient::configure(cfg_t *cfg)
     if (!reg_redis)
         return -1;
 
-    use_functions        = cfg_getbool(reg_redis, CFG_PARAM_USE_FUNCTIONS);
     scripts_dir          = cfg_getstr(reg_redis, CFG_PARAM_SCRIPTS_DIR);
     auto reg_redis_write = cfg_getsec(reg_redis, CFG_SEC_WRITE);
     auto reg_redis_read  = cfg_getsec(reg_redis, CFG_SEC_READ);

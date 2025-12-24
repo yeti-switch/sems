@@ -9,8 +9,7 @@ int SipRegistrarConfig::parse(const string &config)
                                     CFG_STR(CFG_PARAM_USERNAME, "", CFGF_NODEFAULT),
                                     CFG_STR(CFG_PARAM_PASSWORD, "", CFGF_NODEFAULT), CFG_END() };
 
-    cfg_opt_t redis_opts[] = { CFG_BOOL(CFG_PARAM_USE_FUNCTIONS, cfg_false, CFGF_NODEFAULT),
-                               CFG_STR(CFG_PARAM_SCRIPTS_DIR, DEFAULT_SCRIPTS_DIR, CFGF_NONE),
+    cfg_opt_t redis_opts[] = { CFG_STR(CFG_PARAM_SCRIPTS_DIR, DEFAULT_SCRIPTS_DIR, CFGF_NONE),
                                CFG_SEC(CFG_SEC_WRITE, redis_pool_opts, CFGF_NONE),
                                CFG_SEC(CFG_SEC_READ, redis_pool_opts, CFGF_NONE), CFG_END() };
 

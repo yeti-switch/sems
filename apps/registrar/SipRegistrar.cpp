@@ -1473,36 +1473,26 @@ void SipRegistrar::post_resolve_response(const string &session_id, const Aors &a
 
 bool SipRegistrar::fetch_all(AmObject *user_data, int user_type_id, const string &registration_id)
 {
-    vector<AmArg> args;
-    if (use_functions)
-        args = { "FCALL", "register", 1, registration_id.c_str() };
-    else {
-        auto script = write_conn->script(REGISTER_SCRIPT);
-        if (!script || !script->is_loaded()) {
-            ERROR("%s script is not loaded", REGISTER_SCRIPT);
-            return false;
-        }
-
-        args = { "EVALSHA", script->hash.c_str(), 1, registration_id.c_str() };
+    auto script = write_conn->script(REGISTER_SCRIPT);
+    if (!script || !script->is_loaded()) {
+        ERROR("%s script is not loaded", REGISTER_SCRIPT);
+        return false;
     }
+
+    vector<AmArg> args = { "EVALSHA", script->hash.c_str(), 1, registration_id.c_str() };
 
     return post_request(write_conn->id, args, user_data, user_type_id);
 }
 
 bool SipRegistrar::unbind_all(AmObject *user_data, int user_type_id, const string &registration_id)
 {
-    vector<AmArg> args;
-    if (use_functions)
-        args = { "FCALL", "register", 1, registration_id.c_str(), 0 };
-    else {
-        auto script = write_conn->script(REGISTER_SCRIPT);
-        if (!script || !script->is_loaded()) {
-            ERROR("%s script is not loaded", REGISTER_SCRIPT);
-            return false;
-        }
-
-        args = { "EVALSHA", script->hash.c_str(), 1, registration_id.c_str(), 0 };
+    auto script = write_conn->script(REGISTER_SCRIPT);
+    if (!script || !script->is_loaded()) {
+        ERROR("%s script is not loaded", REGISTER_SCRIPT);
+        return false;
     }
+
+    vector<AmArg> args = { "EVALSHA", script->hash.c_str(), 1, registration_id.c_str(), 0 };
 
     return post_request(write_conn->id, args, user_data, user_type_id);
 }
@@ -1511,46 +1501,27 @@ bool SipRegistrar::bind(AmObject *user_data, int user_type_id, const string &reg
                         const string &instance, long reg_id, int expires, const string &user_agent, const string &path,
                         const string &interface_name, const string &headers)
 {
-    vector<AmArg> args;
-    if (use_functions)
-        args = { "FCALL",
-                 "register",
-                 1,
-                 registration_id.c_str(),
-                 expires,
-                 contact.c_str(),
-                 instance.c_str(),
-                 reg_id,
-                 AmConfig.node_id,
-                 interface_name.c_str(),
-                 user_agent.c_str(),
-                 path.c_str(),
-                 headers.c_str(),
-                 bindings_max,
-                 one_contact_per_aor };
-    else {
-        auto script = write_conn->script(REGISTER_SCRIPT);
-        if (!script || !script->is_loaded()) {
-            ERROR("%s script is not loaded", REGISTER_SCRIPT);
-            return false;
-        }
-
-        args = { "EVALSHA",
-                 script->hash.c_str(),
-                 1,
-                 registration_id.c_str(),
-                 expires,
-                 contact.c_str(),
-                 instance.c_str(),
-                 reg_id,
-                 AmConfig.node_id,
-                 interface_name.c_str(),
-                 user_agent.c_str(),
-                 path.c_str(),
-                 headers.c_str(),
-                 bindings_max,
-                 one_contact_per_aor };
+    auto script = write_conn->script(REGISTER_SCRIPT);
+    if (!script || !script->is_loaded()) {
+        ERROR("%s script is not loaded", REGISTER_SCRIPT);
+        return false;
     }
+
+    vector<AmArg> args = { "EVALSHA",
+                           script->hash.c_str(),
+                           1,
+                           registration_id.c_str(),
+                           expires,
+                           contact.c_str(),
+                           instance.c_str(),
+                           reg_id,
+                           AmConfig.node_id,
+                           interface_name.c_str(),
+                           user_agent.c_str(),
+                           path.c_str(),
+                           headers.c_str(),
+                           bindings_max,
+                           one_contact_per_aor };
 
     return post_request(write_conn->id, args, user_data, user_type_id);
 }
@@ -1559,18 +1530,13 @@ bool SipRegistrar::resolve_aors(AmObject *user_data, int user_type_id, std::set<
 {
     DBG("got %ld AoR ids to resolve", aor_ids.size());
 
-    vector<AmArg> args;
-    if (use_functions)
-        args = { "FCALL_RO", "aor_lookup", (int)aor_ids.size() };
-    else {
-        auto script = read_conn->script(AOR_LOOKUP_SCRIPT);
-        if (!script || !script->is_loaded()) {
-            ERROR("%s script is not loaded", AOR_LOOKUP_SCRIPT);
-            return false;
-        }
-
-        args = { "EVALSHA", script->hash.c_str(), (int)aor_ids.size() };
+    auto script = read_conn->script(AOR_LOOKUP_SCRIPT);
+    if (!script || !script->is_loaded()) {
+        ERROR("%s script is not loaded", AOR_LOOKUP_SCRIPT);
+        return false;
     }
+
+    vector<AmArg> args = { "EVALSHA", script->hash.c_str(), (int)aor_ids.size() };
 
     for (const auto &id : aor_ids)
         args.emplace_back(id.c_str());
@@ -1580,18 +1546,13 @@ bool SipRegistrar::resolve_aors(AmObject *user_data, int user_type_id, std::set<
 
 bool SipRegistrar::load_contacts(AmObject *user_data, int user_type_id)
 {
-    vector<AmArg> args;
-    if (use_functions)
-        args = { "FCALL_RO", "load_contacts", 0 };
-    else {
-        auto script = subscr_read_conn->script(LOAD_CONTACTS_SCRIPT);
-        if (!script || !script->is_loaded()) {
-            ERROR("%s script is not loaded", LOAD_CONTACTS_SCRIPT);
-            return false;
-        }
-
-        args = { "EVALSHA", script->hash.c_str(), 0 };
+    auto script = subscr_read_conn->script(LOAD_CONTACTS_SCRIPT);
+    if (!script || !script->is_loaded()) {
+        ERROR("%s script is not loaded", LOAD_CONTACTS_SCRIPT);
+        return false;
     }
+
+    vector<AmArg> args = { "EVALSHA", script->hash.c_str(), 0 };
 
     return post_request(subscr_read_conn->id, args, user_data, user_type_id);
 }
@@ -1619,44 +1580,26 @@ void SipRegistrar::rpc_bind_(AmObject *user_data, int user_type_id, const AmArg 
     string       interface_name  = arg.size() > 5 ? arg2str(arg[5]) : 0;
     const string headers         = arg.size() > 6 ? arg2str(arg[6]) : "";
 
-    vector<AmArg> args;
-    if (use_functions)
-        args = { "FCALL",
-                 "register",
-                 1,
-                 registration_id.c_str(),
-                 expires,
-                 contact.c_str(),
-                 "",
-                 0,
-                 AmConfig.node_id,
-                 interface_name,
-                 user_agent.c_str(),
-                 path.c_str(),
-                 headers,
-                 bindings_max };
-    else {
-        auto script = write_conn->script(REGISTER_SCRIPT);
-        if (!script || !script->is_loaded()) {
-            delete user_data;
-            throw AmSession::Exception(500, "registrar is not enabled");
-        }
-
-        args = { "EVALSHA",
-                 script->hash.c_str(),
-                 1,
-                 registration_id.c_str(),
-                 expires,
-                 contact.c_str(),
-                 "",
-                 0,
-                 AmConfig.node_id,
-                 interface_name,
-                 user_agent.c_str(),
-                 path.c_str(),
-                 headers,
-                 bindings_max };
+    auto script = write_conn->script(REGISTER_SCRIPT);
+    if (!script || !script->is_loaded()) {
+        delete user_data;
+        throw AmSession::Exception(500, "registrar is not enabled");
     }
+
+    vector<AmArg> args = { "EVALSHA",
+                           script->hash.c_str(),
+                           1,
+                           registration_id.c_str(),
+                           expires,
+                           contact.c_str(),
+                           "",
+                           0,
+                           AmConfig.node_id,
+                           interface_name,
+                           user_agent.c_str(),
+                           path.c_str(),
+                           headers,
+                           bindings_max };
 
     if (post_request(write_conn->id, args, user_data, user_type_id) == false)
         throw AmSession::Exception(500, "failed to post bind request");
@@ -1666,18 +1609,13 @@ void SipRegistrar::rpc_unbind_(AmObject *user_data, int user_type_id, const AmAr
 {
     const string registration_id = arg2str(arg[0]);
 
-    vector<AmArg> args;
-    if (use_functions)
-        args = { "FCALL", "register", 1, registration_id.c_str(), 0 }; // expires 0
-    else {
-        auto script = write_conn->script(REGISTER_SCRIPT);
-        if (!script || !script->is_loaded()) {
-            delete user_data;
-            throw AmSession::Exception(500, "registrar is not enabled");
-        }
-
-        args = { "EVALSHA", script->hash.c_str(), 1, registration_id.c_str(), 0 }; // expires 0
+    auto script = write_conn->script(REGISTER_SCRIPT);
+    if (!script || !script->is_loaded()) {
+        delete user_data;
+        throw AmSession::Exception(500, "registrar is not enabled");
     }
+
+    vector<AmArg> args = { "EVALSHA", script->hash.c_str(), 1, registration_id.c_str(), 0 }; // expires 0
 
     if (arg.size() > 1)
         args.emplace_back(arg2str(arg[1])); // contact
@@ -1691,18 +1629,13 @@ void SipRegistrar::rpc_transport_down_(AmObject *user_data, int user_type_id, co
     const string registration_id = arg2str(arg[0]);
     long         conn_id         = arg.size() > 1 ? arg2int(arg[1]) : 0;
 
-    vector<AmArg> args;
-    if (use_functions)
-        args = { "FCALL", "transport_down", 0, registration_id.c_str(), conn_id };
-    else {
-        auto script = write_conn->script(RPC_TRANSPORT_DOWN_SCRIPT);
-        if (!script || !script->is_loaded()) {
-            delete user_data;
-            throw AmSession::Exception(500, "registrar is not enabled");
-        }
-
-        args = { "EVALSHA", script->hash.c_str(), 0, registration_id.c_str(), conn_id }; // expires 0
+    auto script = write_conn->script(RPC_TRANSPORT_DOWN_SCRIPT);
+    if (!script || !script->is_loaded()) {
+        delete user_data;
+        throw AmSession::Exception(500, "registrar is not enabled");
     }
+
+    vector<AmArg> args = { "EVALSHA", script->hash.c_str(), 0, registration_id.c_str(), conn_id }; // expires 0
 
     if (post_request(write_conn->id, args, user_data, user_type_id) == false)
         throw AmSession::Exception(500, "failed to post transport_down request");
@@ -1710,18 +1643,13 @@ void SipRegistrar::rpc_transport_down_(AmObject *user_data, int user_type_id, co
 
 void SipRegistrar::rpc_resolve_aors(AmObject *user_data, int user_type_id, const AmArg &arg)
 {
-    vector<AmArg> args;
-    if (use_functions)
-        args = { "FCALL_RO", "rpc_aor_lookup", (int)arg.size() };
-    else {
-        auto script = read_conn->script(RPC_AOR_LOOKUP_SCRIPT);
-        if (!script || !script->is_loaded()) {
-            delete user_data;
-            throw AmSession::Exception(500, "registrar is not enabled");
-        }
-
-        args = { "EVALSHA", script->hash.c_str(), (int)arg.size() };
+    auto script = read_conn->script(RPC_AOR_LOOKUP_SCRIPT);
+    if (!script || !script->is_loaded()) {
+        delete user_data;
+        throw AmSession::Exception(500, "registrar is not enabled");
     }
+
+    vector<AmArg> args = { "EVALSHA", script->hash.c_str(), (int)arg.size() };
 
     for (auto i = 0U; i < arg.size(); ++i)
         args.emplace_back(arg2str(arg[i])); // contact
