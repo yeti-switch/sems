@@ -497,8 +497,6 @@ TEST_F(RegistrarTest, TestResolve2)
 }
 
 /** \brief unbind all -> bind Name1 -> check keepalive ctx -> unbind all */
-// TODO: fix it. broken after keepalive_ctx creation moved into 'reg2' event processing
-#if 0
 TEST_F(RegistrarTest, TestSubscribe1)
 {
     RegistrarTestClient registrar_client;
@@ -507,6 +505,9 @@ TEST_F(RegistrarTest, TestSubscribe1)
     static RegistrationIdType registration_id = "test";
     unbind_all(registrar_client, registration_id);
     clear_keepalive_context();
+
+    // subscribe for 'reg' event
+    registrar_client.subscribeForRegEvent(registration_id);
 
     // bind Name1
     {
@@ -523,7 +524,26 @@ TEST_F(RegistrarTest, TestSubscribe1)
         str2am_sip_request(req_str, req);
         req.local_if = 0;
         post_register(req, registration_id);
-        wait_for_cond(registrar_client.reply_available);
+
+        // wait for 'reg' event
+        wait_for_cond(registrar_client.resolve_aors_reply_available);
+
+        // check result
+        auto &aors = registrar_client.resolve_reply_aors;
+        GTEST_ASSERT_EQ(aors.size(), 1);
+        GTEST_ASSERT_EQ(aors[registration_id].size(), 1);
+        GTEST_ASSERT_TRUE(aors[registration_id].back().contact.length());
+
+        if (aors[registration_id].back().contact == "sip:Name1@127.0.0.1:6057") {
+            GTEST_ASSERT_EQ(aors[registration_id].back().path, "<sip:path1.test.com;lr>");
+            GTEST_ASSERT_EQ(aors[registration_id].back().interface_name, "input");
+        }
+
+        if (aors[registration_id].back().contact == "sip:Name2@127.0.0.1:6057") {
+            GTEST_ASSERT_EQ(aors[registration_id].back().path, "<sip:path2.test.com;lr>");
+            GTEST_ASSERT_EQ(aors[registration_id].back().interface_name, "input");
+        }
+
         registrar_client.reset();
     }
 
@@ -536,8 +556,10 @@ TEST_F(RegistrarTest, TestSubscribe1)
         GTEST_ASSERT_EQ(ret[0]["key"], "c:test:sip:Name1@127.0.0.1:6057");
     }
 
+    // unsubscribe from 'reg' event
+    registrar_client.unsubscribeForRegEvent(registration_id);
+
     unbind_all(registrar_client, registration_id);
     clear_keepalive_context();
     stop(registrar_client);
 }
-#endif

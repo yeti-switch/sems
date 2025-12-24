@@ -17,8 +17,14 @@ class RegistrarTestClient : public TestClient {
     RegistrarTestClient();
     void reset() override;
 
+    bool subscribeForRegEvent(RegistrationIdType reg_id);
+    bool unsubscribeForRegEvent(RegistrationIdType reg_id);
+
     int    register_reply_code;
     string register_reply_reason;
     string register_reply_hdrs;
     Aors   resolve_reply_aors;
+
+    AmCondition<bool> register_reply_available;
+    AmCondition<bool> resolve_aors_reply_available;
 };
