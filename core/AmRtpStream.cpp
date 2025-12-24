@@ -2213,6 +2213,8 @@ void AmRtpStream::replaceAudioMediaParameters(SdpMedia &m, unsigned int idx, Add
     default: CLASS_ERROR("unexpected OA state %d in AmRtpStream::replaceAudioMediaParameters", dlg->getOAState());
     }
 
+    m.is_multiplex = multiplexing;
+
     is_ice_stream = session ? session->isUseIceMediaStream() : false;
     applyIceParams(m);
 }
