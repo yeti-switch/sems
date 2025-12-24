@@ -22,6 +22,7 @@ AmMediaTransport::AmMediaTransport(AmRtpStream *_stream, int _if, int _proto_id,
     : state(nullptr)
     , conn_factory(this)
     , mode(TRANSPORT_MODE_DEFAULT)
+    , setup_mode(S_UNDEFINED)
     , stream(_stream)
     , logger(nullptr)
     , sensor(nullptr)
@@ -143,6 +144,17 @@ const char *AmMediaTransport::state2strUnsafe()
         return state->state2str();
     else
         return unknown;
+}
+
+void AmMediaTransport::applyOfferSetupMode(Setup offer_mode)
+{
+    switch (offer_mode) {
+    case S_ACTIVE:
+    case S_ACTPASS:   setup_mode = S_PASSIVE; break;
+    case S_PASSIVE:   setup_mode = S_ACTIVE; break;
+    case S_HOLD:      throw AmSession::Exception(488, "hold connections");
+    case S_UNDEFINED: throw AmSession::Exception(488, "setup not defined");
+    }
 }
 
 void AmMediaTransport::setLogger(msg_logger *_logger)
@@ -385,7 +397,10 @@ void AmMediaTransport::getSdpOffer(SdpMedia &offer)
             local_dtls_fingerprint.value = fp.value;
         }
         offer.fingerprint = local_dtls_fingerprint;
-        offer.setup       = S_ACTPASS;
+
+        if (setup_mode == S_UNDEFINED)
+            setup_mode = S_ACTPASS;
+        offer.setup = setup_mode;
     } break;
     case TP_UDPTL:
     {
@@ -403,7 +418,11 @@ void AmMediaTransport::getSdpOffer(SdpMedia &offer)
             local_dtls_fingerprint.value = fp.value;
         }
         offer.fingerprint = local_dtls_fingerprint;
-        offer.setup       = S_ACTPASS;
+
+        if (setup_mode == S_UNDEFINED)
+            setup_mode = S_ACTPASS;
+        offer.setup = setup_mode;
+
         t38_options_t options;
         options.getT38DefaultOptions();
         options.getAttributes(offer);
@@ -464,21 +483,17 @@ void AmMediaTransport::getSdpAnswer(const SdpMedia &offer, SdpMedia &answer)
         }
         answer.crypto = local_crypto;
     } else if (transport == TP_UDPTLSRTPSAVP || transport == TP_UDPTLSRTPSAVPF) {
-        dtls_settings *settings = (offer.setup == S_ACTIVE) ? static_cast<dtls_settings *>(server_settings)
+        applyOfferSetupMode(offer.setup);
+        dtls_settings *settings = (setup_mode == S_PASSIVE) ? static_cast<dtls_settings *>(server_settings)
                                                             : static_cast<dtls_settings *>(client_settings);
         if (local_dtls_fingerprint.hash.empty()) {
             srtp_fingerprint_p fp        = DtlsContext::gen_fingerprint(settings);
             local_dtls_fingerprint.hash  = fp.hash;
             local_dtls_fingerprint.value = fp.value;
         }
+
         answer.fingerprint = local_dtls_fingerprint;
-        answer.setup       = S_PASSIVE;
-        if (offer.setup == S_PASSIVE)
-            answer.setup = S_ACTIVE;
-        else if (offer.setup == S_HOLD)
-            throw AmSession::Exception(488, "hold connections");
-        else if (offer.setup == S_UNDEFINED)
-            throw AmSession::Exception(488, "setup not defined");
+        answer.setup       = setup_mode;
     } else if (transport == TP_UDPTL) {
         t38_options_t options;
         options.negotiateT38Options(offer.attributes);
@@ -486,7 +501,8 @@ void AmMediaTransport::getSdpAnswer(const SdpMedia &offer, SdpMedia &answer)
         answer.payloads.clear();
         answer.fmt = T38_FMT;
     } else if (transport == TP_UDPTLSUDPTL) {
-        dtls_settings *settings = (offer.setup == S_ACTIVE) ? static_cast<dtls_settings *>(server_settings)
+        applyOfferSetupMode(offer.setup);
+        dtls_settings *settings = (setup_mode == S_PASSIVE) ? static_cast<dtls_settings *>(server_settings)
                                                             : static_cast<dtls_settings *>(client_settings);
         if (local_dtls_fingerprint.hash.empty()) {
             srtp_fingerprint_p fp        = DtlsContext::gen_fingerprint(settings);
@@ -494,13 +510,8 @@ void AmMediaTransport::getSdpAnswer(const SdpMedia &offer, SdpMedia &answer)
             local_dtls_fingerprint.value = fp.value;
         }
         answer.fingerprint = local_dtls_fingerprint;
-        answer.setup       = S_PASSIVE;
-        if (offer.setup == S_PASSIVE)
-            answer.setup = S_ACTIVE;
-        else if (offer.setup == S_HOLD)
-            throw AmSession::Exception(488, "hold connections");
-        else if (offer.setup == S_UNDEFINED)
-            throw AmSession::Exception(488, "setup not defined");
+        answer.setup       = setup_mode;
+
         t38_options_t options;
         options.negotiateT38Options(offer.attributes);
         options.getAttributes(answer);

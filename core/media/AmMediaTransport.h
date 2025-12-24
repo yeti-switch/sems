@@ -77,6 +77,8 @@ class AmMediaTransport : public AmMediaConnectionsHolder,
     const char *state2str();
     const char *state2strUnsafe();
 
+    void applyOfferSetupMode(Setup offer_mode);
+
     int getTransportType()
     {
         return type;
@@ -256,7 +258,9 @@ class AmMediaTransport : public AmMediaConnectionsHolder,
     const char *type2str();
 
   protected:
-    Mode mode;
+    Mode  mode;
+    Setup setup_mode;
+
 
     /** Stream owning this transport */
     AmRtpStream        *stream;
