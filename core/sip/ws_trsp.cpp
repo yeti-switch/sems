@@ -317,7 +317,7 @@ ssize_t ws_input::recv_callback([[maybe_unused]] wslay_event_context_ptr ctx, ui
                                 [[maybe_unused]] int flags)
 {
     ssize_t ret = (ws_input_len < len) ? ws_input_len : len;
-    memcpy(data, ws_input_buf, ret);
+    memcpy(data, ws_input_buf + ws_input_pos, ret);
     ws_input_len -= ret;
     ws_input_pos += ret;
     if (!ws_input_len)
