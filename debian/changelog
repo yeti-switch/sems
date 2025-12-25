@@ -1,3 +1,7 @@
+sems (1.178.6) stable; urgency=low
+  * fix large (> 4096 bytes) messages handling for WS/WSS transport
+ -- Michael Furmur <furmur@pm.me>  Thu, 25 Dec 2025 12:36:10 +0200
+
 sems (1.178.5) stable; urgency=low
   * AmMediaTransport: fix ICE candidate random-related fields regeneration
   * AmMediaTransport: save negotiated 'setup' attribute
