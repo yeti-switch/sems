@@ -47,9 +47,6 @@ using std::string;
  * Refer to the SDP RFC document for any further information.
  */
 
-/** Scratch buffer size. */
-#define BUFFER_SIZE 4096
-
 /** \brief c=... line in SDP*/
 struct SdpConnection {
     /** @see NetworkType */
