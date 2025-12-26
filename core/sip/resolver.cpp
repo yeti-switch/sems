@@ -827,10 +827,14 @@ int dns_handle::next_ip(sockaddr_storage *sa, dns_priority priority)
 
 const dns_handle &dns_handle::operator=(const dns_handle &rh)
 {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wclass-memaccess"
-    memcpy(this, &rh, sizeof(dns_handle));
-#pragma GCC diagnostic pop
+    srv_e    = rh.srv_e;
+    srv_n    = rh.srv_n;
+    srv_used = rh.srv_used;
+    port     = rh.port;
+
+    ip_e       = rh.ip_e;
+    ip_n       = rh.ip_n;
+    ip_indexes = rh.ip_indexes;
 
     if (srv_e)
         inc_ref(srv_e);

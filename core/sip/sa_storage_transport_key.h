@@ -16,9 +16,9 @@ using tr_transport_type = unsigned char;
 #define SA_transport_len(addr)   (SA_len(addr) + sizeof(tr_transport_type))
 
 struct sa_storage_transport : public sockaddr_storage {
-    sa_storage_transport(const sockaddr_storage *p_addr) { memcpy(this, p_addr, SA_transport_len(p_addr)); }
+    sa_storage_transport(const sockaddr_storage *p_addr) { memcpy((char *)this, p_addr, SA_transport_len(p_addr)); }
 
-    sa_storage_transport(const sa_storage_transport &other) { memcpy(this, &other, other.size()); }
+    sa_storage_transport(const sa_storage_transport &other) { memcpy((char *)this, &other, other.size()); }
 
     int size() const { return SA_transport_len(this); }
 

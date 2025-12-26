@@ -98,6 +98,13 @@ sip_header::~sip_header()
     delete p;
 }
 
+void sip_header::clear()
+{
+    type = H_UNPARSED;
+    name.clear();
+    value.clear();
+    p = nullptr;
+}
 
 int parse_header_type(sip_header *h)
 {
