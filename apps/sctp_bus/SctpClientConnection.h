@@ -9,7 +9,6 @@ class SctpClientConnection : public SctpConnection {
     struct timeval last_connect_attempt;
     int            reconnect_interval;
     unsigned long  events_sent;
-    AmDynInvoke   *json_rpc;
     AtomicCounter &connection_status;
     AtomicCounter &connection_send_failed;
 
@@ -19,7 +18,6 @@ class SctpClientConnection : public SctpConnection {
     SctpClientConnection()
         : assoc_id(-1)
         , events_sent(0)
-        , json_rpc(nullptr)
         , connection_status(stat_group(Gauge, MOD_NAME, "connection_status")
                                 .setHelp("sctp client connection status")
                                 .addAtomicCounter())

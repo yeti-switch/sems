@@ -8,7 +8,6 @@
 #include "CurlConnection.h"
 
 class HttpMultiPartFormConnection : public CurlConnection {
-    int        response_code;
     string     file_path;
     curl_mime *form;
 
