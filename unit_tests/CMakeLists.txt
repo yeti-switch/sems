@@ -30,5 +30,6 @@ if (BUILD_TESTING)
         ${CMAKE_CURRENT_BINARY_DIR}/rsr
         ${CMAKE_CURRENT_BINARY_DIR}/logs
     )
+    set(CMAKE_CTEST_ARGUMENTS "--timeout 15" "--repeat after-timeout:3")
 endif()
 
