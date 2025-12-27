@@ -276,6 +276,10 @@ void SipRegistrar::dispose()
 
 SipRegistrar::SipRegistrar()
     : AmEventFdQueue(this)
+    , register_events_counter(stat_group(Counter, MOD_NAME, "register_events").addAtomicCounter())
+    , resolve_events_counter(stat_group(Counter, MOD_NAME, "resolve_events").addAtomicCounter())
+    , resolve_subscribe_events_counter(stat_group(Counter, MOD_NAME, "resolve_subscribe_events").addAtomicCounter())
+    , resolve_unsubscribe_events_counter(stat_group(Counter, MOD_NAME, "resolve_unsubscribe_events").addAtomicCounter())
     , max_interval_drift(1)
     , max_registrations_per_slot(1)
 {
@@ -779,6 +783,8 @@ void SipRegistrar::process(AmEvent *event)
 
 void SipRegistrar::process_register_request_event(SipRegistrarRegisterRequestEvent &event)
 {
+    register_events_counter.inc();
+
     const AmSipRequest *req = event.req.get();
     if (!req) {
         ERROR("req is null");
@@ -980,6 +986,8 @@ void SipRegistrar::process_register_request_event(SipRegistrarRegisterRequestEve
 
 void SipRegistrar::process_resolve_request_event(SipRegistrarResolveRequestEvent &event)
 {
+    resolve_events_counter.inc();
+
     auto *user_data = new RedisRequestUserData(event.session_id);
 
     if (!resolve_aors(user_data, UserTypeId::ResolveAors, event.aor_ids)) {
@@ -991,6 +999,8 @@ void SipRegistrar::process_resolve_request_event(SipRegistrarResolveRequestEvent
 
 void SipRegistrar::process_resolve_subscribe_event(SipRegistrarResolveAorsSubscribeEvent &event)
 {
+    resolve_subscribe_events_counter.inc();
+
     if (!process_subscriptions) {
         post_resolve_response(event.session_id);
         return;
@@ -1004,6 +1014,8 @@ void SipRegistrar::process_resolve_subscribe_event(SipRegistrarResolveAorsSubscr
 
 void SipRegistrar::process_resolve_unsubscribe_event(SipRegistrarResolveAorsUnsubscribeEvent &event)
 {
+    resolve_unsubscribe_events_counter.inc();
+
     for (auto &aor_id : event.aor_ids) {
         auto range = aor_lookup_subscribers.equal_range(aor_id);
         for (auto it = range.first; it != range.second;) {

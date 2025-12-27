@@ -46,6 +46,11 @@ class SipRegistrar : public AmThread,
     AmEventFd         stop_event;
     AmCondition<bool> stopped;
 
+    AtomicCounter &register_events_counter;
+    AtomicCounter &resolve_events_counter;
+    AtomicCounter &resolve_subscribe_events_counter;
+    AtomicCounter &resolve_unsubscribe_events_counter;
+
     int            expires_min;
     int            expires_max;
     int            expires_default;
