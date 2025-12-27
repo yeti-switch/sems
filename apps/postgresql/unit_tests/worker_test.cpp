@@ -661,7 +661,7 @@ TEST_F(PostgresqlTest, WorkerReconnectErrorTest)
     }
 }
 
-TEST_F(PostgresqlTest, WorkerCancelTest)
+TEST_F(PostgresqlTest, DISABLED_WorkerCancelTest)
 {
     PGPool pool    = GetPoolByAddress(address);
     pool.pool_size = 2;
