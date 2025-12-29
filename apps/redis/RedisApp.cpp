@@ -22,7 +22,7 @@ class RedisAppFactory : public AmConfigFactory {
 
     int onLoad() { return redis_app->onLoad(); }
 
-    void on_destroy() { redis_app->stop(); }
+    void on_destroy() { redis_app->stop(true); }
 
     /* AmConfigFactory */
 

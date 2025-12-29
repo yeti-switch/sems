@@ -47,7 +47,7 @@ class PostgreSQLFactory : public AmDynInvokeFactory, public AmConfigFactory {
 
     AmDynInvoke *getInstance() { return PostgreSQL::instance(); }
     int          onLoad() { return PostgreSQL::instance()->onLoad(); }
-    void         on_destroy() { PostgreSQL::instance()->stop(); }
+    void         on_destroy() { PostgreSQL::instance()->stop(true); }
 
     int configure(const std::string &config) { return PostgreSQL::instance()->configure(config); }
 
