@@ -31,7 +31,7 @@ int RegistrarClickhouse::configure(cfg_t *cfg)
     clickhouse_table  = cfg_getstr(clickhouse, CFG_PARAM_TABLE);
     clickhouse_period = cfg_getint(clickhouse, CFG_PARAM_PERIOD);
     if (clickhouse_dest.empty()) {
-        WARN("disable clickhouse snapshots because 'destinations' is empty");
+        DBG("disable clickhouse snapshots because 'destinations' is empty");
         return 0;
     }
 
