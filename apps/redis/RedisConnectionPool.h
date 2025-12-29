@@ -77,6 +77,7 @@ class RedisConnectionPool : public AmThread,
     virtual void on_retry_reqs_timer() {}
 
     static bool log_cmds;
+    static bool running;
 
   public:
     RedisConnectionPool(const char *name, const string &queue_name);
@@ -87,6 +88,7 @@ class RedisConnectionPool : public AmThread,
     string           get_queue_name() { return queue_name; }
     virtual void process_internal_reply(RedisConnection *c, int result, const AmObject *user_data, const AmArg &data) {}
     static bool  is_cmds_logging_enabled() { return log_cmds; }
+    static bool  is_running() { return running; }
 };
 
 #endif /*REDIS_CONNECTION_POOL_H*/

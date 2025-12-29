@@ -9,6 +9,7 @@
 #define event_dispatcher  AmEventDispatcher::instance()
 
 bool RedisConnectionPool::log_cmds = false;
+bool RedisConnectionPool::running  = false;
 
 int parseReply(redisReply *reply, RedisReply::result_type &result, AmArg &data)
 {
@@ -39,7 +40,9 @@ static void redis_request_cb_static(redisAsyncContext *, void *r, void *privdata
 
     bool access_error = false;
     if (reply == nullptr) {
-        ERROR("%s: I/O error", ctx->session_id.c_str());
+        if (!RedisConnectionPool::is_running()) {
+            ERROR("%s: I/O error", ctx->session_id.c_str());
+        }
     } else if (redis::isReplyError(reply)) {
         ERROR("%s: error: %s", ctx->session_id.c_str(), redis::getReplyError(reply));
         access_error = (strstr(redis::getReplyError(reply), "READONLY") != nullptr);
@@ -113,7 +116,6 @@ void RedisConnectionPool::run()
 {
     int                ret;
     void              *p;
-    bool               running;
     struct epoll_event events[EPOLL_MAX_EVENTS];
 
     setThreadName(name);
