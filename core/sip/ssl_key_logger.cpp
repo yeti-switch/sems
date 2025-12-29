@@ -15,7 +15,6 @@ SSLKeyLogger::SSLKeyLogger(const std::string &path, bool upload)
 
 SSLKeyLogger::~SSLKeyLogger()
 {
-    DBG("~SSLKeyLogger()");
     struct stat buf;
     if (stat(path.c_str(), &buf) || !buf.st_size) {
         unlink(path.c_str());
