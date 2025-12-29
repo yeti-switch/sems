@@ -144,7 +144,7 @@ void IdentityValidator::dispose()
 IdentityValidator::IdentityValidator()
     : AmEventFdQueue(this)
     , epoll_fd(-1)
-    , name("identity_validator_app")
+    , name("identity")
     , queue_name(IDENTITY_VALIDATOR_APP_QUEUE)
     , stopped(false)
 {
