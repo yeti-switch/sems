@@ -119,7 +119,7 @@ void AmThread::stop(bool join_afer_stop)
     pthread_getname_np(_td, thread_name, 16);
 
     // gives the thread a chance to clean up
-    DBG("Thread %s %lu (%lu)calling on_stop, give it a chance to clean up", thread_name,
+    DBG("Thread %s %lu (%lu) calling on_stop, give it a chance to clean up", thread_name,
         static_cast<unsigned long int>(_pid), static_cast<unsigned long int>(_td));
 
     try {
