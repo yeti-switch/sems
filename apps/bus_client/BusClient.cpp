@@ -41,7 +41,6 @@ BusClient::BusClient(const string &name)
     , AmEventFdQueue(this)
     , timer_val(0)
     , query_timer_val(0)
-    , stopped(false)
     , config{}
     , epoll_fd(-1)
     , tostop(false)
@@ -152,7 +151,7 @@ int BusClient::onLoad()
 void BusClient::on_stop()
 {
     stop_event.fire();
-    stopped.wait_for();
+    join();
 }
 
 void BusClient::on_timer()
@@ -421,8 +420,6 @@ void BusClient::run()
     close(epoll_fd);
 
     DBG("BusClient stopped");
-
-    stopped.set(true);
 }
 
 bool BusClient::link(int fd, int op, struct epoll_event &ev)

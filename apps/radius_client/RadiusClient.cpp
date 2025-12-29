@@ -51,7 +51,6 @@ RadiusClient *RadiusClient::instance()
 RadiusClient::RadiusClient(const string &name)
     : AmDynInvokeFactory(name)
     , AmEventFdQueue(this)
-    , stopped(false)
     , epoll_fd(-1)
 {
 }
@@ -195,15 +194,13 @@ void RadiusClient::run()
     close(epoll_fd);
     AmEventDispatcher::instance()->delEventQueue(RADIUS_EVENT_QUEUE);
 
-    stopped.set(true);
-
     DBG("RadiusClient stopped");
 }
 
 void RadiusClient::on_stop()
 {
     stop_event.fire();
-    stopped.wait_for();
+    join();
 }
 
 void RadiusClient::process(AmEvent *ev)

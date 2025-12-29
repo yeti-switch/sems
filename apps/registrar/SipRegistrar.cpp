@@ -373,14 +373,12 @@ void SipRegistrar::run()
     close(epoll_fd);
 
     DBG("SIPRegistrar stopped");
-
-    stopped.set(true);
 }
 
 void SipRegistrar::on_stop()
 {
     stop_event.fire();
-    stopped.wait_for();
+    join();
 }
 
 int SipRegistrar::configure(cfg_t *cfg)

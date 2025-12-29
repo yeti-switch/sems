@@ -32,7 +32,6 @@ SctpBus::SctpBus(const string &name)
     , AmConfigFactory(name)
     , AmEventFdQueue(this)
     , reader(MOD_NAME)
-    , stopped(false)
     , epoll_fd(-1)
 {
 }
@@ -230,15 +229,13 @@ void SctpBus::run()
     close(epoll_fd);
     AmEventDispatcher::instance()->delEventQueue(SCTP_BUS_EVENT_QUEUE);
 
-    stopped.set(true);
-
     DBG("SctpBus stopped");
 }
 
 void SctpBus::on_stop()
 {
     stop_event.fire();
-    stopped.wait_for();
+    join();
 }
 
 void SctpBus::process(AmEvent *ev)

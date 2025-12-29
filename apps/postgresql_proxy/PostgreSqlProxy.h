@@ -21,9 +21,8 @@ class PostgreSqlProxy : public AmThread, public AmEventFdQueue, public AmEventHa
     friend class PostgreSqlMockFactory;
     static PostgreSqlProxy *_instance;
 
-    AmEventFd         stop_event;
-    AmCondition<bool> stopped;
-    int               epoll_fd;
+    AmEventFd stop_event;
+    int       epoll_fd;
 
     struct Response {
         int ref_index;

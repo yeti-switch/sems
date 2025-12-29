@@ -46,7 +46,6 @@ Mixer::Mixer()
     , AmConfigFactory(MOD_NAME)
     , AmEventFdQueue(this)
     , running(true)
-    , stopped(false)
     , epoll_fd(-1)
 {
     _instance = this;
@@ -58,7 +57,6 @@ Mixer::Mixer(const string &name)
     , AmConfigFactory(MOD_NAME)
     , AmEventFdQueue(this)
     , running(true)
-    , stopped(false)
     , epoll_fd(-1)
 {
     _instance = this;
@@ -295,7 +293,7 @@ void Mixer::on_stop()
 {
     running = false;
     event.fire();
-    stopped.wait_for();
+    join();
 }
 
 
@@ -376,7 +374,7 @@ void Mixer::run()
     AmEventDispatcher::instance()->delEventQueue(MIXER_EVENT_QUEUE);
 
     DetachConferenceMediaFromMediaProcessorThreads();
-    stopped.set(true);
+
     DBG("Mixer stopped");
 }
 

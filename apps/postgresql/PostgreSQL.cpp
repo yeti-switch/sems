@@ -216,14 +216,12 @@ void PostgreSQL::run()
     close(epoll_fd);
 
     DBG("PostgreSQL Client stopped");
-
-    stopped.set(true);
 }
 
 void PostgreSQL::on_stop()
 {
     stop_event.fire();
-    stopped.wait_for();
+    join();
 }
 
 bool PostgreSQL::showStatistics(const string &connection_id, const AmArg &request_id, const AmArg &params)

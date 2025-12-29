@@ -31,9 +31,8 @@ class RadiusClient : public AmDynInvokeFactory,
     typedef map<unsigned int, RadiusAccConnection *> AccConnections;
     AccConnections                                   acc_connections;
 
-    AmEventFd         stop_event;
-    AmTimerFd         timer;
-    AmCondition<bool> stopped;
+    AmEventFd stop_event;
+    AmTimerFd timer;
 
     int epoll_fd;
 

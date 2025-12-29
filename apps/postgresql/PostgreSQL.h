@@ -74,7 +74,6 @@ class PostgreSQL : public AmThread,
     static PostgreSQL *_instance;
 
     AmEventFd                        stop_event;
-    AmCondition<bool>                stopped;
     map<string, PoolWorker *>        workers;
     map<string, JsonRpcRequestEvent> rpcRequests;
     int                              epoll_fd;

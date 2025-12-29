@@ -55,11 +55,10 @@ class SIPRegistrarClient : public AmDynInvokeFactory,
                            public AmEventHandler,
                            public StatsCountersGroupsContainerInterface,
                            public RegClientClickhouse {
-    int               epoll_fd;
-    AmTimerFd         timer;
-    AmTimerFd         postponed_regs_timer;
-    AmEventFd         stop_event;
-    AmCondition<bool> stopped;
+    int       epoll_fd;
+    AmTimerFd timer;
+    AmTimerFd postponed_regs_timer;
+    AmEventFd stop_event;
 
     // registrations container
     AmMutex reg_mut;

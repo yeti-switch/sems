@@ -124,7 +124,6 @@ SIPRegistrarClient::SIPRegistrarClient(const string &name)
     : AmDynInvokeFactory(MOD_NAME)
     , AmConfigFactory(MOD_NAME)
     , AmEventFdQueue(this)
-    , stopped(false)
     , default_expires(DEFAULT_EXPIRES)
     , shaper_min_interval_per_domain(0)
     , uac_auth_i(NULL)
@@ -270,7 +269,7 @@ void SIPRegistrarClient::run()
     close(epoll_fd);
 
     onServerShutdown();
-    stopped.set(true);
+
     DBG("SIPRegistrarClient ending...");
 }
 
@@ -633,7 +632,7 @@ void SIPRegistrarClient::onBusEvent(BusReplyEvent *bus_event)
 void SIPRegistrarClient::on_stop()
 {
     stop_event.fire();
-    stopped.wait_for();
+    join();
 }
 
 

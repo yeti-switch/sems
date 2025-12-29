@@ -24,8 +24,7 @@ class HttpClient : public AmThread,
     friend class HttpClientFactory;
     static HttpClient *_instance;
 
-    AmEventFd         stop_event;
-    AmCondition<bool> stopped;
+    AmEventFd stop_event;
 
     int epoll_fd;
 

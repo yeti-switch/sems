@@ -191,14 +191,12 @@ void S3Client::run()
     close(epoll_fd);
 
     DBG("S3Client stopped");
-
-    stopped.set(true);
 }
 
 void S3Client::on_stop()
 {
     stop_event.fire();
-    stopped.wait_for();
+    join();
 }
 
 int S3Client::init()

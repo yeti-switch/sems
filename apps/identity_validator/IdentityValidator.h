@@ -128,9 +128,8 @@ class IdentityValidator : public AmThread,
     const char *name;
     string      queue_name;
 
-    AmTimerFd         each_second_timer;
-    AmEventFd         stop_event;
-    AmCondition<bool> stopped;
+    AmTimerFd each_second_timer;
+    AmEventFd stop_event;
 
     int                  expires;
     string               http_destination;

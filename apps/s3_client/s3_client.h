@@ -48,7 +48,6 @@ class S3Client : public AmThread,
     static S3Client *_instance;
 
     AmEventFd         stop_event;
-    AmCondition<bool> stopped;
     int               epoll_fd;
     S3RequestContext *s3ctx;
     struct {

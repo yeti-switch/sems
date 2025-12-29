@@ -16,10 +16,9 @@ class OptionsProber : public AmDynInvokeFactory,
                       public AmEventHandler,
                       public RpcTreeHandler,
                       public StatsCountersGroupsContainerInterface {
-    int               epoll_fd;
-    AmTimerFd         timer;
-    AmEventFd         stop_event;
-    AmCondition<bool> stopped;
+    int       epoll_fd;
+    AmTimerFd timer;
+    AmEventFd stop_event;
 
     // probers container
     std::map<unsigned int, SipSingleProbe *> probers_by_id;

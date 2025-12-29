@@ -74,7 +74,6 @@ RedisConnectionPool::RedisConnectionPool(const char *name, const string &queue_n
     , epoll_fd(-1)
     , name(name)
     , queue_name(queue_name)
-    , stopped(false)
 {
     event_dispatcher->addEventQueue(queue_name, this);
 }
@@ -169,8 +168,6 @@ void RedisConnectionPool::run()
     close(epoll_fd);
 
     DBG("async redis '%s' stopped", name);
-
-    stopped.set(true);
 }
 
 void RedisConnectionPool::process(AmEvent *ev)
@@ -348,5 +345,5 @@ void RedisConnectionPool::init_retry_reqs_timer(unsigned int timeout_ms)
 void RedisConnectionPool::on_stop()
 {
     stop_event.fire();
-    stopped.wait_for();
+    join();
 }

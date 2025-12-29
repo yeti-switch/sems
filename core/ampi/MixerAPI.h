@@ -150,12 +150,11 @@ class Mixer : public AmDynInvokeFactory,
     static Mixer *_instance;
     static RxRing rx_ring;
 
-    AmEventFd         event;
-    bool              running;
-    AmCondition<bool> stopped;
-    int               epoll_fd;
-    int               socket_fd;
-    sockaddr_storage  l_saddr;
+    AmEventFd        event;
+    bool             running;
+    int              epoll_fd;
+    int              socket_fd;
+    sockaddr_storage l_saddr;
 
 
     /** AmMediaProcessorThread[n] -> ConferenceMedia */

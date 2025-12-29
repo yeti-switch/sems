@@ -146,7 +146,6 @@ IdentityValidator::IdentityValidator()
     , epoll_fd(-1)
     , name("identity")
     , queue_name(IDENTITY_VALIDATOR_APP_QUEUE)
-    , stopped(false)
 {
     event_dispatcher->addEventQueue(queue_name, this);
 }
@@ -256,14 +255,12 @@ void IdentityValidator::run()
     close(epoll_fd);
 
     DBG("async '%s' stopped", name);
-
-    stopped.set(true);
 }
 
 void IdentityValidator::on_stop()
 {
     stop_event.fire();
-    stopped.wait_for();
+    join();
 }
 
 void IdentityValidator::onTimer(const std::chrono::system_clock::time_point &now)

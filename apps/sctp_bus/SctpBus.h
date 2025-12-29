@@ -35,9 +35,8 @@ class SctpBus : public AmDynInvokeFactory,
     SctpServerConnection server_connection;
     cfg_reader           reader;
 
-    AmEventFd         stop_event;
-    AmTimerFd         timer;
-    AmCondition<bool> stopped;
+    AmEventFd stop_event;
+    AmTimerFd timer;
 
     int epoll_fd;
 

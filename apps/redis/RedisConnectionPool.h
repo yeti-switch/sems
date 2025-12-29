@@ -52,8 +52,7 @@ class RedisConnectionPool : public AmThread,
     const char *name;
     string      queue_name;
 
-    AmEventFd         stop_event;
-    AmCondition<bool> stopped;
+    AmEventFd stop_event;
 
     AmTimerFd reconnect_timer;
     AmTimerFd retry_reqs_timer;

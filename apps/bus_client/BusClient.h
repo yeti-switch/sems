@@ -62,8 +62,7 @@ class BusClient : public AmDynInvokeFactory,
     AmTimerFd query_timer;
     uint64_t  query_timer_val;
 
-    AmEventFd         stop_event;
-    AmCondition<bool> stopped;
+    AmEventFd stop_event;
 
     typedef std::unordered_map<int, std::unique_ptr<BusDynamicQueue>> DynamicQueuesMap;
     DynamicQueuesMap                                                  dynamic_queues;

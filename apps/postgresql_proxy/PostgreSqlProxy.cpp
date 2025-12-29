@@ -183,14 +183,12 @@ void PostgreSqlProxy::run()
     close(epoll_fd);
 
     DBG("PostgreSqlProxy Client stopped");
-
-    stopped.set(true);
 }
 
 void PostgreSqlProxy::on_stop()
 {
     stop_event.fire();
-    stopped.wait_for();
+    join();
 }
 
 /* rpc handlers */

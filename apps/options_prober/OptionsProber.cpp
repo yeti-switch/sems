@@ -38,7 +38,6 @@ OptionsProber::OptionsProber(const string &name)
     : AmDynInvokeFactory(MOD_NAME)
     , AmConfigFactory(MOD_NAME)
     , AmEventFdQueue(this)
-    , stopped(false)
     , uac_auth_i(nullptr)
 {
 }
@@ -125,7 +124,6 @@ void OptionsProber::run()
     close(epoll_fd);
 
     onServerShutdown();
-    stopped.set(true);
 }
 
 void OptionsProber::checkTimeouts()
@@ -300,7 +298,7 @@ void OptionsProber::onSipReplyEvent(AmSipReplyEvent *ev)
 void OptionsProber::on_stop()
 {
     stop_event.fire();
-    stopped.wait_for();
+    join();
 }
 
 void OptionsProber::init_rpc_tree()

@@ -84,7 +84,6 @@ void HttpClient::dispose()
 HttpClient::HttpClient()
     : AmEventFdQueue(this)
     , ShutdownHandler(MOD_NAME, HTTP_EVENT_QUEUE)
-    , stopped(false)
     , epoll_fd(-1)
 {
     stat_group(Gauge, MOD_NAME, "sync_context_count").addFunctionCounter([]() -> unsigned long long {
@@ -508,14 +507,12 @@ void HttpClient::run()
     close(epoll_fd);
 
     DBG("HttpClient stopped");
-
-    stopped.set(true);
 }
 
 void HttpClient::on_stop()
 {
     stop_event.fire();
-    stopped.wait_for();
+    join();
 }
 
 void HttpClient::process(AmEvent *ev)

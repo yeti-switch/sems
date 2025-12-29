@@ -42,9 +42,8 @@ class SipRegistrar : public AmThread,
     friend RegistrarTest;
     static SipRegistrar *_instance;
 
-    int               epoll_fd;
-    AmEventFd         stop_event;
-    AmCondition<bool> stopped;
+    int       epoll_fd;
+    AmEventFd stop_event;
 
     AtomicCounter &register_events_counter;
     AtomicCounter &resolve_events_counter;
