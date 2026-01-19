@@ -209,8 +209,8 @@ int JsonrpcNetstringsConnection::read_data(char *data, int size)
 
 int JsonrpcNetstringsConnection::netstringsRead()
 {
-    if (!in_msg) {
-        while (true) {
+    while (true) {
+        if (!in_msg) {
             if (rcvd_size > MAX_NS_LEN_SIZE) {
                 DBG("closing connection [%p/%d]: oversize length", this, fd);
                 return REMOVE;
@@ -237,25 +237,9 @@ int JsonrpcNetstringsConnection::netstringsRead()
 #pragma GCC diagnostic pop
                     return REMOVE;
                 }
-                // received len - switch to receive msg mode
-                in_msg = true;
-                r      = read_data(msgbuf, msg_size + 1);
-                if (!r)
-                    return CONTINUE;
-                if (r < 0)
-                    return REMOVE;
-                rcvd_size = r;
-                // DBG("received '%.*s'", rcvd_size, msgbuf);
-
-                if (rcvd_size == msg_size + 1) {
-                    if (msgbuf[msg_size] == ',') {
-                        msgbuf[msg_size + 1] = '\0';
-                        return DISPATCH;
-                    }
-                    INFO("Protocol error on connection [%p/%d]: netstring not terminated with ','", this, fd);
-                    return REMOVE;
-                }
-                return CONTINUE;
+                in_msg    = true;
+                rcvd_size = 0;
+                continue;
             }
 
             if (msgbuf[rcvd_size] < '0' || msgbuf[rcvd_size] > '9') {
@@ -266,29 +250,30 @@ int JsonrpcNetstringsConnection::netstringsRead()
             }
 
             rcvd_size++;
-        }
-    } else {
-        ssize_t r = read_data(msgbuf + rcvd_size, msg_size - rcvd_size + 1);
-        if (r > 0) {
-            rcvd_size += r;
-            // DBG("msgbuf='%.*s'", msg_size+1,msgbuf);
-            if (rcvd_size == msg_size + 1) {
-                // DBG("msg_size = %d, rcvd_size = %d, <%c> ", msg_size, rcvd_size, msgbuf[msg_size-1]);
-                if (msgbuf[msg_size] == ',')
-                    return DISPATCH;
-                INFO("Protocol error on connection [%p/%d]: netstring not terminated with ','", this, fd);
-                return REMOVE;
+        } else {
+            // received len - switch to receive msg mode
+            ssize_t r = read_data(msgbuf + rcvd_size, msg_size - rcvd_size + 1);
+            if (r > 0) {
+                rcvd_size += r;
+                // DBG("msgbuf='%.*s'", msg_size+1,msgbuf);
+                if (rcvd_size == msg_size + 1) {
+                    // DBG("msg_size = %d, rcvd_size = %d, <%c> ", msg_size, rcvd_size, msgbuf[msg_size-1]);
+                    if (msgbuf[msg_size] == ',')
+                        return DISPATCH;
+                    INFO("Protocol error on connection [%p/%d]: netstring not terminated with ','", this, fd);
+                    return REMOVE;
+                }
+                return CONTINUE;
             }
-            return CONTINUE;
-        }
 
-        if (r < 0)
+            if (r < 0)
+                return REMOVE;
+            if (!r)
+                return CONTINUE; // necessary?
+
+            INFO("socket error on connection [%p/%d]: %s", this, fd, strerror(errno));
             return REMOVE;
-        if (!r)
-            return CONTINUE; // necessary?
-
-        INFO("socket error on connection [%p/%d]: %s", this, fd, strerror(errno));
-        return REMOVE;
+        }
     }
 }
 
