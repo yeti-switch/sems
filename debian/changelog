@@ -1,3 +1,7 @@
+sems (1.179.1) stable; urgency=low
+  * jsonrpc: fix netstring parsing
+ -- Michael Furmur <furmur@pm.me>  Mon, 19 Jan 2026 16:31:13 +0200
+
 sems (1.179.0) stable; urgency=low
   * registrar: remove redis functions support
   * registrar: add events counters
