@@ -197,12 +197,11 @@ tls_conf::cert_chain(const vector<string>                                       
 {
     vector<Botan::X509_Certificate> certs;
     for (auto &cert : certificates) {
-        std::string algorithm = cert.subject_public_key()->algo_name();
-        for (auto &key : cert_key_types) {
-            if (algorithm == key) {
-                // DBG("added certificate with algorithm %s", algorithm.c_str());
-                certs.push_back(cert);
-            }
+        if (cert_key_types.empty() || std::find(cert_key_types.begin(), cert_key_types.end(),
+                                                cert.subject_public_key()->algo_name()) != cert_key_types.end())
+        {
+            // DBG("added certificate with algorithm %s", cert.subject_public_key()->algo_name().c_str());
+            certs.push_back(cert);
         }
     }
 
