@@ -1,3 +1,7 @@
+sems (1.179.2) stable; urgency=low
+  * tls_trsp: fix certificates duplication in handshake
+ -- Michael Furmur <furmur@pm.me>  Thu, 22 Jan 2026 15:07:53 +0200
+
 sems (1.179.1) stable; urgency=low
   * jsonrpc: fix netstring parsing
  -- Michael Furmur <furmur@pm.me>  Mon, 19 Jan 2026 16:31:13 +0200
