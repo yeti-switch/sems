@@ -6,6 +6,7 @@
 #include <thread>
 #include <mutex>
 #include <chrono>
+#include <ranges>
 #include <unordered_set>
 
 void freePortBordersTest(unsigned short low, unsigned short high)
@@ -289,8 +290,7 @@ TEST(Config, DISABLED_MediaAquireOrderingMultithreaded)
     int high = 10001;
 
     int threads_count = 10;
-    // int aquires_count = 50;
-    int aquires_count = 500;
+    int aquires_count = 2000;
 
     RTP_info port_map(low, high);
     port_map.prepare("test");
@@ -298,6 +298,10 @@ TEST(Config, DISABLED_MediaAquireOrderingMultithreaded)
     std::mutex                                   m;
     std::vector<std::pair<std::thread::id, int>> aquired_ports;
     std::map<int, int>                           ports_distribution;
+
+    for (const int i : std::views::iota(low, high) | std::views::filter([](int i) { return 0 == i % 2; })) {
+        ports_distribution[i] = 0;
+    }
 
     DBG("start %d threads with %d aquires for range %d-%d", threads_count, aquires_count, low, high);
 
@@ -315,16 +319,16 @@ TEST(Config, DISABLED_MediaAquireOrderingMultithreaded)
                     // std::this_thread::sleep_for(std::chrono::milliseconds(1));
                     port = am_get_port(&ss);
                     delayed_ports_free.emplace_back(port);
-                    if (delayed_ports_free.size() > 2) {
-                        am_set_port(&ss, *delayed_ports_free.begin());
+                    if (delayed_ports_free.size() > 200) {
+                        am_set_port(&ss, delayed_ports_free.front());
+                        delayed_ports_free.pop_front();
                         port_map.freeRtpAddress(ss);
                     }
-                } else {
-                    port = -1;
+
+                    std::lock_guard<std::mutex> l(m);
+                    aquired_ports.emplace_back(std::this_thread::get_id(), port);
+                    ports_distribution[port]++;
                 }
-                std::lock_guard<std::mutex> l(m);
-                aquired_ports.emplace_back(std::this_thread::get_id(), port);
-                ports_distribution[port]++;
                 // std::this_thread::yield();
             }
         });
