@@ -313,6 +313,7 @@ void SipSingleProbe::getInfo(AmArg &a)
     a["to"]                 = dlg.getRemoteParty();
     a["contact"]            = contact_uri;
     a["proxy"]              = dlg.outbound_proxy;
+    a["route_set"]          = route_set;
     a["append_headers"]     = append_headers;
     a["sip_interface_name"] = sip_interface_name;
 
