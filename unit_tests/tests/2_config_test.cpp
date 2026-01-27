@@ -299,9 +299,8 @@ TEST(Config, DISABLED_MediaAquireOrderingMultithreaded)
     std::vector<std::pair<std::thread::id, int>> aquired_ports;
     std::map<int, int>                           ports_distribution;
 
-    for (const int i : std::views::iota(low, high) | std::views::filter([](int i) { return 0 == i % 2; })) {
+    for (int i = low; i <= high; i += 2)
         ports_distribution[i] = 0;
-    }
 
     DBG("start %d threads with %d aquires for range %d-%d", threads_count, aquires_count, low, high);
 
