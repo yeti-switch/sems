@@ -311,8 +311,8 @@ int AmBasicSipDialog::getOutboundIf()
         }
         if_it = AmConfig.local_sip_ip2if.find(local_ip);
         if (if_it == AmConfig.local_sip_ip2if.end()) {
-            ERROR("Could not find a local interface for resolved local IP (local_tag='%s';local_ip='%s')",
-                  local_tag.c_str(), local_ip.c_str());
+            DBG("Could not find a local interface for resolved local IP (local_tag='%s';local_ip='%s')",
+                local_tag.c_str(), local_ip.c_str());
             goto error;
         }
     } else {
