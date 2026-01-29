@@ -8,7 +8,7 @@ init:
 	git config --local core.hooksPath .githooks
 
 check:
-	./run_clang_format.py --clang-format-binary /usr/bin/clang-format-19 --check core apps tools unit_tests
+	./run_clang_format.py --clang-format-binary /usr/bin/clang-format-19 --check -x .git,build,debian,doc
 
 format:
-	./run_clang_format.py --clang-format-binary /usr/bin/clang-format-19 core apps tools unit_tests
+	./run_clang_format.py --clang-format-binary /usr/bin/clang-format-19 -x .git,build,debian,doc

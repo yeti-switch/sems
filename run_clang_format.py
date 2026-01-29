@@ -21,9 +21,14 @@ def glob_files(args):
     files = []
 
     extensions = args.extensions.split(',')
+    exclude = args.exclude.split(',') if args.exclude else ['.git']
 
     for directory in args.directories:
-        for root, _, filenames in os.walk(directory):
+        for root, dirs, filenames in os.walk(directory):
+            if dirs:
+                for e in exclude:
+                    if e in dirs:
+                        dirs.remove(e)
             for ext in extensions:
                 for filename in fnmatch.filter(filenames, '*.' + ext):
                     files.append(os.path.join(root, filename))
@@ -57,6 +62,8 @@ def parse_args(argv=None):
                         help='number of clang-format instances to be run in parallel')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='output verbose comments')
+    parser.add_argument('-x', '--exclude-dirs', dest='exclude',
+                        help='comma-delimited list of directories to ignore')
     parser.add_argument(metavar='DIRPATH', dest='directories', nargs='*',
                         help='path(s) used to glob source files')
 
