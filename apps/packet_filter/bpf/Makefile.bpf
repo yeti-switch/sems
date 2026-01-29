@@ -16,6 +16,7 @@ out_obj = $(addprefix $(skel_dir)/, $(patsubst %.bpf.c, %.skel.h, $(bpf_src)))
 BPF_CFLAGS ?=
 BPF_CFLAGS += -O2 -g
 BPF_CFLAGS += -std=gnu17
+BPF_CFLAGS += -target bpf
 BPF_CFLAGS += -Werror
 BPF_CFLAGS += -Wno-unused-value
 BPF_CFLAGS += -Wno-pointer-sign
