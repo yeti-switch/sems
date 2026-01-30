@@ -464,6 +464,9 @@ void tls_trsp_socket::tls_record_received([[maybe_unused]] uint64_t seq_no, std:
 void tls_trsp_socket::tls_alert([[maybe_unused]] Botan::TLS::Alert alert)
 {
     DBG("alert type: %d, desc: %s", alert.type(), alert.type_string().c_str());
+    tls_server_socket::tls_statistics *tls_stats =
+        dynamic_cast<tls_server_socket::tls_statistics *>(server_sock->get_statistics());
+    tls_stats->incTlsAlertCount(alert.type());
 }
 
 void tls_trsp_socket::tls_session_established(const Botan::TLS::Session_Summary &session)
@@ -592,6 +595,10 @@ tls_server_socket::tls_server_socket(unsigned short if_num, unsigned short proto
 {
 }
 
+#define MAGIC_ENUM_RANGE_MIN 0
+#define MAGIC_ENUM_RANGE_MAX 256
+#include "magic_enum.hpp"
+
 tls_server_socket::tls_statistics::tls_statistics(trsp_socket::socket_transport transport, unsigned short if_num,
                                                   unsigned short proto_idx)
     : tcp_server_socket::tcp_statistics(transport, if_num, proto_idx)
@@ -612,6 +619,14 @@ tls_server_socket::tls_statistics::tls_statistics(trsp_socket::socket_transport 
               .addLabel("transport", trsp_socket::socket_transport2proto_str(transport))
               .addLabel("protocol", AmConfig.sip_ifs[if_num].proto_info[proto_idx]->ipTypeToStr()))
 {
+    const auto alerts_entries = magic_enum::enum_entries<Botan::TLS::AlertType>();
+    for (const auto alert : alerts_entries) {
+        alert_type_counter counter({
+            { "interface", AmConfig.sip_ifs[if_num].name },
+            {      "type",     std::string(alert.second) }
+        });
+        alertTypeCounter.try_emplace(alert.first, std::move(counter));
+    }
 }
 
 void tls_server_socket::tls_statistics::changeCountConnection(bool remove, tcp_base_trsp *socket)
@@ -649,6 +664,23 @@ void tls_server_socket::tls_statistics::decTlsConnectedConnectionsCount(tcp_base
     else
         countInTlsConnectedConnections.dec();
 }
+
+void tls_server_socket::tls_statistics::incTlsAlertCount(Botan::TLS::AlertType type)
+{
+    auto it = alertTypeCounter.find(type);
+    if (it != alertTypeCounter.end())
+        it->second.count.inc();
+}
+
+void tls_server_socket::tls_statistics::iterateTlsAlerts(StatCounterInterface::iterate_func_type callback)
+{
+    for (auto counter : alertTypeCounter) {
+        int count = counter.second.count.get();
+        if (count)
+            callback(count, counter.second.labels);
+    }
+}
+
 
 void tls_cleanup()
 {

@@ -178,11 +178,24 @@ class tls_server_socket : public trsp_server_socket {
     struct tls_statistics : public tcp_server_socket::tcp_statistics {
         AtomicCounter &countInTlsConnectedConnections;
         AtomicCounter &countOutTlsConnectedConnections;
+
+        struct alert_type_counter {
+            map<string, string> labels;
+            atomic_int64        count;
+            alert_type_counter() = delete;
+            alert_type_counter(std::initializer_list<std::pair<const std::string, std::string>> l)
+                : labels(l)
+            {
+            }
+        };
+        map<Botan::TLS::AlertType, alert_type_counter> alertTypeCounter;
         tls_statistics(socket_transport transport, unsigned short if_num, unsigned short proto_idx);
         ~tls_statistics() {}
         void changeCountConnection(bool remove, tcp_base_trsp *socket) override;
         void incTlsConnectedConnectionsCount(tcp_base_trsp *socket);
         void decTlsConnectedConnectionsCount(tcp_base_trsp *socket);
+        void incTlsAlertCount(Botan::TLS::AlertType type);
+        void iterateTlsAlerts(StatCounterInterface::iterate_func_type callback);
     };
 
     tls_server_socket(unsigned short if_num, unsigned short proto_idx, unsigned int opts, socket_transport transport);

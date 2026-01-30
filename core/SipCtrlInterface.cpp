@@ -634,6 +634,16 @@ int _SipCtrlInterface::load()
                 socket->getAcceptQueueSize(f);
             }
         });
+    stat_group(Counter, "core", "tls_alerts")
+        .addFunctionGroupCounter([](StatCounterInterface::iterate_func_type callback) {
+            SipCtrlInterface *sip_ctrl = SipCtrlInterface::instance();
+            for (int i = 0; i < sip_ctrl->nr_tls_sockets; i++) {
+                tls_server_socket                 *socket = sip_ctrl->tls_sockets[i];
+                tls_server_socket::tls_statistics *tls_stats =
+                    dynamic_cast<tls_server_socket::tls_statistics *>(socket->get_statistics());
+                tls_stats->iterateTlsAlerts(callback);
+            }
+        });
 
     return 0;
 }
