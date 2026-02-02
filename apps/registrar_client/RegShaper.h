@@ -27,13 +27,16 @@ class RegShaper {
     ThrottlingHash          throttling_hash;
     ThrottlingIntervalsHash throttling_intervals_hash;
     ThrottlingHashValue     global_last_req_time;
+    milliseconds            postponed_regs_timer_interval;
 
     milliseconds diff(const timep &tp1, const timep &tp2);
+    void         recalc_postponed_regs_timer_interval(int key_min_interval = 0);
 
   public:
     RegShaper()
         : enabled(false)
         , min_interval(milliseconds::zero())
+        , postponed_regs_timer_interval(milliseconds::zero())
     {
     }
 
@@ -57,6 +60,7 @@ class RegShaper {
     {
         min_interval = milliseconds(msec);
         enabled      = true;
+        recalc_postponed_regs_timer_interval();
     }
 
     int get_min_interval() { return min_interval.count(); }
@@ -70,5 +74,8 @@ class RegShaper {
         }
         throttling_intervals_hash.emplace(key, interval);
         enabled = true;
+        recalc_postponed_regs_timer_interval(msec);
     }
+
+    int get_postponed_regs_timer_interval() { return postponed_regs_timer_interval.count(); }
 };

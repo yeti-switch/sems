@@ -314,7 +314,7 @@ void SIPRegistrarClient::checkTimeouts()
     // reset postponed_regs_timer if needed
     if (is_postponed_reg_exists) {
         if (postponed_regs_timer.is_active() == false) {
-            postponed_regs_timer.set(shaper.get_min_interval() * 1000);
+            postponed_regs_timer.set(shaper.get_postponed_regs_timer_interval() * 1000);
         }
     } else {
         if (postponed_regs_timer.is_active()) {
