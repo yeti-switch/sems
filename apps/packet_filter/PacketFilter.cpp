@@ -175,6 +175,7 @@ int PacketFilter::onLoad()
     stop_event.link(epoll_fd);
 
     AmEventDispatcher::instance()->addEventQueue(PF_QUEUE, this);
+    statistics::instance()->add_groups_container("packet_filter", this, false);
 
     instance()->start();
 
@@ -206,7 +207,7 @@ void PacketFilter::on_stop()
 }
 
 
-void PacketFilter::dump_counter_map(sa_family_t sa_family, __u32 batch_size, AmArg &ret)
+void PacketFilter::dump_counter_map(sa_family_t sa_family, __u32 batch_size, iterate_pf_counters_callback_type callback)
 {
     sockaddr_storage       src, dst;
     struct sockaddr_in    *src_sin, *dst_sin;
@@ -260,30 +261,26 @@ void PacketFilter::dump_counter_map(sa_family_t sa_family, __u32 batch_size, AmA
             next = false;
 
         for (unsigned i = 0; i < count; i++) {
-            char                label[INET6_ADDRSTRLEN * 2 + 16];
             struct counter_val *val = &values[i];
-
-            ret.push(AmArg());
-            AmArg &cnt = ret.back();
 
             if (sa_family == AF_INET) {
                 struct counter_v4_key *key = &key_v4[i];
 
                 src_sin->sin_addr.s_addr = key->pair.src;
                 dst_sin->sin_addr.s_addr = key->pair.dst;
-                snprintf(label, sizeof(label), "%s:%u - %s:%u", am_inet_ntop(&dst).c_str(), key->port16[DST_PORT],
-                         am_inet_ntop(&src).c_str(), key->port16[SRC_PORT]);
+                src_sin->sin_port        = key->port16[SRC_PORT];
+                dst_sin->sin_port        = key->port16[DST_PORT];
+
             } else {
                 struct counter_v6_key *key = &key_v6[i];
 
                 src_sin6->sin6_addr = key->pair.src;
                 dst_sin6->sin6_addr = key->pair.dst;
-                snprintf(label, sizeof(label), "%s:%u - %s:%u", am_inet_ntop(&dst).c_str(), key->port16[DST_PORT],
-                         am_inet_ntop(&src).c_str(), key->port16[SRC_PORT]);
+                src_sin6->sin6_port = key->port16[SRC_PORT];
+                dst_sin6->sin6_port = key->port16[DST_PORT];
             }
 
-            cnt[label]["bytes"] = (long long)val->bytes;
-            cnt[label]["pkts"]  = (long long)val->packets;
+            callback(src, dst, *val);
         }
 
         first = false;
@@ -361,8 +358,36 @@ void PacketFilter::showCounters(const AmArg &args, AmArg &ret)
 {
     __u32 batch_size = 1024;
 
-    dump_counter_map(AF_INET, batch_size, ret);
-    dump_counter_map(AF_INET6, batch_size, ret);
+    auto fmt = [&ret](const sockaddr_storage &src, const sockaddr_storage &dst, const counter_val &val) {
+        char label[INET6_ADDRSTRLEN * 2 + 16];
+
+        ret.push(AmArg());
+        AmArg &cnt = ret.back();
+
+        if (src.ss_family == AF_INET) {
+            struct sockaddr_in *src_sin, *dst_sin;
+
+            src_sin = (struct sockaddr_in *)&src;
+            dst_sin = (struct sockaddr_in *)&dst;
+
+            snprintf(label, sizeof(label), "%s:%u - %s:%u", am_inet_ntop(&dst).c_str(), dst_sin->sin_port,
+                     am_inet_ntop(&src).c_str(), src_sin->sin_port);
+        } else {
+            struct sockaddr_in6 *src_sin6, *dst_sin6;
+
+            src_sin6 = (struct sockaddr_in6 *)&src;
+            dst_sin6 = (struct sockaddr_in6 *)&dst;
+
+            snprintf(label, sizeof(label), "%s:%u - %s:%u", am_inet_ntop(&dst).c_str(), dst_sin6->sin6_port,
+                     am_inet_ntop(&src).c_str(), src_sin6->sin6_port);
+        }
+
+        cnt[label]["bytes"] = (long long)val.bytes;
+        cnt[label]["pkts"]  = (long long)val.packets;
+    };
+
+    dump_counter_map(AF_INET, batch_size, fmt);
+    dump_counter_map(AF_INET6, batch_size, fmt);
 }
 
 
@@ -400,4 +425,59 @@ void PacketFilter::init_rpc_tree()
     reg_method(show, "counters", "", "", &PacketFilter::showCounters, this);
     reg_method(set, "block_mode", "", "", &PacketFilter::setBlockMode, this);
     reg_method(set, "packets_count_threshold", "", "", &PacketFilter::setPacketCountThreshold, this);
+}
+
+
+void PacketFilter::operator()(const string &name, iterate_groups_callback_type callback)
+{
+    unsigned      packets_count_threshold = bpf_prog_filter->data->packets_count_threshold;
+    __u32         batch_size              = 1024;
+    PfMetricGroup g;
+
+    auto fmt = [packets_count_threshold, &g](const sockaddr_storage &src, const sockaddr_storage &dst,
+                                             const counter_val &val) {
+        char src_buf[INET6_ADDRSTRLEN + 16];
+        char dst_buf[INET6_ADDRSTRLEN + 16];
+
+        PfMetricGroup::pf_info pf_info;
+
+        if (packets_count_threshold > val.packets)
+            return;
+
+        if (src.ss_family == AF_INET) {
+            struct sockaddr_in *src_sin, *dst_sin;
+
+            src_sin = (struct sockaddr_in *)&src;
+            dst_sin = (struct sockaddr_in *)&dst;
+
+            snprintf(src_buf, sizeof(src_buf), "%s:%u", am_inet_ntop(&src).c_str(), src_sin->sin_port);
+            snprintf(dst_buf, sizeof(dst_buf), "%s:%u", am_inet_ntop(&dst).c_str(), dst_sin->sin_port);
+
+        } else {
+            struct sockaddr_in6 *src_sin6, *dst_sin6;
+
+            src_sin6 = (struct sockaddr_in6 *)&src;
+            dst_sin6 = (struct sockaddr_in6 *)&dst;
+
+            snprintf(src_buf, sizeof(src_buf), "[%s]:%u", am_inet_ntop(&src).c_str(), src_sin6->sin6_port);
+            snprintf(dst_buf, sizeof(dst_buf), "[%s]:%u", am_inet_ntop(&dst).c_str(), dst_sin6->sin6_port);
+        }
+
+        pf_info.labels["src"] = src_buf;
+        pf_info.labels["dst"] = dst_buf;
+        pf_info.pkt_cnt       = val.packets;
+
+        g.add_pf_info(pf_info);
+    };
+
+    dump_counter_map(AF_INET, batch_size, fmt);
+    dump_counter_map(AF_INET6, batch_size, fmt);
+
+    g.serialize(callback);
+}
+
+
+void PfMetricGroup::add_pf_info(const pf_info &info)
+{
+    data.emplace_back(info);
 }
