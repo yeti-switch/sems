@@ -11,7 +11,8 @@
 
 char _license[] SEC("license") = "GPL";
 
-int tc_action_block = TC_ACT_UNSPEC;
+int tc_action_block         = TC_ACT_UNSPEC;
+int packets_count_threshold = 5;
 
 __arena void *mem = NULL;
 
@@ -295,7 +296,7 @@ static inline __u64 do_work_in_range(struct flow_key *flow, struct __sk_buff *sk
 
     bpf_timer_start(&val->timer, PAIR_TTL_SEC * 1000000000UL, 0);
 
-    return tc_action_block;
+    return val->packets >= packets_count_threshold ? tc_action_block : TC_ACT_UNSPEC;
 }
 
 

@@ -46,6 +46,7 @@ class PacketFilter : public AmDynInvokeFactory,
     rpc_handler showConfig;
     rpc_handler showCounters;
     rpc_handler setBlockMode;
+    rpc_handler setPacketCountThreshold;
 
     void run() override;
     void on_stop() override;

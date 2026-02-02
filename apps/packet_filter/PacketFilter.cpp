@@ -43,8 +43,37 @@ PacketFilter::~PacketFilter()
     close(epoll_fd);
 }
 
+
+#define OPT_PKT_CNT_THRESHOLD     "packets_count_threshold"
+#define DEFAULT_PKT_CNT_THRESHOLD 5
+#define OPT_BLOCK_MODE            "block_mode"
+
 int PacketFilter::configure(const std::string &config)
 {
+    cfg_opt_t opt[] = { CFG_INT(OPT_PKT_CNT_THRESHOLD, DEFAULT_PKT_CNT_THRESHOLD, CFGF_NONE),
+                        CFG_BOOL(OPT_BLOCK_MODE, cfg_false, CFGF_NONE), CFG_END() };
+    cfg_t    *cfg   = cfg_init(opt, CFGF_NONE);
+
+    if (!cfg)
+        return -1;
+
+    switch (cfg_parse_buf(cfg, config.c_str())) {
+    case CFG_SUCCESS: break;
+    case CFG_PARSE_ERROR:
+        ERROR("configuration of module %s parse error", MOD_NAME);
+        cfg_free(cfg);
+        return -1;
+    default:
+        ERROR("unexpected error on configuration of module %s processing", MOD_NAME);
+        cfg_free(cfg);
+        return -1;
+    }
+
+    int  packets_count_threshold = cfg_getint(cfg, OPT_PKT_CNT_THRESHOLD);
+    bool block_mode              = cfg_getbool(cfg, OPT_BLOCK_MODE);
+
+    cfg_free(cfg);
+
     if (!currentBpf || currentBpf->bpf_prog_load())
         return -1;
 
@@ -65,6 +94,9 @@ int PacketFilter::configure(const std::string &config)
     for (auto &[ifindex, tc_hook_created] : tc_ifs)
         if (currentBpf->tc_ingress_attach(ifindex, tc_hook_created))
             return -1;
+
+    bpf_prog_filter->data->tc_action_block         = block_mode ? TC_ACT_SHOT : TC_ACT_UNSPEC;
+    bpf_prog_filter->data->packets_count_threshold = packets_count_threshold;
 
     return 0;
 }
@@ -347,6 +379,18 @@ void PacketFilter::setBlockMode(const AmArg &args, AmArg &ret)
 }
 
 
+void PacketFilter::setPacketCountThreshold(const AmArg &args, AmArg &ret)
+{
+    if (!bpf_prog_filter)
+        return;
+    int packets_count_threshold = bpf_prog_filter->data->packets_count_threshold;
+
+    if (args.size() == 1 && str2int(args[0].asCStr(), packets_count_threshold))
+        bpf_prog_filter->data->packets_count_threshold = packets_count_threshold;
+
+    ret["packets_count_threshold"] = packets_count_threshold;
+}
+
 void PacketFilter::init_rpc_tree()
 {
     auto &show = reg_leaf(root, "show");
@@ -355,4 +399,5 @@ void PacketFilter::init_rpc_tree()
     reg_method(show, "config", "", "", &PacketFilter::showConfig, this);
     reg_method(show, "counters", "", "", &PacketFilter::showCounters, this);
     reg_method(set, "block_mode", "", "", &PacketFilter::setBlockMode, this);
+    reg_method(set, "packets_count_threshold", "", "", &PacketFilter::setPacketCountThreshold, this);
 }
