@@ -22,15 +22,14 @@ class RegShaper {
     typedef map<ThrottlingHashKey, ThrottlingHashValue> ThrottlingHash;
     typedef map<ThrottlingHashKey, milliseconds>        ThrottlingIntervalsHash;
 
-    bool                    enabled;
-    milliseconds            min_interval;
-    ThrottlingHash          throttling_hash;
-    ThrottlingIntervalsHash throttling_intervals_hash;
-    ThrottlingHashValue     global_last_req_time;
-    milliseconds            postponed_regs_timer_interval;
+    bool                        enabled;
+    milliseconds                min_interval;
+    ThrottlingHash              throttling_hash;
+    ThrottlingIntervalsHash     throttling_intervals_hash;
+    ThrottlingHashValue         global_last_req_time;
+    std::optional<milliseconds> postponed_regs_timer_interval;
 
     milliseconds diff(const timep &tp1, const timep &tp2);
-    void         recalc_postponed_regs_timer_interval(int key_min_interval = 0);
 
   public:
     RegShaper()
@@ -58,9 +57,9 @@ class RegShaper {
 
     void set_min_interval(int msec)
     {
-        min_interval = milliseconds(msec);
-        enabled      = true;
-        recalc_postponed_regs_timer_interval();
+        min_interval                  = milliseconds(msec);
+        enabled                       = true;
+        postponed_regs_timer_interval = min_interval;
     }
 
     int get_min_interval() { return min_interval.count(); }
@@ -74,8 +73,16 @@ class RegShaper {
         }
         throttling_intervals_hash.emplace(key, interval);
         enabled = true;
-        recalc_postponed_regs_timer_interval(msec);
+
+        if (postponed_regs_timer_interval.has_value()) {
+            postponed_regs_timer_interval = std::min(postponed_regs_timer_interval.value(), interval);
+        } else {
+            postponed_regs_timer_interval = interval;
+        }
     }
 
-    int get_postponed_regs_timer_interval() { return postponed_regs_timer_interval.count(); }
+    unsigned int get_postponed_regs_timer_interval_ms()
+    {
+        return postponed_regs_timer_interval.value_or(milliseconds::zero()).count();
+    }
 };
