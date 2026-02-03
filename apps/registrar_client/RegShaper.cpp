@@ -2,6 +2,7 @@
 #include "log.h"
 
 #include <ctime>
+#include <limits>
 
 bool RegShaper::check_rate_limit(const string &key, timep &next_attempt_time)
 {

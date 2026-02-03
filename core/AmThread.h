@@ -286,15 +286,15 @@ class AmTimerFd {
     int  timer_fd;
     bool active;
 
-    int settime(unsigned int umsec, unsigned int repeat_umsec);
+    int settime(unsigned int usec, unsigned int repeat_usec);
 
   public:
-    AmTimerFd(unsigned int umsec = 0, bool repeat = true)
+    AmTimerFd(unsigned int usec = 0, bool repeat = true)
         : active(false)
     {
         if ((timer_fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK)) == -1)
             throw string("timerfd. timerfd_create call failed");
-        if (settime(umsec, repeat ? umsec : 0))
+        if (settime(usec, repeat ? usec : 0))
             throw string("timerfd. timer set failed");
     }
 
@@ -307,10 +307,10 @@ class AmTimerFd {
     operator int() { return -timer_fd; }
 
     /** Set time */
-    int set(unsigned int umsec, bool repeat = true) { return settime(umsec, repeat ? umsec : 0); }
+    int set(unsigned int usec, bool repeat = true) { return settime(usec, repeat ? usec : 0); }
 
     /** Set time with explicit repeat interval */
-    int set(unsigned int umsec, unsigned int repeat_umsec) { return settime(umsec, repeat_umsec); }
+    int set(unsigned int usec, unsigned int repeat_usec) { return settime(usec, repeat_usec); }
 
     /** Add to external epoll handler */
     void link(int fd, bool ptr = false)

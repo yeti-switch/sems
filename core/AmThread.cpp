@@ -35,11 +35,11 @@
 #include <string>
 using std::string;
 
-int AmTimerFd::settime(unsigned int umsec, unsigned int repeat_umsec)
+int AmTimerFd::settime(unsigned int usec, unsigned int repeat_usec)
 {
     struct itimerspec tmr;
-    longlong2timespec(tmr.it_value, umsec);
-    longlong2timespec(tmr.it_interval, repeat_umsec);
+    longlong2timespec(tmr.it_value, usec);
+    longlong2timespec(tmr.it_interval, repeat_usec);
     int res = timerfd_settime(timer_fd, 0, &tmr, nullptr);
     active  = (res == 0 && (tmr.it_value.tv_sec != 0 || tmr.it_value.tv_nsec != 0));
     return res;
@@ -47,6 +47,7 @@ int AmTimerFd::settime(unsigned int umsec, unsigned int repeat_umsec)
 
 AmThread::AmThread()
     : _stopped(true)
+    , _pid(0)
 {
 }
 

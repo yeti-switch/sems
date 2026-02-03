@@ -22,11 +22,12 @@ class RegShaper {
     typedef map<ThrottlingHashKey, ThrottlingHashValue> ThrottlingHash;
     typedef map<ThrottlingHashKey, milliseconds>        ThrottlingIntervalsHash;
 
-    bool                    enabled;
-    milliseconds            min_interval;
-    ThrottlingHash          throttling_hash;
-    ThrottlingIntervalsHash throttling_intervals_hash;
-    ThrottlingHashValue     global_last_req_time;
+    bool                        enabled;
+    milliseconds                min_interval;
+    ThrottlingHash              throttling_hash;
+    ThrottlingIntervalsHash     throttling_intervals_hash;
+    ThrottlingHashValue         global_last_req_time;
+    std::optional<milliseconds> postponed_regs_timer_interval;
 
     milliseconds diff(const timep &tp1, const timep &tp2);
 
@@ -34,6 +35,7 @@ class RegShaper {
     RegShaper()
         : enabled(false)
         , min_interval(milliseconds::zero())
+        , postponed_regs_timer_interval(milliseconds::zero())
     {
     }
 
@@ -55,8 +57,9 @@ class RegShaper {
 
     void set_min_interval(int msec)
     {
-        min_interval = milliseconds(msec);
-        enabled      = true;
+        min_interval                  = milliseconds(msec);
+        enabled                       = true;
+        postponed_regs_timer_interval = min_interval;
     }
 
     int get_min_interval() { return min_interval.count(); }
@@ -70,5 +73,16 @@ class RegShaper {
         }
         throttling_intervals_hash.emplace(key, interval);
         enabled = true;
+
+        if (postponed_regs_timer_interval.has_value()) {
+            postponed_regs_timer_interval = std::min(postponed_regs_timer_interval.value(), interval);
+        } else {
+            postponed_regs_timer_interval = interval;
+        }
+    }
+
+    unsigned int get_postponed_regs_timer_interval_ms()
+    {
+        return postponed_regs_timer_interval.value_or(milliseconds::zero()).count();
     }
 };
