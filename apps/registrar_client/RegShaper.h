@@ -35,7 +35,6 @@ class RegShaper {
     RegShaper()
         : enabled(false)
         , min_interval(milliseconds::zero())
-        , postponed_regs_timer_interval(milliseconds::zero())
     {
     }
 
