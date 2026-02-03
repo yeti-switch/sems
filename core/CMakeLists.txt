@@ -11,7 +11,7 @@ FILE (GLOB sems_SRCS "*.cpp" "sip/*.cpp" "resample/*.cpp" "*.c" "rtcp/*.cpp"  "m
 SET(SEMS_LIB libsems)
 
 #SET(aux_binaries decode_test utf8_test)
-SET(aux_binaries decode-test jwt-tool)
+SET(aux_binaries decode-test jwt-tool rtp-gen)
 
 set (audio_files
 beep.wav
