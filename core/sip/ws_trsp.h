@@ -119,7 +119,7 @@ class ws_trsp_socket : public ws_output, public tcp_trsp_socket {
     int         send_data(const char *msg, const int msg_len, unsigned int flags);
     int         send(const char *msg, const int msg_len, unsigned int flags)
     {
-        return tcp_trsp_socket::send(&peer_addr, msg, msg_len, flags);
+        return tcp_trsp_socket::send(&peer_addr, "", msg, msg_len, flags);
     }
 
     cstring get_host() { return cstring(get_peer_ip().c_str(), get_peer_ip().size()); }
@@ -144,10 +144,10 @@ class ws_trsp_socket : public ws_output, public tcp_trsp_socket {
   public:
     virtual ~ws_trsp_socket();
 
-    void               pre_write();
-    void               post_write();
-    int                send(const sockaddr_storage *sa, const char *msg, const int msg_len, unsigned int flags);
-    bool               is_ws_connected() { return static_cast<ws_input *>(input)->is_connected(); }
+    void pre_write();
+    void post_write();
+    int  send(const sockaddr_storage *sa, const string &host, const char *msg, const int msg_len, unsigned int flags);
+    bool is_ws_connected() { return static_cast<ws_input *>(input)->is_connected(); }
     unsigned long long getQueueSize();
 };
 
@@ -156,12 +156,12 @@ class wss_trsp_socket : public ws_output, public tls_trsp_socket {
     friend class wss_socket_factory;
     const char *get_transport() const { return "wss"; }
     wss_trsp_socket(trsp_server_socket *server_sock, trsp_worker *server_worker, int sd, const sockaddr_storage *sa,
-                    socket_transport transport, event_base *evbase);
+                    const string &host, socket_transport transport, event_base *evbase);
 
     int send_data(const char *msg, const int msg_len, unsigned int flags);
     int send(const char *msg, const int msg_len, unsigned int flags)
     {
-        return tls_trsp_socket::send(&peer_addr, msg, msg_len, flags);
+        return tls_trsp_socket::send(&peer_addr, get_sni(), msg, msg_len, flags);
     }
     cstring get_host() { return cstring(get_peer_ip().c_str(), get_peer_ip().size()); }
 
@@ -181,10 +181,10 @@ class wss_trsp_socket : public ws_output, public tls_trsp_socket {
   public:
     ~wss_trsp_socket();
 
-    void               pre_write();
-    void               post_write();
-    int                send(const sockaddr_storage *sa, const char *msg, const int msg_len, unsigned int flags);
-    bool               is_ws_connected() { return static_cast<wss_input *>(input)->is_connected(); }
+    void pre_write();
+    void post_write();
+    int  send(const sockaddr_storage *sa, const string &host, const char *msg, const int msg_len, unsigned int flags);
+    bool is_ws_connected() { return static_cast<wss_input *>(input)->is_connected(); }
     unsigned long long getQueueSize();
 };
 
@@ -193,7 +193,7 @@ class wss_socket_factory : public trsp_socket_factory {
     wss_socket_factory(tcp_base_trsp::socket_transport transport);
 
     tcp_base_trsp *create_socket(trsp_server_socket *server_sock, trsp_worker *server_worker, int sd,
-                                 const sockaddr_storage *sa, event_base *evbase);
+                                 const sockaddr_storage *sa, const string &host, event_base *evbase);
 };
 
 class ws_socket_factory : public trsp_socket_factory {
@@ -201,7 +201,7 @@ class ws_socket_factory : public trsp_socket_factory {
     ws_socket_factory(tcp_base_trsp::socket_transport transport);
 
     tcp_base_trsp *create_socket(trsp_server_socket *server_sock, trsp_worker *server_worker, int sd,
-                                 const sockaddr_storage *sa, event_base *evbase);
+                                 const sockaddr_storage *sa, const string &host, event_base *evbase);
 };
 
 class ws_server_socket : public trsp_server_socket {

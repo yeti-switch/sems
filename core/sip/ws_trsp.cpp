@@ -596,14 +596,14 @@ void ws_trsp_socket::post_write()
     tcp_trsp_socket::post_write();
 }
 
-int ws_trsp_socket::send(const sockaddr_storage *sa, const char *msg, const int msg_len,
+int ws_trsp_socket::send(const sockaddr_storage *sa, const string &host, const char *msg, const int msg_len,
                          [[maybe_unused]] unsigned int flags)
 {
     if (closed || (check_connection() < 0))
         return -1;
 
-    DBG("add msg to send deque/from %s:%i to %s:%i\n--++--\n%.*s--++--", actual_ip.c_str(), actual_port,
-        get_addr_str(sa).c_str(), am_get_port(sa), msg_len, msg);
+    DBG("add msg to send deque/from %s:%i to (%s)%s:%i\n--++--\n%.*s--++--", actual_ip.c_str(), actual_port,
+        host.c_str(), get_addr_str(sa).c_str(), am_get_port(sa), msg_len, msg);
 
     static_cast<ws_input *>(input)->send(new msg_buf(sa, msg, msg_len));
 
@@ -631,7 +631,7 @@ ws_socket_factory::ws_socket_factory(tcp_base_trsp::socket_transport transport)
 }
 
 tcp_base_trsp *ws_socket_factory::create_socket(trsp_server_socket *server_sock, trsp_worker *server_worker, int sd,
-                                                const sockaddr_storage *sa, event_base *evbase)
+                                                const sockaddr_storage *sa, const string &, event_base *evbase)
 {
     return new ws_trsp_socket(server_sock, server_worker, sd, sa, transport, evbase);
 }
@@ -644,9 +644,9 @@ ws_server_socket::ws_server_socket(short unsigned int if_num, short unsigned int
 }
 
 wss_trsp_socket::wss_trsp_socket(trsp_server_socket *server_sock, trsp_worker *server_worker, int sd,
-                                 const sockaddr_storage *sa, trsp_socket::socket_transport transport,
-                                 struct event_base *evbase)
-    : tls_trsp_socket(server_sock, server_worker, sd, sa, transport, evbase, new wss_input(this, sd != -1))
+                                 const sockaddr_storage *sa, const string &host,
+                                 trsp_socket::socket_transport transport, struct event_base *evbase)
+    : tls_trsp_socket(server_sock, server_worker, sd, sa, host, transport, evbase, new wss_input(this, sd != -1))
 {
 }
 
@@ -751,14 +751,14 @@ void wss_trsp_socket::post_write()
     tls_trsp_socket::post_write();
 }
 
-int wss_trsp_socket::send(const sockaddr_storage *sa, const char *msg, const int msg_len,
+int wss_trsp_socket::send(const sockaddr_storage *sa, const string &host, const char *msg, const int msg_len,
                           [[maybe_unused]] unsigned int flags)
 {
     if (closed || (check_connection() < 0))
         return -1;
 
-    DBG("add msg to send deque/from %s:%i to %s:%i\n--++--\n%.*s--++--", actual_ip.c_str(), actual_port,
-        get_addr_str(sa).c_str(), am_get_port(sa), msg_len, msg);
+    DBG("add msg to send deque/from %s:%i to (%s)%s:%i\n--++--\n%.*s--++--", actual_ip.c_str(), actual_port,
+        host.c_str(), get_addr_str(sa).c_str(), am_get_port(sa), msg_len, msg);
 
     static_cast<wss_input *>(input)->send(new msg_buf(sa, msg, msg_len));
 
@@ -786,9 +786,9 @@ wss_socket_factory::wss_socket_factory(tcp_base_trsp::socket_transport transport
 }
 
 tcp_base_trsp *wss_socket_factory::create_socket(trsp_server_socket *server_sock, trsp_worker *server_worker, int sd,
-                                                 const sockaddr_storage *sa, event_base *evbase)
+                                                 const sockaddr_storage *sa, const string &host, event_base *evbase)
 {
-    return new wss_trsp_socket(server_sock, server_worker, sd, sa, transport, evbase);
+    return new wss_trsp_socket(server_sock, server_worker, sd, sa, host, transport, evbase);
 }
 
 wss_server_socket::wss_server_socket(short unsigned int if_num, short unsigned int proto_idx, unsigned int opts,

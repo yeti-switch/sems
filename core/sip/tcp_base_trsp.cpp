@@ -622,9 +622,10 @@ void tcp_base_trsp::copy_peer_addr(sockaddr_storage *sa)
 }
 
 tcp_base_trsp *trsp_socket_factory::new_connection(trsp_server_socket *server_sock, trsp_worker *server_worker, int sd,
-                                                   const sockaddr_storage *sa, struct event_base *evbase)
+                                                   const sockaddr_storage *sa, const string &host,
+                                                   struct event_base *evbase)
 {
-    tcp_base_trsp *socket = create_socket(server_sock, server_worker, sd, sa, evbase);
+    tcp_base_trsp *socket = create_socket(server_sock, server_worker, sd, sa, host, evbase);
     server_sock->get_statistics()->changeCountConnection(false, socket);
     return socket;
 }
@@ -695,8 +696,8 @@ bool trsp_worker::remove_connection(const string &ip, unsigned short port, unsig
     return false;
 }
 
-int trsp_worker::send(trsp_server_socket *server_sock, const sockaddr_storage *sa, const char *msg, const int msg_len,
-                      unsigned int flags)
+int trsp_worker::send(trsp_server_socket *server_sock, const sockaddr_storage *sa, const string &host, const char *msg,
+                      const int msg_len, unsigned int flags)
 {
     tcp_base_trsp *sock    = NULL;
     string         conn_id = get_connection_id(sa, server_sock);
@@ -718,7 +719,7 @@ int trsp_worker::send(trsp_server_socket *server_sock, const sockaddr_storage *s
 
     if (!sock) {
         // TODO: add flags to avoid new connections (ex: UAs behind NAT)
-        tcp_base_trsp *new_sock = new_connection(server_sock, sa);
+        tcp_base_trsp *new_sock = new_connection(server_sock, sa, host);
         if (new_sock) {
             sock = new_sock;
             inc_ref(sock);
@@ -732,7 +733,7 @@ int trsp_worker::send(trsp_server_socket *server_sock, const sockaddr_storage *s
 
     // must be done outside from connections_mut
     // to avoid dead-lock with the event base
-    int ret = sock->send(sa, msg, msg_len, flags);
+    int ret = sock->send(sa, host, msg, msg_len, flags);
     if ((ret < 0) && new_conn) {
         remove_connection(sock);
     }
@@ -746,7 +747,7 @@ void trsp_worker::create_connected(trsp_server_socket *server_sock, int sd, cons
     if (sd < 0) {
         return;
     }
-    tcp_base_trsp *new_sock = server_sock->sock_factory->new_connection(server_sock, this, sd, sa, evbase);
+    tcp_base_trsp *new_sock = server_sock->sock_factory->new_connection(server_sock, this, sd, sa, "", evbase);
     if (new_sock) {
         add_connection(new_sock);
         new_sock->set_connected(true);
@@ -757,11 +758,12 @@ void trsp_worker::create_connected(trsp_server_socket *server_sock, int sd, cons
 }
 
 
-tcp_base_trsp *trsp_worker::new_connection(trsp_server_socket *server_sock, const sockaddr_storage *sa)
+tcp_base_trsp *trsp_worker::new_connection(trsp_server_socket *server_sock, const sockaddr_storage *sa,
+                                           const string &host)
 {
     string conn_id = get_connection_id(sa, server_sock);
 
-    tcp_base_trsp *new_sock = server_sock->sock_factory->new_connection(server_sock, this, -1, sa, evbase);
+    tcp_base_trsp *new_sock = server_sock->sock_factory->new_connection(server_sock, this, -1, sa, host, evbase);
     if (!new_sock)
         return 0;
     connections[conn_id] = new_sock;
@@ -1014,12 +1016,13 @@ void trsp_server_socket::on_accept(int sd, [[maybe_unused]] short ev)
     workers[idx]->create_connected(this, connection_sd, &src_addr);
 }
 
-int trsp_server_socket::send(const sockaddr_storage *sa, const char *msg, const int msg_len, unsigned int flags)
+int trsp_server_socket::send(const sockaddr_storage *sa, const string &host, const char *msg, const int msg_len,
+                             unsigned int flags)
 {
     uint32_t     h   = hash_addr(sa);
     unsigned int idx = h % workers.size();
     DBG("trsp_server_socket::send: idx = %u", idx);
-    return workers[idx]->send(this, sa, msg, msg_len, flags);
+    return workers[idx]->send(this, sa, host, msg, msg_len, flags);
 }
 
 void trsp_server_socket::set_connect_timeout(unsigned int ms)

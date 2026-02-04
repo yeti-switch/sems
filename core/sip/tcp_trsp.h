@@ -44,7 +44,8 @@ class tcp_trsp_socket : public tcp_base_trsp {
   public:
     virtual ~tcp_trsp_socket();
 
-    int  send(const sockaddr_storage *sa, const char *msg, const int msg_len, unsigned int flags) override;
+    int  send(const sockaddr_storage *sa, const string &host, const char *msg, const int msg_len,
+              unsigned int flags) override;
     void set_connected(bool val) override;
 };
 
@@ -53,7 +54,7 @@ class tcp_socket_factory : public trsp_socket_factory {
     tcp_socket_factory(tcp_base_trsp::socket_transport transport);
 
     tcp_base_trsp *create_socket(trsp_server_socket *server_sock, trsp_worker *server_worker, int sd,
-                                 const sockaddr_storage *sa, event_base *evbase);
+                                 const sockaddr_storage *sa, const string &host, event_base *evbase);
 };
 
 class tcp_server_socket : public trsp_server_socket {

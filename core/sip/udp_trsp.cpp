@@ -250,12 +250,12 @@ int udp_trsp_socket::sendmsg(const sockaddr_storage *sa, const char *msg, const 
     return 0;
 }
 
-int udp_trsp_socket::send(const sockaddr_storage *sa, const char *msg, const int msg_len,
+int udp_trsp_socket::send(const sockaddr_storage *sa, const string &host, const char *msg, const int msg_len,
                           [[maybe_unused]] unsigned int flags)
 {
     if (log_level_raw_msgs >= 0) {
-        _LOG(log_level_raw_msgs, "send msg via UDP from %s:%i to %s:%i\n--++--\n%.*s--++--\n", actual_ip.c_str(),
-             actual_port, get_addr_str(sa).c_str(), ntohs(((sockaddr_in *)sa)->sin_port), msg_len, msg);
+        _LOG(log_level_raw_msgs, "send msg via UDP from %s:%i to (%s)%s:%i\n--++--\n%.*s--++--\n", actual_ip.c_str(),
+             actual_port, host.c_str(), get_addr_str(sa).c_str(), ntohs(((sockaddr_in *)sa)->sin_port), msg_len, msg);
     }
 
     if (socket_options & use_raw_sockets)

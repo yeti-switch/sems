@@ -251,7 +251,8 @@ class trsp_socket : public atomic_ref_cnt {
      * Sends a message.
      * @return -1 if error(s) occured.
      */
-    virtual int send(const sockaddr_storage *sa, const char *msg, const int msg_len, unsigned int flags) = 0;
+    virtual int send(const sockaddr_storage *sa, const string &host, const char *msg, const int msg_len,
+                     unsigned int flags) = 0;
 
     virtual void getInfo(AmArg &) {}
 

@@ -604,7 +604,7 @@ int _trans_layer::send_reply(sip_msg *msg, const trans_ticket *tt, const cstring
         50 /* preview - instead of p_msg->len */, reply_buf);
 
     // TODO: pass send-flags down to here
-    err = local_socket->send(&remote_ip, reply_buf, reply_len, 0);
+    err = local_socket->send(&remote_ip, req->remote_host, reply_buf, reply_len, 0);
     if (err < 0) {
         ERROR("could not send to %s:%i <%.*s...>", get_addr_str(&remote_ip).c_str(),
               ntohs(((sockaddr_in *)&remote_ip)->sin_port), 50 /* preview - instead of p_msg->len */, reply_buf);
@@ -826,7 +826,7 @@ int _trans_layer::send_sl_reply(sip_msg *req, int reply_code, const cstring &rea
 
     assert(req->local_socket);
 
-    int err = req->local_socket->send(&req->remote_ip, reply_buf, reply_len, 0);
+    int err = req->local_socket->send(&req->remote_ip, req->remote_host, reply_buf, reply_len, 0);
     delete[] reply_buf;
 
     stats.inc_sent_replies();
@@ -1252,6 +1252,7 @@ static int generate_and_parse_new_msg(sip_msg *msg, sip_msg *&p_msg)
     // copy msg->remote_ip
     memcpy(&p_msg->remote_ip, &msg->remote_ip, sizeof(sockaddr_storage));
     p_msg->local_socket = msg->local_socket;
+    p_msg->remote_host  = msg->remote_host;
     inc_ref(p_msg->local_socket);
 
     return 0;
@@ -1329,7 +1330,7 @@ int _trans_layer::send_request(sip_msg *msg, trans_ticket *tt, const cstring &di
     tt->_t      = 0;
 
 try_next_dest:
-    if (targets->get_next(&msg->remote_ip, next_trsp, flags) < 0) {
+    if (targets->get_next(&msg->remote_ip, msg->remote_host, next_trsp, flags) < 0) {
         DBG("next_ip(): no more destinations! reply 500");
         sip_msg err;
         set_err_reply_from_req(&err, msg, 500, "No destination available");
@@ -2439,7 +2440,7 @@ void _trans_layer::send_non_200_ack(sip_msg *reply, sip_trans *t)
     DBG("About to send ACK");
 
     assert(inv->local_socket);
-    int send_err = inv->local_socket->send(&inv->remote_ip, ack_buf, ack_len, t->flags);
+    int send_err = inv->local_socket->send(&inv->remote_ip, inv->remote_host, ack_buf, ack_len, t->flags);
     if (send_err < 0) {
         ERROR("Error from transport layer: call_id %s", inv->callid ? inv->callid->value.s : "unknown");
     } else
@@ -2737,7 +2738,7 @@ int _trans_layer::try_next_ip(trans_bucket *bucket, sip_trans *tr, bool use_new_
 
 try_next_dest:
     // get the next ip
-    if (!tr->targets || tr->targets->get_next(&sa, next_trsp, tr->flags) < 0) {
+    if (!tr->targets || tr->targets->get_next(&sa, tr->msg->remote_host, next_trsp, tr->flags) < 0) {
         DBG("no more destinations!");
         if (orig_tr != tr) {
             // abandon newly created transaction

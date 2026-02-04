@@ -302,26 +302,32 @@ static tls_settings *getTlsSetting(int sd, int if_, int proto)
 }
 
 tls_trsp_socket::tls_trsp_socket(trsp_server_socket *server_sock, trsp_worker *server_worker, int sd,
-                                 const sockaddr_storage *sa, trsp_socket::socket_transport transport,
-                                 event_base *evbase, trsp_input *input)
+                                 const sockaddr_storage *sa, const string &host,
+                                 trsp_socket::socket_transport transport, event_base *evbase, trsp_input *input)
     : tcp_base_trsp(server_sock, server_worker, sd, sa, transport, evbase, input)
     , tls_callbacks(std::make_shared<BotanTLSCallbacksProxy>(*this))
     , tls_connected(false)
     , rand_gen(std::make_shared<Botan::System_RNG>())
     , settings(std::make_shared<tls_conf>(getTlsSetting(sd, server_sock->get_if(), server_sock->get_proto_idx())))
 {
+    sockaddr_storage dst;
+    if (!am_inet_pton(host.c_str(), &dst))
+        sni = host;
     init(sa);
 }
 
 tls_trsp_socket::tls_trsp_socket(trsp_server_socket *server_sock, trsp_worker *server_worker, int sd,
-                                 const sockaddr_storage *sa, trsp_socket::socket_transport transport,
-                                 struct event_base *evbase)
+                                 const sockaddr_storage *sa, const string &host,
+                                 trsp_socket::socket_transport transport, struct event_base *evbase)
     : tcp_base_trsp(server_sock, server_worker, sd, sa, transport, evbase, new tls_input)
     , tls_callbacks(std::make_shared<BotanTLSCallbacksProxy>(*this))
     , tls_connected(false)
     , rand_gen(std::make_shared<Botan::System_RNG>())
     , settings(std::make_shared<tls_conf>(getTlsSetting(sd, server_sock->get_if(), server_sock->get_proto_idx())))
 {
+    sockaddr_storage dst;
+    if (!am_inet_pton(host.c_str(), &dst))
+        sni = host;
     init(sa);
 }
 
@@ -340,10 +346,9 @@ void tls_trsp_socket::init(const sockaddr_storage *sa)
             settings->set_policy_overrides(toString(sa_ssl->sig), toString(sa_ssl->cipher), toString(sa_ssl->mac));
         }
 
-        tls_channel =
-            new Botan::TLS::Client(tls_callbacks, session_manager_tls::instance()->ssm, settings, settings, rand_gen,
-                                   Botan::TLS::Server_Information(get_peer_ip().c_str(), get_peer_port()),
-                                   Botan::TLS::Protocol_Version::TLS_V12);
+        tls_channel = new Botan::TLS::Client(tls_callbacks, session_manager_tls::instance()->ssm, settings, settings,
+                                             rand_gen, Botan::TLS::Server_Information(sni.c_str(), get_peer_port()),
+                                             Botan::TLS::Protocol_Version::TLS_V12);
     } else {
         tls_channel = new Botan::TLS::Server(tls_callbacks, session_manager_tls::instance()->ssm, settings, settings,
                                              rand_gen, false);
@@ -519,6 +524,20 @@ void tls_trsp_socket::tls_verify_cert_chain(const std::vector<Botan::X509_Certif
                                                      policy);
 }
 
+void tls_trsp_socket::tls_examine_extensions(const Botan::TLS::Extensions &extn, Botan::TLS::Connection_Side which_side,
+                                             Botan::TLS::Handshake_Type which_message)
+{
+    for (auto &ext : extn.all()) {
+        if (ext->type() == Botan::TLS::Extension_Code::ServerNameIndication) {
+            auto sni_ext = dynamic_cast<Botan::TLS::Server_Name_Indicator *>(ext.get());
+            if (sni_ext && !sni_ext->empty()) {
+                sni = sni_ext->host_name();
+                break;
+            }
+        }
+    }
+}
+
 void tls_trsp_socket::set_connected(bool val)
 {
     if (connected != val) {
@@ -533,7 +552,7 @@ void tls_trsp_socket::set_connected(bool val)
     }
 }
 
-int tls_trsp_socket::send(const sockaddr_storage *sa, const char *msg, const int msg_len,
+int tls_trsp_socket::send(const sockaddr_storage *sa, const string &host, const char *msg, const int msg_len,
                           [[maybe_unused]] unsigned int flags)
 {
     std::unique_lock _l(sock_mut);
@@ -541,8 +560,8 @@ int tls_trsp_socket::send(const sockaddr_storage *sa, const char *msg, const int
     if (closed || (check_connection() < 0))
         return -1;
 
-    DBG("add msg to send deque/from %s:%i to %s:%i\n--++--\n%.*s--++--", actual_ip.c_str(), actual_port,
-        get_addr_str(sa).c_str(), am_get_port(sa), msg_len, msg);
+    DBG("add msg to send deque/from %s:%i to (%s)%s:%i\n--++--\n%.*s--++--", actual_ip.c_str(), actual_port,
+        host.c_str(), get_addr_str(sa).c_str(), am_get_port(sa), msg_len, msg);
 
     orig_send_q.push_back(new msg_buf(sa, msg, msg_len));
 
@@ -563,6 +582,7 @@ void tls_trsp_socket::getInfo(AmArg &ret)
         ret["ssl_cipher"]     = toString(ssl->cipher);
         ret["ssl_mac"]        = toString(ssl->mac);
         ret["tls_queue_size"] = orig_send_q.size();
+        ret["sni"]            = sni;
     }
     tcp_base_trsp::getInfo(ret);
 }
@@ -578,10 +598,10 @@ tls_socket_factory::tls_socket_factory(tcp_base_trsp::socket_transport transport
 }
 
 tcp_base_trsp *tls_socket_factory::create_socket(trsp_server_socket *server_sock, trsp_worker *server_worker, int sd,
-                                                 const sockaddr_storage *sa, event_base *evbase)
+                                                 const sockaddr_storage *sa, const string &host, event_base *evbase)
 {
     try {
-        return new tls_trsp_socket(server_sock, server_worker, sd, sa, transport, evbase);
+        return new tls_trsp_socket(server_sock, server_worker, sd, sa, host, transport, evbase);
     } catch (Botan::Exception &ex) {
         ERROR("Botan tls error: %s", ex.what());
         return 0;

@@ -118,6 +118,7 @@ class tls_trsp_socket : public tcp_base_trsp, public Botan::TLS::Callbacks {
 
     bool     tls_connected;
     uint16_t ciphersuite;
+    string   sni;
 
     std::shared_ptr<Botan::RandomNumberGenerator> rand_gen;
     Botan::TLS::Channel                          *tls_channel;
@@ -126,7 +127,7 @@ class tls_trsp_socket : public tcp_base_trsp, public Botan::TLS::Callbacks {
     friend class tls_socket_factory;
     friend class tls_input;
     tls_trsp_socket(trsp_server_socket *server_sock, trsp_worker *server_worker, int sd, const sockaddr_storage *sa,
-                    socket_transport transport, event_base *evbase);
+                    const string &host, socket_transport transport, event_base *evbase);
 
     void init(const sockaddr_storage *sa);
 
@@ -140,6 +141,8 @@ class tls_trsp_socket : public tcp_base_trsp, public Botan::TLS::Callbacks {
                                const std::vector<std::optional<Botan::OCSP::Response>> &ocsp_responses,
                                const std::vector<Botan::Certificate_Store *> &trusted_roots, Botan::Usage_Type usage,
                                std::string_view hostname, const Botan::TLS::Policy &policy);
+    void tls_examine_extensions(const Botan::TLS::Extensions &extn, Botan::TLS::Connection_Side which_side,
+                                Botan::TLS::Handshake_Type which_message);
 
   protected:
     deque<msg_buf *> orig_send_q;
@@ -147,7 +150,7 @@ class tls_trsp_socket : public tcp_base_trsp, public Botan::TLS::Callbacks {
   protected:
     const char *get_transport() const { return "tls"; }
     tls_trsp_socket(trsp_server_socket *server_sock, trsp_worker *server_worker, int sd, const sockaddr_storage *sa,
-                    socket_transport transport, event_base *evbase, trsp_input *input);
+                    const string &host, socket_transport transport, event_base *evbase, trsp_input *input);
 
   public:
     virtual ~tls_trsp_socket();
@@ -157,9 +160,10 @@ class tls_trsp_socket : public tcp_base_trsp, public Botan::TLS::Callbacks {
 
     void copy_peer_addr(sockaddr_storage *sa);
 
-    int  send(const sockaddr_storage *sa, const char *msg, const int msg_len, unsigned int flags);
+    int  send(const sockaddr_storage *sa, const string &host, const char *msg, const int msg_len, unsigned int flags);
     void set_connected(bool val);
-    bool is_tls_connected() { return tls_connected; }
+    const string &get_sni() { return sni; }
+    bool          is_tls_connected() { return tls_connected; }
 
     void               getInfo(AmArg &ret);
     unsigned long long getQueueSize();
@@ -170,7 +174,7 @@ class tls_socket_factory : public trsp_socket_factory {
     tls_socket_factory(tcp_base_trsp::socket_transport transport);
 
     tcp_base_trsp *create_socket(trsp_server_socket *server_sock, trsp_worker *server_worker, int sd,
-                                 const sockaddr_storage *sa, event_base *evbase);
+                                 const sockaddr_storage *sa, const string &host, event_base *evbase);
 };
 
 class tls_server_socket : public trsp_server_socket {

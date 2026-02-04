@@ -116,7 +116,7 @@ void sip_trans::retransmit()
     }
     assert(retr_socket);
 
-    int send_err = retr_socket->send(&retr_addr, retr_buf, retr_len, flags);
+    int send_err = retr_socket->send(&retr_addr, msg->remote_host, retr_buf, retr_len, flags);
     if (send_err < 0) {
         ERROR("Error from transport layer: call_id %s", msg->callid ? msg->callid->value.s : "unknown");
     }

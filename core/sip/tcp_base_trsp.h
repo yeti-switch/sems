@@ -200,10 +200,10 @@ class trsp_socket_factory : public atomic_ref_cnt {
     virtual ~trsp_socket_factory() {}
 
     tcp_base_trsp *new_connection(trsp_server_socket *server_sock, trsp_worker *server_worker, int sd,
-                                  const sockaddr_storage *sa, struct event_base *evbase);
+                                  const sockaddr_storage *sa, const string &host, struct event_base *evbase);
 
     virtual tcp_base_trsp *create_socket(trsp_server_socket *server_sock, trsp_worker *server_worker, int sd,
-                                         const sockaddr_storage *sa, event_base *evbase) = 0;
+                                         const sockaddr_storage *sa, const string &host, event_base *evbase) = 0;
 
     tcp_base_trsp::socket_transport transport;
 };
@@ -223,14 +223,14 @@ class trsp_worker : public AmThread {
 
     friend class trsp_server_socket;
     void           create_connected(trsp_server_socket *server_sock, int sd, const sockaddr_storage *sa);
-    tcp_base_trsp *new_connection(trsp_server_socket *server_sock, const sockaddr_storage *sa);
+    tcp_base_trsp *new_connection(trsp_server_socket *server_sock, const sockaddr_storage *sa, const string &host);
 
   public:
     trsp_worker();
     virtual ~trsp_worker();
 
-    int send(trsp_server_socket *server_sock, const sockaddr_storage *sa, const char *msg, const int msg_len,
-             unsigned int flags);
+    int send(trsp_server_socket *server_sock, const sockaddr_storage *sa, const string &host, const char *msg,
+             const int msg_len, unsigned int flags);
 
     void               add_connection(tcp_base_trsp *client_sock);
     void               remove_connection(tcp_base_trsp *client_sock);
@@ -311,7 +311,8 @@ class trsp_server_socket : public trsp_socket {
     void add_event(struct event_base *evbase);
 
     int bind(const string &address, unsigned short port) override;
-    int send(const sockaddr_storage *sa, const char *msg, const int msg_len, unsigned int flags) override;
+    int send(const sockaddr_storage *sa, const string &host, const char *msg, const int msg_len,
+             unsigned int flags) override;
 
     /**
      * Set timeout in milliseconds for the connection

@@ -913,7 +913,8 @@ dns_base_entry *dns_naptr_entry::get_rr(dns_record *rr, u_char *, u_char *end)
     return naptr_r;
 }
 
-sip_target::sip_target()
+sip_target::sip_target(const string &host)
+    : host(host)
 {
     bzero(&ss, sizeof(sockaddr_storage));
 }
@@ -927,6 +928,7 @@ const sip_target &sip_target::operator=(const sip_target &target)
 {
     memcpy(&ss, &target.ss, sizeof(sockaddr_storage));
     trsp = target.trsp;
+    host = target.host;
     return *this;
 }
 
@@ -1028,7 +1030,8 @@ bool sip_target_set::has_next()
     return dest_list_it != dest_list.end();
 }
 
-int sip_target_set::get_next(sockaddr_storage *ss, trsp_socket::socket_transport &next_trsp, unsigned int flags)
+int sip_target_set::get_next(sockaddr_storage *ss, string &host, trsp_socket::socket_transport &next_trsp,
+                             unsigned int flags)
 {
     do {
         if (!has_next())
@@ -1037,7 +1040,7 @@ int sip_target_set::get_next(sockaddr_storage *ss, trsp_socket::socket_transport
         sip_target &t = *dest_list_it;
         memcpy(ss, &t.ss, sizeof(sockaddr_storage));
         next_trsp = t.trsp;
-
+        host      = t.host;
         next();
 
     } while (!(flags & TR_FLAG_DISABLE_BL) && tr_blacklist::instance()->exist(ss));
@@ -1062,8 +1065,8 @@ void sip_target_set::debug()
     DBG("target list:");
 
     for (list<sip_target>::iterator it = dest_list.begin(); it != dest_list.end(); it++) {
-        DBG("\t%c %s:%u/%d(%s)", it == dest_list_it ? '>' : ' ', am_inet_ntop(&it->ss).c_str(), am_get_port(&it->ss),
-            it->trsp, trsp_socket::socket_transport2proto_str(it->trsp));
+        DBG("\t%c (%s)%s:%u/%d(%s)", it == dest_list_it ? '>' : ' ', it->host.c_str(), am_inet_ntop(&it->ss).c_str(),
+            am_get_port(&it->ss), it->trsp, trsp_socket::socket_transport2proto_str(it->trsp));
     }
 }
 
@@ -1505,7 +1508,7 @@ int _resolver::resolve_targets(const list<sip_destination> &dest_list, sip_targe
     bool sips_scheme;
 
     for (list<sip_destination>::const_iterator it = dest_list.begin(); it != dest_list.end(); it++) {
-        sip_target t;
+        sip_target t(it->host.toString());
         dns_handle h_dns;
 
         DBG("sip_destination: %.*s:%.*s:%u/%.*s", it->scheme.len, it->scheme.s, it->host.len, it->host.s, it->port,

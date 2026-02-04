@@ -44,4 +44,11 @@ class BotanTLSCallbacksProxy : public Botan::TLS::Callbacks {
                               Botan::hex_encode(secret.data(), secret.size()));
         parent.tls_ssl_key_log_data(label, client_random, secret);
     }
+
+    void tls_examine_extensions(const Botan::TLS::Extensions &extn, Botan::TLS::Connection_Side which_side,
+                                Botan::TLS::Handshake_Type which_message) override
+    {
+        if (which_message == Botan::TLS::Handshake_Type::ClientHello)
+            parent.tls_examine_extensions(extn, which_side, which_message);
+    }
 };

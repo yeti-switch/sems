@@ -141,6 +141,7 @@ struct sip_msg {
     trsp_socket     *local_socket;
 
     sockaddr_storage remote_ip;
+    std::string      remote_host;
 
     timeval      recv_timestamp;
     unsigned int transport_id;

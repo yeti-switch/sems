@@ -30,7 +30,7 @@ class ws_input_test : public ws_input {
                                           "Content-Length: 0\r\n\r\n";
                 sockaddr_storage sa;
                 dynamic_cast<ws_trsp_socket *>(output)->copy_peer_addr(&sa);
-                dynamic_cast<ws_trsp_socket *>(output)->send(&sa, data, sizeof(data), 0);
+                dynamic_cast<ws_trsp_socket *>(output)->send(&sa, "test.com", data, sizeof(data), 0);
                 return;
             } else {
                 output->on_ws_close();
@@ -65,7 +65,7 @@ class ws_factory_test : public trsp_socket_factory {
     }
 
     tcp_base_trsp *create_socket(trsp_server_socket *server_sock, trsp_worker *server_worker, int sd,
-                                 const sockaddr_storage *sa, event_base *evbase)
+                                 const sockaddr_storage *sa, const string &, event_base *evbase)
     {
         return new ws_trsp_test(server_sock, server_worker, sd, sa, transport, evbase);
     }
@@ -115,6 +115,6 @@ TEST(TransportTest, WebSocket)
                   "Contact: <sip:ivan@test.com>\r\n"
                   "Content-Type: application/sdp\r\n"
                   "Content-Length: 0\r\n\r\n";
-    worker.send(&server, &sa, data, sizeof(data), 0);
+    worker.send(&server, &sa, "test.com", data, sizeof(data), 0);
     worker.join();
 }

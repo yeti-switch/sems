@@ -71,7 +71,7 @@ class udp_trsp_socket : public trsp_socket {
      * Sends a message.
      * @return -1 if error(s) occured.
      */
-    int send(const sockaddr_storage *sa, const char *msg, const int msg_len, unsigned int flags);
+    int send(const sockaddr_storage *sa, const string &host, const char *msg, const int msg_len, unsigned int flags);
 
     int recv();
 };

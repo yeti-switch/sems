@@ -218,10 +218,11 @@ class dns_naptr_entry : public dns_entry {
 #define SIP_TRSP_SIZE_MAX 4
 
 struct sip_target {
+    string                        host;
     sockaddr_storage              ss;
     trsp_socket::socket_transport trsp;
 
-    sip_target();
+    sip_target(const string &host = string(""));
     sip_target(const sip_target &target);
 
     void              clear();
@@ -240,7 +241,7 @@ struct sip_target_set {
 
     void reset_iterator();
     bool has_next();
-    int  get_next(sockaddr_storage *ss, trsp_socket::socket_transport &next_trsp, unsigned int flags);
+    int  get_next(sockaddr_storage *ss, string &host, trsp_socket::socket_transport &next_trsp, unsigned int flags);
     bool next();
     void prev();
 
