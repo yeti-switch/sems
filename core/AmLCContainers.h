@@ -99,6 +99,8 @@ class SIP_info : public IP_info {
 
     unsigned int local_port;
 
+    std::vector<int> client_ports;
+
     trsp_acls acls;
 
     std::string transportToStr() const override

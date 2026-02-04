@@ -308,7 +308,7 @@ void tcp_base_trsp::create_events()
     DBG3("%p created write_ev %p with base %p", this, write_ev, evbase);
 }
 
-int tcp_base_trsp::connect()
+int tcp_base_trsp::connect(int port)
 {
     int true_opt = 1;
 
@@ -342,7 +342,8 @@ int tcp_base_trsp::connect()
         return -1;
     }
 
-    if (socket_options & static_client_port) {
+
+    if (socket_options & static_client_port || port) {
         if (setsockopt(sd, SOL_SOCKET, SO_REUSEPORT, (void *)&true_opt, sizeof(true_opt)) == -1) {
             ERROR("setsockopt(SO_REUSEPORT): %s", strerror(errno));
             ::close(sd);
@@ -355,9 +356,9 @@ int tcp_base_trsp::connect()
             return -1;
         }
 #endif
-    } else {
-        am_set_port(&addr, 0);
     }
+    if ((socket_options & static_client_port) == 0)
+        am_set_port(&addr, port);
 
     if (::bind(sd, (const struct sockaddr *)&addr, SA_len(&addr)) < 0) {
         CLASS_ERROR("bind: %s", strerror(errno));
@@ -373,17 +374,43 @@ int tcp_base_trsp::connect()
 int tcp_base_trsp::check_connection()
 {
     if (sd < 0) {
-        int ret = connect();
-        if (ret < 0) {
-            if (errno != EINPROGRESS && errno != EALREADY) {
-                ERROR("could not connect from %s:%d (opts:%d,sd:%d) to %s:%d: %s", am_inet_ntop(&addr).c_str(),
-                      am_get_port(&addr), socket_options, sd, am_inet_ntop(&peer_addr).c_str(), am_get_port(&peer_addr),
-                      strerror(errno));
+        auto clports             = AmConfig.sip_ifs[if_num].proto_info[proto_idx]->client_ports;
+        int  ret                 = 0;
+        bool use_fallback_system = clports.empty();
+        do {
+            int port_ = 0;
+            if (!clports.empty()) { // port enumeration
+                int portn = rand() % clports.size();
+                port_     = clports[portn];
+                clports.erase(clports.begin() + portn);
+            } else if (use_fallback_system) { // fallback on system choose
+                port_ = 0;
+            } else {
+                ERROR("could not connect to %s:%d(opts:%d,sd:%d): %s", am_inet_ntop(&peer_addr).c_str(),
+                      am_get_port(&peer_addr), socket_options, sd, strerror(errno));
                 ::close(sd);
                 sd = -1;
                 return -1;
             }
-        }
+            DBG("try connect from %s:%d", am_inet_ntop(&addr).c_str(), port_, socket_options, sd, strerror(errno));
+            ret = connect(port_);
+            if (ret < 0) {
+                if ((errno == EADDRINUSE || errno == EADDRNOTAVAIL) && port_) { // try next port
+                    ::close(sd);
+                    sd = -1;
+                    continue;
+                } else if (errno != EINPROGRESS && errno != EALREADY) { // last attempt, exit
+                    ERROR("could not connect from %s:%d (opts:%d,sd:%d) to %s:%d: ()%d)%s", am_inet_ntop(&addr).c_str(),
+                          am_get_port(&addr), socket_options, sd, am_inet_ntop(&peer_addr).c_str(),
+                          am_get_port(&peer_addr), errno, strerror(errno));
+                    ::close(sd);
+                    sd = -1;
+                    return -1;
+                }
+            }
+            port = port_;
+            break;
+        } while (true);
 
         // memorize actual ip/port
         sockaddr_storage actual_addr;

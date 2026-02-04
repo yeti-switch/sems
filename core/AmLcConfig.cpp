@@ -67,6 +67,7 @@
 #define PARAM_PORT_NAME                    "port"
 #define PARAM_DSCP_NAME                    "dscp"
 #define PARAM_USE_RAW_NAME                 "use-raw-sockets"
+#define PARAM_CLIENT_PORTS_NAME            "client_ports"
 #define PARAM_STAT_CL_PORT_NAME            "static-client-port"
 #define PARAM_FORCE_VIA_PORT_NAME          "force-via-address"
 #define PARAM_FORCE_OBD_IF_NAME            "force_outbound_if"
@@ -305,6 +306,7 @@ static cfg_opt_t sip_tcp[] = { CFG_STR(PARAM_ADDRESS_NAME, "", CFGF_NODEFAULT),
                                CFG_BOOL(PARAM_FORCE_TRANSPORT_NAME, cfg_true, CFGF_NONE),
                                CFG_BOOL(PARAM_FORCE_VIA_PORT_NAME, cfg_false, CFGF_NONE),
                                CFG_BOOL(PARAM_STAT_CL_PORT_NAME, cfg_false, CFGF_NONE),
+                               CFG_STR_LIST(PARAM_CLIENT_PORTS_NAME, 0, CFGF_NONE),
                                CFG_STR(PARAM_PUBLIC_ADDR_NAME, "", CFGF_NONE),
                                CFG_STR(PARAM_PUBLIC_DOMAIN_NAME, "", CFGF_NONE),
                                CFG_BOOL(PARAM_ANNOUNCE_PORT_NAME, cfg_true, CFGF_NONE),
@@ -322,7 +324,6 @@ static cfg_opt_t sip_udp[] = { CFG_STR(PARAM_ADDRESS_NAME, "", CFGF_NODEFAULT),
                                CFG_BOOL(PARAM_FORCE_OBD_IF_NAME, cfg_false, CFGF_NONE),
                                CFG_BOOL(PARAM_FORCE_VIA_PORT_NAME, cfg_false, CFGF_NONE),
                                CFG_BOOL(PARAM_FORCE_TRANSPORT_NAME, cfg_true, CFGF_NONE),
-                               CFG_BOOL(PARAM_STAT_CL_PORT_NAME, cfg_false, CFGF_NONE),
                                CFG_STR(PARAM_PUBLIC_ADDR_NAME, "", CFGF_NONE),
                                CFG_STR(PARAM_PUBLIC_DOMAIN_NAME, "", CFGF_NONE),
                                CFG_BOOL(PARAM_ANNOUNCE_PORT_NAME, cfg_true, CFGF_NONE),
@@ -354,6 +355,7 @@ static cfg_opt_t sip_tls[] = { CFG_STR(PARAM_ADDRESS_NAME, "", CFGF_NODEFAULT),
                                CFG_BOOL(PARAM_FORCE_OBD_IF_NAME, cfg_false, CFGF_NONE),
                                CFG_BOOL(PARAM_FORCE_VIA_PORT_NAME, cfg_false, CFGF_NONE),
                                CFG_BOOL(PARAM_STAT_CL_PORT_NAME, cfg_false, CFGF_NONE),
+                               CFG_STR_LIST(PARAM_CLIENT_PORTS_NAME, 0, CFGF_NONE),
                                CFG_BOOL(PARAM_FORCE_TRANSPORT_NAME, cfg_true, CFGF_NONE),
                                CFG_STR(PARAM_PUBLIC_ADDR_NAME, "", CFGF_NONE),
                                CFG_STR(PARAM_PUBLIC_DOMAIN_NAME, "", CFGF_NONE),
@@ -374,6 +376,7 @@ static cfg_opt_t sip_wss[] = { CFG_STR(PARAM_ADDRESS_NAME, "", CFGF_NODEFAULT),
                                CFG_BOOL(PARAM_FORCE_OBD_IF_NAME, cfg_false, CFGF_NONE),
                                CFG_BOOL(PARAM_FORCE_VIA_PORT_NAME, cfg_false, CFGF_NONE),
                                CFG_BOOL(PARAM_STAT_CL_PORT_NAME, cfg_false, CFGF_NONE),
+                               CFG_STR_LIST(PARAM_CLIENT_PORTS_NAME, 0, CFGF_NONE),
                                CFG_BOOL(PARAM_FORCE_TRANSPORT_NAME, cfg_true, CFGF_NONE),
                                CFG_STR(PARAM_PUBLIC_ADDR_NAME, "", CFGF_NONE),
                                CFG_STR(PARAM_PUBLIC_DOMAIN_NAME, "", CFGF_NONE),
@@ -396,6 +399,7 @@ static cfg_opt_t sip_ws[] = { CFG_STR(PARAM_ADDRESS_NAME, "", CFGF_NODEFAULT),
                               CFG_BOOL(PARAM_FORCE_TRANSPORT_NAME, cfg_true, CFGF_NONE),
                               CFG_BOOL(PARAM_FORCE_VIA_PORT_NAME, cfg_false, CFGF_NONE),
                               CFG_BOOL(PARAM_STAT_CL_PORT_NAME, cfg_false, CFGF_NONE),
+                              CFG_STR_LIST(PARAM_CLIENT_PORTS_NAME, 0, CFGF_NONE),
                               CFG_STR(PARAM_PUBLIC_ADDR_NAME, "", CFGF_NONE),
                               CFG_STR(PARAM_PUBLIC_DOMAIN_NAME, "", CFGF_NONE),
                               CFG_BOOL(PARAM_ANNOUNCE_PORT_NAME, cfg_true, CFGF_NONE),
@@ -1637,6 +1641,28 @@ int AmLcConfig::readMediaInterfaces(cfg_t *cfg, ConfigContainer *config)
     return 0;
 }
 
+struct port_range {
+    unsigned int low_port;
+    unsigned int hi_port;
+    int          operator<(const port_range &n) const { return low_port < n.low_port; }
+};
+
+static bool parse_client_port(char *client_port, port_range &range)
+{
+    string cport(client_port);
+    auto   ports = explode(cport, "-");
+    if (ports.size() == 2) {
+        if (!str2i(ports[0], range.low_port) && !str2i(ports[1], range.hi_port) &&
+            range.low_port <= std::numeric_limits<unsigned short>::max() &&
+            range.hi_port <= std::numeric_limits<unsigned short>::max() && range.low_port < range.hi_port)
+            return true;
+    } else if (!str2i(cport, range.low_port) && range.low_port <= std::numeric_limits<unsigned short>::max()) {
+        range.hi_port = range.low_port;
+        return true;
+    }
+    return false;
+}
+
 IP_info *AmLcConfig::readInterface(cfg_t *cfg, const std::string &if_name, AddressType ip_type)
 {
     IP_info      *info;
@@ -1685,7 +1711,8 @@ IP_info *AmLcConfig::readInterface(cfg_t *cfg, const std::string &if_name, Addre
     info->sig_sock_opts |= cfg_getbool(cfg, PARAM_USE_RAW_NAME) ? trsp_socket::use_raw_sockets : 0;
     info->sig_sock_opts |= cfg_getbool(cfg, PARAM_FORCE_OBD_IF_NAME) ? trsp_socket::force_outbound_if : 0;
     info->sig_sock_opts |= cfg_getbool(cfg, PARAM_FORCE_VIA_PORT_NAME) ? trsp_socket::force_via_address : 0;
-    info->sig_sock_opts |= cfg_getbool(cfg, PARAM_STAT_CL_PORT_NAME) ? trsp_socket::static_client_port : 0;
+    if (!suinfo)
+        info->sig_sock_opts |= cfg_getbool(cfg, PARAM_STAT_CL_PORT_NAME) ? trsp_socket::static_client_port : 0;
 
     if (cfg_size(cfg, PARAM_DSCP_NAME)) {
         info->dscp     = static_cast<uint8_t>(cfg_getint(cfg, PARAM_DSCP_NAME));
@@ -1749,6 +1776,49 @@ IP_info *AmLcConfig::readInterface(cfg_t *cfg, const std::string &if_name, Addre
             if (readAcl(reg_acl, sinfo->acls.reg, if_name)) {
                 ERROR("error parsing register acl for interface: %s", if_name.c_str());
                 return nullptr;
+            }
+        }
+
+        std::vector<port_range> client_ports;
+        for (int i = 0; !suinfo && i < cfg_size(cfg, PARAM_CLIENT_PORTS_NAME); i++) {
+            char      *client_port = cfg_getnstr(cfg, PARAM_CLIENT_PORTS_NAME, i);
+            port_range range;
+            if (parse_client_port(client_port, range)) {
+                auto it = std::lower_bound(client_ports.begin(), client_ports.end(), range);
+                client_ports.insert(it, range);
+            } else {
+                ERROR("error parsing client port `%s` for interface: %s", client_port, if_name.c_str());
+                return nullptr;
+            }
+        }
+
+        if ((info->sig_sock_opts & trsp_socket::static_client_port) && !client_ports.empty()) {
+            ERROR("config opts confict on interface %s: both static-client-port and client-ports are set",
+                  if_name.c_str());
+            return nullptr;
+        }
+
+        // normalization client ports
+        auto last_it = client_ports.begin(), it = client_ports.begin();
+        while (it != client_ports.end()) {
+            if (last_it != it) {
+                if (it->low_port <= last_it->hi_port) {
+                    if (it->hi_port <= last_it->hi_port) {
+                        it = client_ports.erase(it);
+                        continue;
+                    } else {
+                        it->low_port = last_it->hi_port + 1;
+                    }
+                }
+                for (int i = last_it->low_port; i <= last_it->hi_port; i++) {
+                    sinfo->client_ports.push_back(i);
+                }
+            }
+            last_it = it++;
+        }
+        if (last_it != client_ports.end()) {
+            for (int i = last_it->low_port; i <= last_it->hi_port; i++) {
+                sinfo->client_ports.push_back(i);
             }
         }
     }
