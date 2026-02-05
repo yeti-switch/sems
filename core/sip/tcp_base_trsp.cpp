@@ -308,7 +308,7 @@ void tcp_base_trsp::create_events()
     DBG3("%p created write_ev %p with base %p", this, write_ev, evbase);
 }
 
-int tcp_base_trsp::connect(int port)
+int tcp_base_trsp::connect(int port_from_pool)
 {
     int true_opt = 1;
 
@@ -343,7 +343,7 @@ int tcp_base_trsp::connect(int port)
     }
 
 
-    if (socket_options & static_client_port || port) {
+    if (socket_options & static_client_port || port_from_pool) {
         if (setsockopt(sd, SOL_SOCKET, SO_REUSEPORT, (void *)&true_opt, sizeof(true_opt)) == -1) {
             ERROR("setsockopt(SO_REUSEPORT): %s", strerror(errno));
             ::close(sd);
@@ -357,8 +357,11 @@ int tcp_base_trsp::connect(int port)
         }
 #endif
     }
+
+    /* for static_client_port:
+     * port in addr is set in ctor by server_sock->copy_addr_to(&addr) */
     if ((socket_options & static_client_port) == 0)
-        am_set_port(&addr, port);
+        am_set_port(&addr, port_from_pool);
 
     if (::bind(sd, (const struct sockaddr *)&addr, SA_len(&addr)) < 0) {
         CLASS_ERROR("bind: %s", strerror(errno));
@@ -374,33 +377,32 @@ int tcp_base_trsp::connect(int port)
 int tcp_base_trsp::check_connection()
 {
     if (sd < 0) {
-        auto clports             = AmConfig.sip_ifs[if_num].proto_info[proto_idx]->client_ports;
-        int  ret                 = 0;
-        bool use_fallback_system = clports.empty();
+        // TODO: optimize. avoid clports vector copying and erase() in cycle
+        auto clports                        = AmConfig.sip_ifs[if_num].proto_info[proto_idx]->client_ports;
+        int  ret                            = 0;
+        bool use_system_ephemeral_or_static = clports.empty();
         do {
-            int port_ = 0;
-            if (!clports.empty()) { // port enumeration
-                int portn = rand() % clports.size();
-                port_     = clports[portn];
-                clports.erase(clports.begin() + portn);
-            } else if (use_fallback_system) { // fallback on system choose
-                port_ = 0;
+            int port_from_pool = 0;
+            if (use_system_ephemeral_or_static) {
+                port_from_pool = 0;
             } else {
-                ERROR("could not connect to %s:%d(opts:%d,sd:%d): %s", am_inet_ntop(&peer_addr).c_str(),
-                      am_get_port(&peer_addr), socket_options, sd, strerror(errno));
-                ::close(sd);
-                sd = -1;
-                return -1;
+                // clports is not empty here. see condition for 'continue'
+                auto port_it   = clports.begin() + (rand() % clports.size());
+                port_from_pool = *port_it;
+                clports.erase(port_it);
             }
-            DBG("try connect from %s:%d", am_inet_ntop(&addr).c_str(), port_, socket_options, sd, strerror(errno));
-            ret = connect(port_);
+
+            DBG("try to connect from %s:%d", am_inet_ntop(&addr).c_str(), port_from_pool);
+            ret = connect(port_from_pool);
             if (ret < 0) {
-                if ((errno == EADDRINUSE || errno == EADDRNOTAVAIL) && port_) { // try next port
+                if ((errno == EADDRINUSE || errno == EADDRNOTAVAIL) && port_from_pool && !clports.empty()) {
+                    // try next port
                     ::close(sd);
                     sd = -1;
+                    // TODO: optimize to avoid new socket creation on failover
                     continue;
-                } else if (errno != EINPROGRESS && errno != EALREADY) { // last attempt, exit
-                    ERROR("could not connect from %s:%d (opts:%d,sd:%d) to %s:%d: ()%d)%s", am_inet_ntop(&addr).c_str(),
+                } else if (errno != EINPROGRESS && errno != EALREADY) {
+                    ERROR("could not connect from %s:%d (opts:%d,sd:%d) to %s:%d: (%d)%s", am_inet_ntop(&addr).c_str(),
                           am_get_port(&addr), socket_options, sd, am_inet_ntop(&peer_addr).c_str(),
                           am_get_port(&peer_addr), errno, strerror(errno));
                     ::close(sd);
@@ -408,7 +410,7 @@ int tcp_base_trsp::check_connection()
                     return -1;
                 }
             }
-            port = port_;
+            port = port_from_pool;
             break;
         } while (true);
 

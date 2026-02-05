@@ -150,7 +150,7 @@ class tcp_base_trsp : public trsp_socket {
      * Connects the socket to the destination
      * given in constructor.
      */
-    int connect(int port);
+    int connect(int port_from_pool);
 
     /**
      * Checks whether or not the socket is already connected.
