@@ -16,7 +16,7 @@
 #include "RtspClient.h"
 
 #include <fstream>
-#include <iostream>
+#include <ranges>
 
 #define SECTION_SIGIF_NAME           "signaling-interfaces"
 #define SECTION_MEDIAIF_NAME         "media-interfaces"
@@ -1641,26 +1641,52 @@ int AmLcConfig::readMediaInterfaces(cfg_t *cfg, ConfigContainer *config)
     return 0;
 }
 
-struct port_range {
-    unsigned int low_port;
-    unsigned int hi_port;
-    int          operator<(const port_range &n) const { return low_port < n.low_port; }
-};
-
-static bool parse_client_port(char *client_port, port_range &range)
+static bool apply_ports_range(char *ports_range, std::set<uint16_t> &ports_set)
 {
-    string cport(client_port);
-    auto   ports = explode(cport, "-");
+    string ports_range_str{ ports_range };
+    auto   ports = explode(ports_range_str, "-");
+
     if (ports.size() == 2) {
-        if (!str2i(ports[0], range.low_port) && !str2i(ports[1], range.hi_port) &&
-            range.low_port <= std::numeric_limits<unsigned short>::max() &&
-            range.hi_port <= std::numeric_limits<unsigned short>::max() && range.low_port < range.hi_port)
-            return true;
-    } else if (!str2i(cport, range.low_port) && range.low_port <= std::numeric_limits<unsigned short>::max()) {
-        range.hi_port = range.low_port;
-        return true;
+        unsigned int hi_port, lo_port;
+        if (str2i(ports[0], lo_port)) {
+            ERROR("failed to parse low-port:'%s' in a range:'%s'", ports[0].data(), ports_range_str.data());
+            return false;
+        }
+        if (str2i(ports[1], hi_port)) {
+            ERROR("failed to parse high-port:'%s' in a range:'%s'", ports[1].data(), ports_range_str.data());
+            return false;
+        }
+        if (0 == lo_port || !std::in_range<uint16_t>(lo_port)) {
+            ERROR("invalid value for low-port:%i in a range:'%s'", lo_port, ports_range_str.data());
+            return false;
+        }
+        if (0 == hi_port || !std::in_range<uint16_t>(hi_port)) {
+            ERROR("invalid value for high-port:%i in a range:'%s'", hi_port, ports_range_str.data());
+            return false;
+        }
+
+        for (int port : std::ranges::iota_view(lo_port, hi_port + 1))
+            ports_set.emplace(port);
+
+    } else if (ports.size() == 1) {
+        unsigned int port;
+        if (str2i(ports_range_str, port)) {
+            ERROR("failed to parse port:'%s'", ports_range_str.data());
+            return false;
+        }
+
+        if (0 == port || !std::in_range<uint16_t>(port)) {
+            ERROR("invalid value for port:%i", port);
+            return false;
+        }
+
+        ports_set.emplace(port);
+    } else {
+        ERROR("unexpected ports range format: '%s'", ports_range_str.data());
+        return false;
     }
-    return false;
+
+    return true;
 }
 
 IP_info *AmLcConfig::readInterface(cfg_t *cfg, const std::string &if_name, AddressType ip_type)
@@ -1779,48 +1805,22 @@ IP_info *AmLcConfig::readInterface(cfg_t *cfg, const std::string &if_name, Addre
             }
         }
 
-        std::vector<port_range> client_ports;
-        for (int i = 0; !suinfo && i < cfg_size(cfg, PARAM_CLIENT_PORTS_NAME); i++) {
-            char      *client_port = cfg_getnstr(cfg, PARAM_CLIENT_PORTS_NAME, i);
-            port_range range;
-            if (parse_client_port(client_port, range)) {
-                auto it = std::lower_bound(client_ports.begin(), client_ports.end(), range);
-                client_ports.insert(it, range);
-            } else {
-                ERROR("error parsing client port `%s` for interface: %s", client_port, if_name.c_str());
+        std::set<uint16_t> client_ports_set;
+        for (auto i = 0u; !suinfo && i < cfg_size(cfg, PARAM_CLIENT_PORTS_NAME); i++) {
+            char *client_ports = cfg_getnstr(cfg, PARAM_CLIENT_PORTS_NAME, i);
+            if (!apply_ports_range(client_ports, client_ports_set)) {
+                ERROR("error parsing client_ports '%s' for interface: %s/", client_ports, if_name.c_str(), cfg->name);
                 return nullptr;
             }
         }
 
-        if ((info->sig_sock_opts & trsp_socket::static_client_port) && !client_ports.empty()) {
-            ERROR("config opts confict on interface %s: both static-client-port and client-ports are set",
-                  if_name.c_str());
+        if ((info->sig_sock_opts & trsp_socket::static_client_port) && !client_ports_set.empty()) {
+            ERROR("conflicting config options on interface %s/%s: both static-client-port and client_ports are set",
+                  if_name.c_str(), cfg->name);
             return nullptr;
         }
 
-        // normalization client ports
-        auto last_it = client_ports.begin(), it = client_ports.begin();
-        while (it != client_ports.end()) {
-            if (last_it != it) {
-                if (it->low_port <= last_it->hi_port) {
-                    if (it->hi_port <= last_it->hi_port) {
-                        it = client_ports.erase(it);
-                        continue;
-                    } else {
-                        it->low_port = last_it->hi_port + 1;
-                    }
-                }
-                for (int i = last_it->low_port; i <= last_it->hi_port; i++) {
-                    sinfo->client_ports.push_back(i);
-                }
-            }
-            last_it = it++;
-        }
-        if (last_it != client_ports.end()) {
-            for (int i = last_it->low_port; i <= last_it->hi_port; i++) {
-                sinfo->client_ports.push_back(i);
-            }
-        }
+        sinfo->client_ports.assign(client_ports_set.begin(), client_ports_set.end());
     }
 
     // TCP specific opts
