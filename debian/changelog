@@ -1,3 +1,12 @@
+sems (1.180.0) stable; urgency=low
+  * fix RegShaper timer arming on disabled global throttling
+  * show SNI in core.show.connections for tls/wss connections
+  * send SNI in outgoing tls/wss connections
+  * add sems_tls_alerts metrics
+  * add option 'signaling-interfaces.interface.ip{4,6}.sip-{tcp,tls,ws,wss}.client_ports' to specify dynamic ports range
+  * add option 'general.ignore_rtp_send_errors' 
+ -- Michael Furmur <furmur@pm.me>  Thu, 05 Feb 2026 23:30:11 +0200
+
 sems (1.179.3) stable; urgency=low
   * move 'Could not find a local interface for resolved local IP' error to debug level
   * options_prober: show route_set for rpc
