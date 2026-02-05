@@ -1668,7 +1668,7 @@ static bool apply_ports_range(char *ports_range, std::set<uint16_t> &ports_set)
             return false;
         }
 
-        for (int port : std::ranges::iota_view(lo_port, hi_port + 1))
+        for (uint16_t port = lo_port; port <= hi_port; port++)
             ports_set.emplace(port);
 
     } else if (ports.size() == 1) {
