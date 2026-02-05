@@ -709,8 +709,11 @@ ssize_t AmMediaTransport::send(sockaddr_storage *raddr, unsigned char *buf, int 
 
     if (iface->net_if_idx) {
         if (iface->sig_sock_opts & trsp_socket::use_raw_sockets) {
-            return raw_sender::send(reinterpret_cast<char *>(buf), static_cast<unsigned int>(size),
-                                    static_cast<int>(iface->net_if_idx), &l_saddr, raddr, iface->tos_byte);
+            auto ret = raw_sender::send(reinterpret_cast<char *>(buf), static_cast<unsigned int>(size),
+                                        static_cast<int>(iface->net_if_idx), &l_saddr, raddr, iface->tos_byte);
+            if (ret < 0 && AmConfig.ignore_rtp_send_errors)
+                return size;
+            return ret;
         }
         // TODO: process case with AmConfig.force_outbound_if properly for rtcp
         if (AmConfig.force_outbound_if) {
@@ -728,6 +731,8 @@ ssize_t AmMediaTransport::send(sockaddr_storage *raddr, unsigned char *buf, int 
                  get_addr_str(raddr).data(), type);
             // log_stacktrace(L_DBG);
         }
+        if (AmConfig.ignore_rtp_send_errors)
+            return size;
         return -1;
     }
     return err;

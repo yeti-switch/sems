@@ -131,6 +131,7 @@ struct ConfigContainer {
     Am100rel::State                       rel100;
     Log_Level                             unhandled_reply_log_level;
     Log_Level                             rtp_send_errors_log_level;
+    bool                                  ignore_rtp_send_errors;
     std::string                           pcap_upload_queue_name;
     std::string                           skl_upload_queue_name;
     AmAudio::ResamplingImplementationType resampling_implementation_type;
