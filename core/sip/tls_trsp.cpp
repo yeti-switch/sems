@@ -640,7 +640,7 @@ tls_server_socket::tls_statistics::tls_statistics(trsp_socket::socket_transport 
               .addLabel("protocol", AmConfig.sip_ifs[if_num].proto_info[proto_idx]->ipTypeToStr()))
 {
     const auto alerts_entries = magic_enum::enum_entries<Botan::TLS::AlertType>();
-    for (const auto alert : alerts_entries) {
+    for (const auto &alert : alerts_entries) {
         alert_type_counter counter({
             { "interface", AmConfig.sip_ifs[if_num].name },
             {      "type",     std::string(alert.second) }
