@@ -6,6 +6,7 @@
 
 #include <chrono>
 #include <ratio>
+#include <optional>
 
 using std::map;
 using std::string;
