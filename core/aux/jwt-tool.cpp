@@ -8,6 +8,7 @@
 #include <botan/x509_ca.h>
 #include "botan/x509_ext.h"
 #include "botan/x509_key.h"
+#include <botan/x509path.h>
 #include <botan/pkix_types.h>
 #include <botan/system_rng.h>
 #include <botan/pkcs8.h>
@@ -440,14 +441,19 @@ int verify(int argc, char *argv[])
 {
     string     in;
     AmIdentity identity;
-    string     cert_path, key_path;
+    string     cert_path, root_cert_path, key_path;
     bool       raw = false;
 
     optind = 2;
-    options_parser p("--cert=cert_path (-i FILE | INPUT)");
+    options_parser p("\n    --cert=cert_path [ --trusted=root_cert_path ] (-i FILE | INPUT)"
+                     "\n  OR"
+                     "\n    --key=key_path (-i FILE | INPUT)");
     if (p.add('i', "-i file", "input file ('-' for stdin)", true, [&in](const char *value) { in = value; })
             .add_long("cert", "--cert=cert_path", "set certificate path to verify signature (mandatory or key)",
                       optional_argument, [&cert_path](const char *value) { cert_path = value; })
+            .add_long("trusted", "--trusted=root_cert_path",
+                      "set root certificate path to verify trust chain (optional)", optional_argument,
+                      [&root_cert_path](const char *value) { root_cert_path = value; })
             .add_long("key", "--key=key_path", "set public key path to verify signature (mandatory or cert)",
                       optional_argument, [&key_path](const char *value) { key_path = value; })
             .add_long("raw", "--raw", "verify raw JWT", no_argument, [&raw](const char *) { raw = true; })
@@ -504,16 +510,51 @@ int verify(int argc, char *argv[])
 
         AmIdentity identity;
 
+        vector<Botan::X509_Certificate>    cert_chain;
         std::unique_ptr<Botan::Public_Key> key;
         if (!cert_path.empty()) {
-            Botan::X509_Certificate crt(cert_path);
-            key = crt.subject_public_key();
-            printf("parsed certificate (%s)\n", crt.issuer_dn().to_string().data());
+            Botan::DataSource_Stream in(cert_path);
+            while (!in.end_of_data()) {
+                try {
+                    cert_chain.emplace_back(in);
+                    const auto &crt = cert_chain.back();
+                    printf("parsed certificate (%s)\n", crt.subject_dn().to_string().data());
+                } catch (...) {
+                    // ignore additional certs parsing exceptions
+                    if (cert_chain.empty())
+                        throw;
+                }
+            }
+            if (cert_chain.empty()) {
+                printf("empty certificates chain for: %s", cert_path.data());
+                return 1;
+            }
+            key = cert_chain[0].subject_public_key();
         } else {
             key = Botan::X509::load_key(key_path);
         }
 
-        printf("verify with key (%s)\n", key->fingerprint_public().data());
+        if (!cert_chain.empty() && !root_cert_path.empty()) {
+            Botan::X509_Certificate root_crt(root_cert_path);
+            printf("parsed root certificate (%s)\n", root_crt.subject_dn().to_string().data());
+
+            printf("\nverify trust chain\n");
+
+            Botan::Path_Validation_Restrictions restrictions;
+
+            Botan::Certificate_Store_In_Memory trusted_certs_store;
+            trusted_certs_store.add_certificate(root_crt);
+
+            auto validation_result = Botan::x509_path_validate(cert_chain, restrictions, trusted_certs_store);
+            if (validation_result.successful_validation()) {
+                printf("trust chain verified for trusted root: %s\n",
+                       validation_result.trust_root().subject_dn().to_string().data());
+            } else {
+                printf("trust chain verification failed: %s\n", validation_result.result_string().data());
+            }
+        }
+
+        printf("\nverify signature with key (%s)\n", key->fingerprint_public().data());
 
         int ret = identity.parse(in, raw);
         if (!ret) {
@@ -530,7 +571,7 @@ int verify(int argc, char *argv[])
             return 1;
         }
 
-        printf("verified\n");
+        printf("signature verified\n");
 
         return 0;
 
