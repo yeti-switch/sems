@@ -535,26 +535,60 @@ int verify(int argc, char *argv[])
         }
 
         if (!cert_chain.empty() && !root_cert_path.empty()) {
-            Botan::X509_Certificate root_crt(root_cert_path);
-            printf("parsed root certificate (%s)\n", root_crt.subject_dn().to_string().data());
-
-            printf("\nverify trust chain\n");
-
-            Botan::Path_Validation_Restrictions restrictions;
-
+            Botan::X509_Certificate            root_crt(root_cert_path);
             Botan::Certificate_Store_In_Memory trusted_certs_store;
             trusted_certs_store.add_certificate(root_crt);
 
-            auto validation_result = Botan::x509_path_validate(cert_chain, restrictions, trusted_certs_store);
-            if (validation_result.successful_validation()) {
-                printf("trust chain verified for trusted root: %s\n",
-                       validation_result.trust_root().subject_dn().to_string().data());
+            printf("parsed root certificate (%s)\n", root_crt.subject_dn().to_string().data());
+
+            printf("\nbuild certificate path...\n");
+
+            const Botan::X509_Certificate       &end_entity = cert_chain[0];
+            std::vector<Botan::X509_Certificate> end_entity_extra;
+            for (size_t i = 1; i < cert_chain.size(); ++i) {
+                end_entity_extra.push_back(cert_chain[i]);
+            }
+            std::vector<std::vector<Botan::X509_Certificate>> cert_paths;
+            const Botan::Certificate_Status_Code path_building_result = Botan::PKIX::build_all_certificate_paths(
+                cert_paths, { &trusted_certs_store }, end_entity, end_entity_extra);
+            if (path_building_result != Botan::Certificate_Status_Code::OK) {
+                printf("failed to build certificate trust paths\n");
             } else {
-                printf("trust chain verification failed: %s\n", validation_result.result_string().data());
+                printf("built %ld certificate trust paths\n", cert_paths.size());
+                int i = 0;
+                for (const auto &cert_path : cert_paths) {
+                    printf("\ntrust path %d:\n", i);
+                    int indent = 4;
+                    for (const auto &cert : cert_path) {
+                        printf("%*s%s\n", indent, "", cert.subject_dn().to_string().data());
+                        indent += 4;
+                    }
+                    i++;
+                }
+
+                printf("\nverify trust chain...\n");
+
+                static Botan::Path_Validation_Restrictions restrictions{
+                    false,                                                  // require_rev
+                    110,                                                    // minimum_key_strength
+                    false,                                                  // ocsp_all_intermediates
+                    std::chrono::seconds::zero(),                           // max_ocsp_age
+                    std::make_unique<Botan::Certificate_Store_In_Memory>(), // trusted_ocsp_responders
+                    false,                                                  // ignore_trusted_root_time_range
+                    false // require_self_signed_trust_anchors (default: true)
+                };
+
+                auto validation_result = Botan::x509_path_validate(cert_chain, restrictions, trusted_certs_store);
+                if (validation_result.successful_validation()) {
+                    printf("trust chain verified for trusted root: %s\n",
+                           validation_result.trust_root().subject_dn().to_string().data());
+                } else {
+                    printf("trust chain verification failed: %s\n", validation_result.result_string().data());
+                }
             }
         }
 
-        printf("\nverify signature with key (%s)\n", key->fingerprint_public().data());
+        printf("\nverify signature with key (%s)...\n", key->fingerprint_public().data());
 
         int ret = identity.parse(in, raw);
         if (!ret) {
