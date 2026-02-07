@@ -568,15 +568,15 @@ int verify(int argc, char *argv[])
 
                 printf("\nverify trust chain...\n");
 
-                static Botan::Path_Validation_Restrictions restrictions{
-                    false,                                                  // require_rev
-                    110,                                                    // minimum_key_strength
-                    false,                                                  // ocsp_all_intermediates
-                    std::chrono::seconds::zero(),                           // max_ocsp_age
-                    std::make_unique<Botan::Certificate_Store_In_Memory>(), // trusted_ocsp_responders
-                    false,                                                  // ignore_trusted_root_time_range
-                    false // require_self_signed_trust_anchors (default: true)
-                };
+                static Botan::Path_Validation_Restrictions restrictions /*{
+                     false,                                                  // require_rev
+                     110,                                                    // minimum_key_strength
+                     false,                                                  // ocsp_all_intermediates
+                     std::chrono::seconds::zero(),                           // max_ocsp_age
+                     std::make_unique<Botan::Certificate_Store_In_Memory>(), // trusted_ocsp_responders
+                     false,                                                  // ignore_trusted_root_time_range
+                     false // require_self_signed_trust_anchors (default: true)
+                 }*/;
 
                 auto validation_result = Botan::x509_path_validate(cert_chain, restrictions, trusted_certs_store);
                 if (validation_result.successful_validation()) {
