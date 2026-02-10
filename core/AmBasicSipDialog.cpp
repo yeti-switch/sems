@@ -861,7 +861,8 @@ int AmBasicSipDialog::sendRequest(const string &method, const AmMimeBody *body, 
     req.to = SIP_HDR_COLSP(SIP_HDR_TO) + remote_party;
     if (!remote_tag.empty()) {
         req.to += ";tag=" + remote_tag;
-        req.to_tag = remote_tag;
+        req.to_tag   = remote_tag;
+        max_forwards = -1;
     }
 
     req.cseq   = cseq;

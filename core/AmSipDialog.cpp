@@ -837,7 +837,7 @@ int AmSipDialog::send_200_ack(unsigned int inv_cseq, const AmMimeBody *body, con
 
     req.route = getRoute();
 
-    req.max_forwards = inv_it->second.max_forwards;
+    req.max_forwards = -1; // inv_it->second.max_forwards;
 
     if (body != NULL)
         req.body = *body;
