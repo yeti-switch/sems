@@ -1,3 +1,13 @@
+sems (1.181.0) stable; urgency=low
+  * always use Max-Forwards: general.max_forwards for in-dialog messages
+  * sems_core_tls_alerts metrics: add 'protocol' label
+  * sems-external-libs-dev 0.4.5 -> 0.4.11
+    * botan 3.5.0 -> 3.10.0
+    * allow anyExtendedKeyUsage for CA
+  * sems-jwt-tool: verify: add --trusted=root_cert_path opt
+  * sems-jwt-tool: verify: print trust paths on trust chain verification
+ -- Michael Furmur <furmur@pm.me>  Wed, 11 Feb 2026 12:17:31 +0200
+
 sems (1.180.0) stable; urgency=low
   * fix RegShaper timer arming on disabled global throttling
   * show SNI in core.show.connections for tls/wss connections
