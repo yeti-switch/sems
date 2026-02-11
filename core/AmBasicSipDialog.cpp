@@ -160,7 +160,8 @@ string AmBasicSipDialog::getContactUri()
     }
     if (!ext_local_tag.empty()) {
         contact_uri += local_tag + "@";
-    }
+    } else if (!contact_user.empty())
+        contact_uri += contact_user + "@";
 
     int oif    = getOutboundIf();
     int oproto = getOutboundProtoId();

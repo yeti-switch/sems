@@ -91,6 +91,7 @@ class AmBasicSipDialog : public AmObject {
     string first_branch;
 
     string contact_params; // params in Contact-HF
+    string contact_user;   // user in Contact-HF
 
     string scheme; // local scheme(sip or sips)
     string user;   // local user
@@ -270,6 +271,9 @@ class AmBasicSipDialog : public AmObject {
 
     const string &getContactParams() const { return contact_params; }
     virtual void  setContactParams(const string &new_contact_params) { contact_params = new_contact_params; }
+
+    const string &getContactUser() const { return contact_user; }
+    virtual void  setContactUser(const string &new_contact_user) { contact_user = new_contact_user; }
 
     const string &getUser() const { return user; }
     virtual void  setUser(const string &new_user) { user = new_user; }

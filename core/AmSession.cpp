@@ -36,6 +36,7 @@
 #include "AmDtmfDetector.h"
 #include "AmPlayoutBuffer.h"
 #include "AmAppTimer.h"
+#include "AmEventDispatcher.h"
 
 #include "signal.h"
 #include "sys/types.h"
@@ -252,6 +253,11 @@ const string &AmSession::getLocalTag() const
     return dlg->getLocalTag();
 }
 
+const string &AmSession::getContactUser() const
+{
+    return dlg->getContactUser();
+}
+
 const string &AmSession::getFirstBranch() const
 {
     return dlg->get1stBranch();
@@ -261,6 +267,16 @@ void AmSession::setUri(const string &uri)
 {
     DBG("AmSession::setUri(%s)", uri.c_str());
     /* TODO: sdp.uri = uri;*/
+}
+
+void AmSession::setContactUser(const string &user)
+{
+    DBG("AmSession::setContactUser(%s)", user.c_str());
+    if (!dlg->getContactUser().empty())
+        AmEventDispatcher::instance()->delEventQueue(dlg->getContactUser());
+
+    AmEventDispatcher::instance()->addEventQueue(user, this);
+    dlg->setContactUser(user);
 }
 
 void AmSession::setRtpFrameSize(unsigned int frame_size)

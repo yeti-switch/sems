@@ -391,6 +391,9 @@ class AmSession : public virtual AmObject,
     /** Gets the Session's local tag */
     const string &getLocalTag() const;
 
+    /** Gets the Session's Contact User */
+    const string &getContactUser() const;
+
     /** Gets the branch param of the first via in the original INVITE*/
     const string &getFirstBranch() const;
 
@@ -402,6 +405,9 @@ class AmSession : public virtual AmObject,
 
     /** Sets the URI for the session */
     void setUri(const string &uri);
+
+    /** Sets the Session's Contact User */
+    void setContactUser(const string &user);
 
     /** Sets the frame size for the rtp packets */
     void setRtpFrameSize(unsigned int frame_size);
