@@ -1,3 +1,8 @@
+sems (1.162.2) stable; urgency=low
+  * sems-external-libs-dev 0.4.11
+  * add build for trixie
+ -- Michael Furmur <furmur@pm.me>  Thu, 12 Feb 2026 14:45:00 +0200
+
 sems (1.162.1) stable; urgency=low
   * use ctest. avoid modules copying on tests
  -- Michael Furmur <furmur@pm.me>  Thu, 24 Apr 2025 19:18:46 +0300
