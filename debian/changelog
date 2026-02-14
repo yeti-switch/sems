@@ -1,3 +1,7 @@
+sems (1.181.1) stable; urgency=low
+  * sems-external-libs-dev with disabled simd_4x32
+ -- Michael Furmur <furmur@pm.me>  Sat, 14 Feb 2026 15:52:50 +0200
+
 sems (1.181.0) stable; urgency=low
   * always use Max-Forwards: general.max_forwards for in-dialog messages
   * sems_core_tls_alerts metrics: add 'protocol' label
