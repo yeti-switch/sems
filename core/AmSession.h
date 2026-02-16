@@ -654,6 +654,9 @@ class AmSession : public virtual AmObject,
     /** This callback is called if RTP timeout encountered */
     virtual void onRtpTimeout();
 
+    /** This callback is called if RTP sending failed */
+    virtual void onRtpSendingError();
+
     /** This callback is called if session
         timeout encountered (session timers) */
     virtual void onSessionTimeout();

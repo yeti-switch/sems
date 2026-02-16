@@ -255,6 +255,7 @@ class AmB2BSession : public AmSession, protected RelayController {
     void onRemoteDisappeared(const AmSipReply &reply) override;
 
     void onRtpTimeout() override;
+    void onRtpSendingError() override;
     void onSessionTimeout() override;
     void onNoAck(unsigned int cseq) override;
 

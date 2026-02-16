@@ -792,6 +792,12 @@ void AmSession::process(AmEvent *ev)
         onRtpTimeout();
         return;
     }
+
+    AmRtpSendingErrorEvent *send_err_ev = dynamic_cast<AmRtpSendingErrorEvent *>(ev);
+    if (send_err_ev) {
+        onRtpSendingError();
+        return;
+    }
 }
 
 void AmSession::onSipRequest(const AmSipRequest &req)
@@ -1182,6 +1188,15 @@ void AmSession::onRtpTimeout()
     DBG("RTP timeout, stopping Session");
     dlg->bye();
     setStopped();
+}
+
+void AmSession::onRtpSendingError()
+{
+    if (dlg->getStatus() == AmBasicSipDialog::Status::Connected) {
+        DBG("RTP sending error");
+        dlg->bye();
+        setStopped();
+    }
 }
 
 void AmSession::onSessionTimeout()

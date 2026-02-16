@@ -737,6 +737,14 @@ void AmB2BSession::onRtpTimeout()
     AmSession::onRtpTimeout();
 }
 
+void AmB2BSession::onRtpSendingError()
+{
+    if (dlg->getStatus() == AmBasicSipDialog::Status::Connected)
+        terminateOtherLeg();
+
+    AmSession::onRtpSendingError();
+}
+
 void AmB2BSession::onSessionTimeout()
 {
     DBG("Session Timer: Timeout, ending other leg");

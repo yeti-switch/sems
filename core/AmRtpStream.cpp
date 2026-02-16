@@ -1728,7 +1728,12 @@ int AmRtpStream::send(unsigned int user_ts, unsigned char *buffer, unsigned int 
 
     last_not_supported_tx_payload = -1;
 
-    return compile_and_send(it->second.remote_pt, false, user_ts, buffer, size);
+    int ret = compile_and_send(it->second.remote_pt, false, user_ts, buffer, size);
+
+    if (ret < 0 && session)
+        session->postEvent(new AmRtpSendingErrorEvent());
+
+    return ret;
 }
 
 void AmRtpStream::relay(AmRtpPacket *p)
@@ -1774,6 +1779,10 @@ void AmRtpStream::relay(AmRtpPacket *p)
             _LOG(AmConfig.rtp_send_errors_log_level, "while sending RTP packet to '%s':%i",
                  cur_rtp_trans->getRHost(false).c_str(), cur_rtp_trans->getRPort(false));
         }
+
+        if (session)
+            session->postEvent(new AmRtpSendingErrorEvent());
+
     } else {
         p->relayed = true;
         if (session) {

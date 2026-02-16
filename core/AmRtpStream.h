@@ -127,6 +127,16 @@ class AmRtpTimeoutEvent : public AmEvent {
     ~AmRtpTimeoutEvent() {}
 };
 
+/** \brief event fired on RTP sending error */
+class AmRtpSendingErrorEvent : public AmEvent {
+  public:
+    AmRtpSendingErrorEvent()
+        : AmEvent(0)
+    {
+    }
+    ~AmRtpSendingErrorEvent() {}
+};
+
 /** helper class for assigning boolean floag to a payload ID
  * it is used to check if the payload should be relayed or not */
 class PayloadMask {
