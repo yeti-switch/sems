@@ -95,8 +95,10 @@ int PacketFilter::configure(const std::string &config)
         if (currentBpf->tc_ingress_attach(ifindex, tc_hook_created))
             return -1;
 
-    bpf_prog_filter->data->tc_action_block         = block_mode ? TC_ACT_SHOT : TC_ACT_UNSPEC;
-    bpf_prog_filter->data->packets_count_threshold = packets_count_threshold;
+    if (bpf_prog_filter) {
+        bpf_prog_filter->data->tc_action_block         = block_mode ? TC_ACT_SHOT : TC_ACT_UNSPEC;
+        bpf_prog_filter->data->packets_count_threshold = packets_count_threshold;
+    }
 
     return 0;
 }
