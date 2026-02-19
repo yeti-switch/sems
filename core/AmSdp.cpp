@@ -388,6 +388,16 @@ int AmSdp::parse(const char *_sdp_msg)
         }
     }
 
+    // validate payloads format
+    for (const auto &m : media) {
+        for (const auto &p : m.payloads) {
+            if (0 == p.clock_rate) {
+                ERROR("zero clock_rate for payload %d/%s", p.payload_type, p.encoding_name.data());
+                return true;
+            }
+        }
+    }
+
     // validate session-level connection line
     if (!conn.address.empty()) {
         dns_handle   dh;

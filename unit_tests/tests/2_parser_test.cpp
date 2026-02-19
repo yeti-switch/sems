@@ -1297,3 +1297,21 @@ TEST(SdpParser, ICECandidatesParsingTest)
     sdp.print(sdp_out);
     ASSERT_EQ(sdp_str, sdp_out);
 }
+
+TEST(SdpParser, ZeroAdvertizedRate)
+{
+    string sdp_str = "v=0\r\n"
+                     "o=- 1771471504 1 IN IP4 127.0.0.1\r\n"
+                     "s=-\r\n"
+                     "c=IN IP4 127.0.0.1\r\n"
+                     "t=0 0\r\n"
+                     "m=audio 5190 RTP/AVP 8 0 101\r\n"
+                     "a=rtpmap:8 PCMA/8000/1\r\n"
+                     "a=rtpmap:0 rtp/0\r\n"
+                     "a=rtpmap:101 telephone-event/8000\r\n"
+                     "a=ptime:20\r\n"
+                     "a=sendrecv\r\n"
+                     "a=direction:both\r\n";
+    AmSdp  sdp;
+    ASSERT_EQ(sdp.parse(sdp_str.c_str()), 1);
+}
