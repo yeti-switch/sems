@@ -241,7 +241,7 @@ int AmRtpAudio::receive(unsigned long long system_ts)
         AmAudioRtpFormat  *rtp_fmt         = static_cast<AmAudioRtpFormat *>(fmt.get());
         unsigned long long adjusted_rtp_ts = last_recv_ts;
 
-        if (rtp_fmt->getRate() != rtp_fmt->getTSRate()) {
+        if (rtp_fmt->getRate() != rtp_fmt->getTSRate() && 0 != rtp_fmt->getTSRate()) {
             adjusted_rtp_ts = last_recv_ts * static_cast<unsigned long long>(rtp_fmt->getRate()) /
                               static_cast<unsigned long long>(rtp_fmt->getTSRate());
         }
