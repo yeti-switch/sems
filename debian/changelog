@@ -1,3 +1,7 @@
+sems (1.181.2) stable; urgency=low
+  * fix divizion by zero on payloads with zero advertized clock rate
+ -- Michael Furmur <furmur@pm.me>  Thu, 19 Feb 2026 13:24:13 +0200
+
 sems (1.181.1) stable; urgency=low
   * sems-external-libs-dev with disabled simd_4x32
  -- Michael Furmur <furmur@pm.me>  Sat, 14 Feb 2026 15:52:50 +0200
