@@ -32,3 +32,35 @@ TEST_F(IdentityValidatorTest, parseTNAuthList)
     IdentityValidator::serializeCert2AmArg(cert, a);
     ASSERT_EQ(a["tn_auth_list"][0]["spc"], "063E");
 }
+
+TEST_F(IdentityValidatorTest, parseCrlDistPoints)
+{
+    vector<string> in;
+    vector<string> out;
+
+    // single dist point (1)
+    in = { "URI:http://example.com/crl.pem" };
+    IdentityValidator::parse_crl_dist_points(in, out);
+    ASSERT_EQ(out[0], "http://example.com/crl.pem");
+
+    // single dist point (2)
+    in = { "URI: http://example.com/crl.pem " };
+    IdentityValidator::parse_crl_dist_points(in, out);
+    ASSERT_EQ(out[0], "http://example.com/crl.pem");
+
+    // single dist point but with multiple URIs
+    string multi_dp = "URI: ldap://ldap.example.com/CN=CA,CN=CDP,CN=Certificates "
+                      "URI: http://example.com/crl1.pem "
+                      "URI: http://example.com/crl2.pem ";
+    in              = {
+        multi_dp,
+    };
+    IdentityValidator::parse_crl_dist_points(in, out);
+    ASSERT_EQ(out[0], "http://example.com/crl1.pem");
+
+    // multiple dist points
+    in = { "URI: ldap://ldap.example.com/CN=CA,CN=CDP,CN=Certificates ", "URI: http://example.com/crl1.pem ",
+           "URI: http://example.com/crl2.pem " };
+    IdentityValidator::parse_crl_dist_points(in, out);
+    ASSERT_EQ(out[0], "http://example.com/crl1.pem");
+}

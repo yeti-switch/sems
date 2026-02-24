@@ -10,6 +10,9 @@ using std::string;
 #define CFG_PARAM_CERTS_CACHE_TTL               "certs_cache_ttl"
 #define CFG_PARAM_CERTS_CACHE_FAILED_TTL        "certs_cache_failed_ttl"
 #define CFG_PARAM_CERTS_CACHE_FAILED_VERIFY_TTL "certs_cache_failed_verify_ttl"
+#define CFG_PARAM_CRL_CACHE_RENEW_TIMEOUT       "crl_cache_renew_timeout"
+#define CFG_PARAM_CRL_CACHE_IDLE_TIMEOUT        "crl_cache_idle_timeout"
+#define CFG_PARAM_CRL_PROCRSSING                "crl_processing"
 
 #define CFG_PARAM_PG_SCHEMA_NAME    "schema"
 #define CFG_PARAM_TRUSTED_CERTS_REQ "trusted_certs_req"
@@ -28,6 +31,9 @@ using std::string;
 #define DEFAULT_CERTS_CACHE_TTL          86400
 #define DEFAULT_CACHE_FAILED_TTL         86400
 #define DEFAULT_CACHE_FAILED_VERIFY_TTLS 86400
+#define DEFAULT_CRL_CACHE_RENEW_TIMEOUT  86400
+#define DEFAULT_CRL_CACHE_IDLE_TIMEOUT   86400
+#define DEFAULT_CRL_PROCRSSING           cfg_true
 
 #define DEFAULT_HTTP_DESTINATIION "identity"
 #define DEFAULT_TRUSTED_CERT_REQ  "SELECT * FROM load_stir_shaken_trusted_certificates()"

@@ -67,10 +67,9 @@ struct SessionCtx {
 };
 
 struct IdentityValidatorEntry {
-    enum cert_state { LOADING, LOADED, UNAVAILABLE };
+    enum cert_state { LOADING, LOADED, REVOKED, UNAVAILABLE };
 
     std::chrono::system_clock::time_point expire_time;
-    string                                response_data;
     vector<Botan::X509_Certificate>       cert_chain;
     string                                error_str;
     int                                   error_code;
@@ -88,6 +87,7 @@ struct IdentityValidatorEntry {
         : error_code(0)
         , error_type(0)
         , state(LOADING)
+        , validation_sucessfull(false)
     {
     }
 
@@ -98,12 +98,62 @@ struct IdentityValidatorEntry {
         error_type = 0;
         error_code = 0;
         error_str.clear();
-        response_data.clear();
         cert_chain.clear();
-        state = LOADING;
+        trust_root_cert.clear();
+        validation_result.clear();
+        validation_sucessfull = false;
+        state                 = LOADING;
     }
 
     static string to_string(cert_state state)
+    {
+        switch (state) {
+        case LOADING:     return "loading";
+        case LOADED:      return "loaded";
+        case REVOKED:     return "revoked";
+        case UNAVAILABLE: return "unavailable";
+        }
+        return "";
+    }
+
+    void getInfo(AmArg &a, const std::chrono::system_clock::time_point &now) const;
+};
+
+struct CrlEntry {
+    enum crl_state { LOADING, LOADED, UNAVAILABLE };
+    unique_ptr<Botan::X509_CRL>           crl;
+    std::chrono::system_clock::time_point expire_time;
+    std::chrono::system_clock::time_point last_use_time;
+    string                                error_str;
+    int                                   error_code;
+    int                                   error_type;
+    crl_state                             state;
+    bool                                  validation_sucessfull;
+    string                                validation_result;
+    string                                trust_root_cert;
+    vector<string>                        defer_cert_urls;
+
+    CrlEntry()
+        : error_code(0)
+        , error_type(0)
+        , state(LOADING)
+        , validation_sucessfull(false)
+    {
+    }
+
+    void reset()
+    {
+        error_type = 0;
+        error_code = 0;
+        error_str.clear();
+        crl.reset();
+        trust_root_cert.clear();
+        validation_result.clear();
+        validation_sucessfull = false;
+        state                 = LOADING;
+    }
+
+    static string to_string(crl_state state)
     {
         switch (state) {
         case LOADING:     return "loading";
@@ -114,6 +164,7 @@ struct IdentityValidatorEntry {
     }
 
     void getInfo(AmArg &a, const std::chrono::system_clock::time_point &now) const;
+    bool isRevoked(const Botan::X509_Certificate &cert);
 };
 
 class IdentityValidator : public AmThread,
@@ -136,6 +187,9 @@ class IdentityValidator : public AmThread,
     std::chrono::seconds identity_validator_ttl;
     std::chrono::seconds identity_validator_failed_ttl;
     std::chrono::seconds identity_validator_failed_verify_ttl;
+    std::chrono::seconds crl_cache_renew_timeout;
+    std::chrono::seconds crl_cache_idle_timeout;
+    bool                 crl_processing;
     string               schema;
     string               trusted_certs_req;
     string               trusted_repos_req;
@@ -189,10 +243,16 @@ class IdentityValidator : public AmThread,
     };
     vector<TrustedRepositoryEntry> trusted_repositories;
 
+    /* СRLs */
+    using CrlHash = unordered_map<string, CrlEntry>;
+    CrlHash crls;
+
     /* guards:
      *   trusted_certs,
      *   trusted_certs_store,
      *   trusted_repositories
+     *   certificates
+     *   crls
      */
     mutable std::shared_mutex certificates_mutex;
 
@@ -207,6 +267,12 @@ class IdentityValidator : public AmThread,
     rpc_handler clearCerts;
     rpc_handler renewCerts;
 
+    rpc_handler setCrlProcessing;
+    rpc_handler showCrls;
+    rpc_handler clearCrls;
+    rpc_handler renewCrls;
+
+    async_rpc_handler checkCert;
     async_rpc_handler validateIdentity;
 
     /* Statistics */
@@ -230,19 +296,27 @@ class IdentityValidator : public AmThread,
     void process(AmEvent *ev) override;
     int  configure(cfg_t *cfg) override;
 
-    void      onTimer(const std::chrono::system_clock::time_point &now);
-    void      reloadTrustedCertificates(const AmArg &data);
-    void      reloadTrustedRepositories(const AmArg &data);
-    void      addIdentities(const vector<string> &value, const string &id, const string &rpc_conn_id = string());
-    void      processHttpReply(const HttpGetResponseEvent &resp);
-    void      processJsonRpcRequestEvent(JsonRpcRequestEvent *ev);
-    void      handleValidateIdentityRpcRequest(JsonRpcRequestEvent *ev);
-    bool      isTrustedRepository(const string &url) const;
-    void      renewCertEntry(CertHash::value_type &entry);
-    PublicKey getPubKey(const string &cert_url, AmArg &info, bool &cert_is_valid) const;
-    void      postDbQuery(const string &query, const string &token);
-    void      makeIdentityData(SessionCtx *ctx, AmArg &identity_data);
-    void      postResult(SessionCtx *ctx);
+    void             onTimer(const std::chrono::system_clock::time_point &now);
+    void             reloadTrustedCertificates(const AmArg &data);
+    void             reloadTrustedRepositories(const AmArg &data);
+    void             addIdentities(const vector<string> &value, const string &id, const string &rpc_conn_id = string());
+    void             processCrl(const string &crl_url, const string &data);
+    void             processHttpReply(const HttpGetResponseEvent &resp);
+    void             processJsonRpcRequestEvent(JsonRpcRequestEvent *ev);
+    void             handleValidateIdentityRpcRequest(JsonRpcRequestEvent *ev);
+    void             handleCheckCertificateRpcRequest(JsonRpcRequestEvent *ev);
+    bool             isTrustedRepository(const string &url) const;
+    void             renewCertEntry(CertHash::value_type &entry);
+    PublicKey        getPubKey(const string &cert_url, bool &cert_is_valid,
+                               IdentityValidatorEntry::cert_state &cert_state) const;
+    void             postDbQuery(const string &query, const string &token);
+    void             makeIdentityData(SessionCtx *ctx, AmArg &identity_data);
+    void             postResult(IdentityValidatorEntry &cert_entry, const string &url);
+    void             postResult(SessionCtx *ctx);
+    optional<string> crlUrl(const Botan::X509_Certificate &cert);
+    void             renewCrl(const string &url, const string &defer_cert_url = string());
+    void             validateCrl(CrlEntry &crl_entry);
+    void onCertRevoked(IdentityValidatorEntry &cert_entry, const string &cert_url, const string &subject_dn);
 
   public:
     IdentityValidator();
@@ -253,4 +327,6 @@ class IdentityValidator : public AmThread,
 
     static void serializeCertTNAuthList2AmArg(const Botan::X509_Certificate &cert, AmArg &a);
     static void serializeCert2AmArg(const Botan::X509_Certificate &cert, AmArg &a);
+    static void serializeCrl2AmArg(const Botan::X509_CRL &crl, AmArg &a);
+    static void parse_crl_dist_points(const vector<string> in, vector<string> &out, const string proto = "http");
 };
