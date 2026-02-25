@@ -26,6 +26,9 @@ ADD_SUBDIRECTORY(radius_client)
 ADD_SUBDIRECTORY(registrar_client)
 ADD_SUBDIRECTORY(registrar)
 ADD_SUBDIRECTORY(identity_validator)
+
+cmake_host_system_information(RESULT DIST_VERSION QUERY DISTRIB_VERSION_ID)
+IF(DIST_VERSION GREATER 12)
+    # skip packet_filter building for debian <= bookworm. it has no BPF_MAP_TYPE_ARENA support
 ADD_SUBDIRECTORY(packet_filter)
-
-
+ENDIF()
