@@ -220,11 +220,8 @@ void AmSessionContainer::stopAndQueue(AmSession *s)
 
 void AmSessionContainer::destroySession(AmSession *s)
 {
-    if (!s->getContactUser().empty())
-        AmEventDispatcher::instance()->delEventQueue(s->getContactUser());
     AmEventQueueInterface *q = AmEventDispatcher::instance()->delEventQueue(s->getLocalTag());
     DBG("event_queue: %p", q);
-
 
     /* removed queue checking because we use manual session queue unregistering
      * in the certain modules to avoid AmSessionContainer::startSessionUAS AlreadyExist case

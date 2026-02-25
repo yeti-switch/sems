@@ -158,9 +158,8 @@ string AmBasicSipDialog::getContactUri()
         contact_uri = scheme;
         contact_uri += ":";
     }
-    if (!ext_local_tag.empty()) {
-        contact_uri += local_tag + "@";
-    } else if (!contact_user.empty())
+
+    if (!contact_user.empty())
         contact_uri += contact_user + "@";
 
     int oif    = getOutboundIf();
@@ -590,14 +589,8 @@ void AmBasicSipDialog::dropTransactions()
 
 bool AmBasicSipDialog::onRxReplySanity(const AmSipReply &reply)
 {
-    if (ext_local_tag.empty()) {
-        if (reply.from_tag != local_tag) {
-            ERROR("received reply with wrong From-tag ('%s' vs. '%s')", reply.from_tag.c_str(), local_tag.c_str());
-            throw string("reply has wrong from-tag");
-            // return;
-        }
-    } else if (reply.from_tag != ext_local_tag) {
-        ERROR("received reply with wrong From-tag ('%s' vs. '%s')", reply.from_tag.c_str(), ext_local_tag.c_str());
+    if (reply.from_tag != local_tag) {
+        ERROR("received reply with wrong From-tag ('%s' vs. '%s')", reply.from_tag.c_str(), local_tag.c_str());
         throw string("reply has wrong from-tag");
         // return;
     }
@@ -768,7 +761,7 @@ int AmBasicSipDialog::reply(const AmSipRequest &req, unsigned int code, const st
     reply.reason = reason;
     reply.tt     = req.tt;
     if ((code > 100) && !(flags & SIP_FLAGS_NOTAG))
-        reply.to_tag = ext_local_tag.empty() ? local_tag : ext_local_tag;
+        reply.to_tag = local_tag;
     reply.hdrs        = hdrs;
     reply.cseq        = req.cseq;
     reply.cseq_method = req.method;
@@ -851,10 +844,8 @@ int AmBasicSipDialog::sendRequest(const string &method, const AmMimeBody *body, 
     req.r_uri  = remote_uri;
 
     req.from = SIP_HDR_COLSP(SIP_HDR_FROM) + local_party;
-    if (!ext_local_tag.empty()) {
-        req.from += ";tag=" + ext_local_tag;
-        req.from_tag = ext_local_tag;
-    } else if (!local_tag.empty()) {
+
+    if (!local_tag.empty()) {
         req.from += ";tag=" + local_tag;
         req.from_tag = local_tag;
     }

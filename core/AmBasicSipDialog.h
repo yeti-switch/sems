@@ -85,7 +85,6 @@ class AmBasicSipDialog : public AmObject {
     string callid;
 
     string local_tag;
-    string ext_local_tag;
 
     string remote_tag;
     string first_branch;
@@ -265,9 +264,6 @@ class AmBasicSipDialog : public AmObject {
 
     const string &get1stBranch() const { return first_branch; }
     virtual void  set1stBranch(const string &n_branch) { first_branch = n_branch; }
-
-    const string &getExtLocalTag() const { return ext_local_tag; }
-    virtual void  setExtLocalTag(const string &new_ext_tag) { ext_local_tag = new_ext_tag; }
 
     const string &getContactParams() const { return contact_params; }
     virtual void  setContactParams(const string &new_contact_params) { contact_params = new_contact_params; }

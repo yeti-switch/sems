@@ -272,10 +272,6 @@ void AmSession::setUri(const string &uri)
 void AmSession::setContactUser(const string &user)
 {
     DBG("AmSession::setContactUser(%s)", user.c_str());
-    if (!dlg->getContactUser().empty())
-        AmEventDispatcher::instance()->delEventQueue(dlg->getContactUser());
-
-    AmEventDispatcher::instance()->addEventQueue(user, this);
     dlg->setContactUser(user);
 }
 
