@@ -1,3 +1,10 @@
+sems (1.182.0) stable; urgency=low
+  * add AmRtpSendingErrorEvent
+  * AmBasicSipDialog: support custom contact user, remove ext_local_tag
+  * add rtp-gen utility
+  * add packet_filter app
+ -- Michael Furmur <furmur@pm.me>  Wed, 25 Feb 2026 11:30:29 +0200
+
 sems (1.181.2) stable; urgency=low
   * fix divizion by zero on payloads with zero advertized clock rate
  -- Michael Furmur <furmur@pm.me>  Thu, 19 Feb 2026 13:24:13 +0200
