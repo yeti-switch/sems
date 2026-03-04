@@ -172,7 +172,7 @@ class _AmAudioFileRecorderProcessor : public AmThread, AmEventHandler, AmEventFd
     void getStats(AmArg &ret);
 
     // singleton function
-    void dispose() { stop(); }
+    void dispose() { stop(true); }
 };
 
 typedef singleton<_AmAudioFileRecorderProcessor> AmAudioFileRecorderProcessor;
