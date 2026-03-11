@@ -1,3 +1,8 @@
+sems (1.182.1) stable; urgency=low
+  * postgresql: fix transaction removal on timeouts
+  * fix crash in AmAudioFileRecorder on termination
+ -- Michael Furmur <furmur@pm.me>  Wed, 11 Mar 2026 20:49:51 +0200
+
 sems (1.182.0) stable; urgency=low
   * add AmRtpSendingErrorEvent
   * AmBasicSipDialog: support custom contact user, remove ext_local_tag
