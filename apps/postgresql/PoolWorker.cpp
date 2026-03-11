@@ -971,7 +971,7 @@ void PoolWorker::onTimer()
     for (auto trans_it = transactions.begin(); trans_wait_time && trans_it != transactions.end();) {
         if (now - trans_it->createdTime > trans_wait_time && trans_it->trans->get_status() == Transaction::ACTIVE) {
             onFireTransaction(*trans_it);
-            trans_it++;
+            trans_it = transactions.erase(trans_it);
         } else if (now - trans_it->createdTime > trans_wait_time * 2 &&
                    trans_it->trans->get_status() == Transaction::CANCELING)
         {
