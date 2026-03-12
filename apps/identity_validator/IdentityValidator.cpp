@@ -700,8 +700,7 @@ void IdentityValidator::processHttpReply(const HttpGetResponseEvent &resp)
     std::unique_lock lock(certificates_mutex);
 
     if (crl_processing) {
-        auto pos = resp.token.find(crl_token_prefix);
-        if (pos == 0) {
+        if (resp.token.starts_with(crl_token_prefix)) {
             const string crl_url = resp.token.substr(crl_token_prefix.length());
             processCrl(crl_url, resp.data);
             return;
