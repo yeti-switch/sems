@@ -1,3 +1,10 @@
+sems (1.182.2) stable; urgency=low
+  * identity_validator: add CRL checking. new options:
+    * crl_processing = true
+    * crl_cache_renew_timeout = 86400
+    * crl_cache_idle_timeout = 3600
+ -- Michael Furmur <furmur@pm.me>  Fri, 13 Mar 2026 01:17:33 +0200
+
 sems (1.182.1) stable; urgency=low
   * postgresql: fix transaction removal on timeouts
   * fix crash in AmAudioFileRecorder on termination
