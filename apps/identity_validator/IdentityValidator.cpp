@@ -86,6 +86,7 @@ void CrlEntry::getInfo(AmArg &a, const std::chrono::system_clock::time_point &no
 
 bool CrlEntry::isRevoked(const Botan::X509_Certificate &cert)
 {
+    // TODO: change to strict mode later. or control valid CRL requirement by options
     if (!validation_sucessfull)
         return false;
     last_use_time = std::chrono::system_clock::now();
@@ -779,6 +780,7 @@ void IdentityValidator::processHttpReply(const HttpGetResponseEvent &resp)
                                 cert_url.c_str());
                         }
                     } else {
+                        // TODO: looks like we can pass few first certs until CRL is loaded. refactor to defer reply
                         crl_urls_for_renew.emplace(std::move(*crl_url));
                         std::exchange(crl_url, std::nullopt);
                     }
