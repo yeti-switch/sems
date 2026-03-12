@@ -572,7 +572,7 @@ void tcp_base_trsp::on_write(short ev)
                 break;
 
             default: // unforseen error: close connection
-                ERROR("unforseen error: close connection (%i/%s)", errno, strerror(errno));
+                DBG("unforseen error: close connection (%i/%s)", errno, strerror(errno));
                 close();
                 _l.release();
                 break;

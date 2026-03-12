@@ -272,7 +272,7 @@ int _trans_layer::send_reply(sip_msg *msg, const trans_ticket *tt, const cstring
     assert(tt);
 
     if (!tt->_bucket || !tt->_t) {
-        ERROR("Invalid transaction ticket");
+        DBG("Invalid transaction ticket");
         return -1;
     }
 
@@ -282,13 +282,13 @@ int _trans_layer::send_reply(sip_msg *msg, const trans_ticket *tt, const cstring
     bucket->lock();
     if (!bucket->exist(t)) {
         bucket->unlock();
-        ERROR("Invalid transaction key: transaction does not exist (%p;%p)", bucket, t);
+        DBG("Invalid transaction key: transaction does not exist (%p;%p)", bucket, t);
         return -1;
     }
 
     if (t->reply_status >= 200) {
         bucket->unlock();
-        ERROR("Transaction has already been closed with a final reply");
+        DBG("Transaction has already been closed with a final reply");
         return -1;
     }
 

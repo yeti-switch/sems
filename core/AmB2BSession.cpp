@@ -480,7 +480,7 @@ void AmB2BSession::updateLocalSdp(AmSdp &sdp, const string &, unsigned int)
 
     if (!media_session) {
         // report missing media session (here we get for rtp_relay_mode == RTP_Relay)
-        ERROR("BUG: media session is missing, can't update local SDP");
+        DBG("BUG: media session is missing, can't update local SDP");
         return; // FIXME: throw an exception here?
     }
 
@@ -939,7 +939,7 @@ int AmB2BSession::relaySip(const AmSipRequest &req)
         DBG("sending relayed 200 ACK");
         int err = dlg->send_200_ack(t->first, &body, req.hdrs, SIP_FLAGS_VERBATIM);
         if (err < 0) {
-            ERROR("dlg->send_200_ack() failed, local_tag = %s", dlg->getLocalTag().c_str());
+            DBG("dlg->send_200_ack() failed, local_tag = %s", dlg->getLocalTag().c_str());
             return err;
         }
 

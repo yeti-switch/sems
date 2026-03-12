@@ -254,10 +254,10 @@ int tls_input::on_input(tcp_base_trsp *trsp)
         reset_input();
         return ret;
     } catch (Botan::Exception &e) {
-        ERROR("Botan tls error: %s. peer %s:%d", e.what(), trsp->get_peer_ip().data(), trsp->get_peer_port());
+        DBG("Botan tls error: %s. peer %s:%d", e.what(), trsp->get_peer_ip().data(), trsp->get_peer_port());
         return -1;
     } catch (std::logic_error &e) {
-        ERROR("logic_error: %s. peer %s:%d", e.what(), trsp->get_peer_ip().data(), trsp->get_peer_port());
+        DBG("logic_error: %s. peer %s:%d", e.what(), trsp->get_peer_ip().data(), trsp->get_peer_port());
         return -1;
     } catch (ConnectionCloseException &e) {
         DBG("ConnectionCloseException");

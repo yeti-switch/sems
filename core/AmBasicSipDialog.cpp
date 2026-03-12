@@ -789,9 +789,9 @@ int AmBasicSipDialog::reply(const AmSipRequest &req, unsigned int code, const st
 
     int ret = SipCtrlInterface::send(reply, local_tag, logger, sensor);
     if (ret) {
-        ERROR("Could not send reply: code=%i; reason='%s'; method=%s;"
-              " call-id=%s; cseq=%i\n",
-              reply.code, reply.reason.c_str(), reply.cseq_method.c_str(), callid.c_str(), reply.cseq);
+        DBG("Could not send reply: code=%i; reason='%s'; method=%s;"
+            " call-id=%s; cseq=%i\n",
+            reply.code, reply.reason.c_str(), reply.cseq_method.c_str(), callid.c_str(), reply.cseq);
 
         return ret;
     } else {
@@ -822,9 +822,9 @@ int AmBasicSipDialog::reply_error(const AmSipRequest &req, unsigned int code, co
 
     int ret = SipCtrlInterface::send(reply, string(""), logger, sensor);
     if (ret) {
-        ERROR("Could not send reply: code=%i; reason='%s';"
-              " method=%s; call-id=%s; cseq=%i\n",
-              reply.code, reply.reason.c_str(), req.method.c_str(), req.callid.c_str(), req.cseq);
+        DBG("Could not send reply: code=%i; reason='%s';"
+            " method=%s; call-id=%s; cseq=%i\n",
+            reply.code, reply.reason.c_str(), req.method.c_str(), req.callid.c_str(), req.cseq);
     }
 
     return ret;

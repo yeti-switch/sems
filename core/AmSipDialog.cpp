@@ -812,7 +812,7 @@ int AmSipDialog::send_200_ack(unsigned int inv_cseq, const AmMimeBody *body, con
 
     TransMap::iterator inv_it = uac_trans.find(inv_cseq);
     if (inv_it == uac_trans.end()) {
-        ERROR("trying to ACK a non-existing transaction (cseq=%i;local_tag=%s)", inv_cseq, local_tag.c_str());
+        DBG("trying to ACK a non-existing transaction (cseq=%i;local_tag=%s)", inv_cseq, local_tag.c_str());
         return -1;
     }
 
