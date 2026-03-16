@@ -725,9 +725,10 @@ string AmUriParser::print()
     return nameaddr_str();
 }
 
-bool AmUriParser::patch_uri_param(const string &param, const string &value, string &prev_value, bool rewrite)
+bool AmUriParser::patch_uri_param(const string &param, const string &value, string *prev_value, bool rewrite)
 {
-    prev_value = "";
+    if (prev_value)
+        *prev_value = "";
 
     if (uri_param.empty()) {
         uri_param = format("{}={}", param, value);
@@ -762,7 +763,7 @@ bool AmUriParser::patch_uri_param(const string &param, const string &value, stri
     return false;
 }
 
-bool AmUriParser::is_uri_param_exists(const string &param, string &prev_value)
+bool AmUriParser::is_uri_param_exists(const string &param, string *prev_value)
 {
     if (uri_param.empty())
         return false;
@@ -774,7 +775,8 @@ bool AmUriParser::is_uri_param_exists(const string &param, string &prev_value)
             continue;
 
         if (v[0] == param && v.size() > 1) {
-            prev_value = v[1];
+            if (prev_value)
+                *prev_value = v[1];
             return true;
         }
     }

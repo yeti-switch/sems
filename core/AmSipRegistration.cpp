@@ -227,31 +227,16 @@ void AmSIPRegistration::patch_transport(string &uri, int transport_protocol_id)
                   parser.uri.c_str(), transport_name.len, transport_name.s);
             break;
         }
-        // check for existent transport param
-        if (!parser.uri_param.empty()) {
-            bool can_patch       = true;
-            auto uri_params_list = explode(URL_decode(parser.uri_param), ";");
-            for (const auto &p : uri_params_list) {
-                auto v = explode(p, "=");
-                if (v[0] == "transport") {
-                    ERROR("%s attempt to patch with existent transport parameter: '%s'."
-                          " leave it as is",
-                          handle.c_str(), v.size() > 1 ? v[1].c_str() : "");
-                    can_patch = false;
-                    break;
-                }
-            }
-            if (can_patch) {
-                parser.uri_param += ";transport=";
-                parser.uri_param += c2stlstr(transport_name);
-                uri = parser.uri_str();
-                DBG("%s uri patched to: '%s'", handle.c_str(), uri.c_str());
-            }
-        } else {
-            parser.uri_param = "transport=";
-            parser.uri_param += c2stlstr(transport_name);
+
+        string next_transport{ c2stlstr(transport_name) };
+        string prev_transport{};
+        if (parser.patch_uri_param("transport", next_transport, &prev_transport)) {
             uri = parser.uri_str();
             DBG("%s uri patched to: '%s'", handle.c_str(), uri.c_str());
+        } else {
+            ERROR("%s attempt to patch with existent transport parameter: '%s'."
+                  " leave it as is",
+                  handle.c_str(), prev_transport.c_str());
         }
     } break;
     default:

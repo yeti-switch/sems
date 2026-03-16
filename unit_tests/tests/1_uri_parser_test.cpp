@@ -164,7 +164,7 @@ TEST(UriParser, params_dname7)
     ASSERT_EQ(p.params.size(), 3);
 };
 
-TEST(UriParser, patch_param)
+TEST(UriParser, patch_uri_param)
 {
     AmUriParser p;
     string      prev_value;
@@ -172,56 +172,63 @@ TEST(UriParser, patch_param)
     // "param1" doesn't exist; rewrite == false
     p.uri = "sip:user@host:5060";
     ASSERT_TRUE(p.parse_uri());
-    ASSERT_TRUE(p.patch_uri_param("param1", "value1", prev_value));
+    ASSERT_TRUE(p.patch_uri_param("param1", "value1", &prev_value));
     ASSERT_EQ(prev_value, "");
     ASSERT_EQ(p.uri_str(), "sip:user@host:5060;param1=value1");
 
     // "param1" doesn't exist but other parameters are presented; rewrite == false
     p.uri = "sip:user@host:5060;param2=value2;param3=value3";
     ASSERT_TRUE(p.parse_uri());
-    ASSERT_TRUE(p.patch_uri_param("param1", "value1", prev_value));
+    ASSERT_TRUE(p.patch_uri_param("param1", "value1", &prev_value));
     ASSERT_EQ(prev_value, "");
     ASSERT_EQ(p.uri_str(), "sip:user@host:5060;param2=value2;param3=value3;param1=value1");
 
     // "param1" doesn't exist; rewrite == true
     p.uri = "sip:user@host:5060";
     ASSERT_TRUE(p.parse_uri());
-    ASSERT_TRUE(p.patch_uri_param("param1", "value1", prev_value, true));
+    ASSERT_TRUE(p.patch_uri_param("param1", "value1", &prev_value, true));
     ASSERT_EQ(prev_value, "");
     ASSERT_EQ(p.uri_str(), "sip:user@host:5060;param1=value1");
 
     // "param1" exists; rewrite == false
     p.uri = "sip:user@host:5060;param1=value1";
     ASSERT_TRUE(p.parse_uri());
-    ASSERT_FALSE(p.patch_uri_param("param1", "2", prev_value));
+    ASSERT_FALSE(p.patch_uri_param("param1", "2", &prev_value));
     ASSERT_EQ(prev_value, "value1");
     ASSERT_EQ(p.uri_str(), "sip:user@host:5060;param1=value1");
 
     // "param1" exists; rewrite == true
     p.uri = "sip:user@host:5060;param1=value1";
     ASSERT_TRUE(p.parse_uri());
-    ASSERT_TRUE(p.patch_uri_param("param1", "value2", prev_value, true));
+    ASSERT_TRUE(p.patch_uri_param("param1", "value2", &prev_value, true));
     ASSERT_EQ(prev_value, "value1");
     ASSERT_EQ(p.uri_str(), "sip:user@host:5060;param1=value2");
 
     // "param2" exists in the middle of the list; rewrite == true
     p.uri = "sip:user@host:5060;param1=value1;param2=value2;param3=value3";
     ASSERT_TRUE(p.parse_uri());
-    ASSERT_TRUE(p.patch_uri_param("param2", "VALUE2", prev_value, true));
+    ASSERT_TRUE(p.patch_uri_param("param2", "VALUE2", &prev_value, true));
     ASSERT_EQ(prev_value, "value2");
     ASSERT_EQ(p.uri_str(), "sip:user@host:5060;param1=value1;param2=VALUE2;param3=value3");
+
+    // "param2" exists in the middle of the list; param3 has no value; rewrite == true
+    p.uri = "sip:user@host:5060;param1=value1;param2=value2;param3";
+    ASSERT_TRUE(p.parse_uri());
+    ASSERT_TRUE(p.patch_uri_param("param2", "VALUE2", &prev_value, true));
+    ASSERT_EQ(prev_value, "value2");
+    ASSERT_EQ(p.uri_str(), "sip:user@host:5060;param1=value1;param2=VALUE2;param3");
 
     // param with empty value; rewrite == false
     p.uri = "sip:user@host:5060;param1=";
     ASSERT_TRUE(p.parse_uri());
-    ASSERT_FALSE(p.patch_uri_param("param1", "value1", prev_value, false));
+    ASSERT_FALSE(p.patch_uri_param("param1", "value1", &prev_value, false));
     ASSERT_EQ(prev_value, "");
     ASSERT_EQ(p.uri_str(), "sip:user@host:5060;param1=");
 
     // param with empty value; rewrite == true
     p.uri = "sip:user@host:5060;param1=";
     ASSERT_TRUE(p.parse_uri());
-    ASSERT_TRUE(p.patch_uri_param("param1", "value1", prev_value, true));
+    ASSERT_TRUE(p.patch_uri_param("param1", "value1", &prev_value, true));
     ASSERT_EQ(prev_value, "");
     ASSERT_EQ(p.uri_str(), "sip:user@host:5060;param1=value1");
 };
