@@ -26,6 +26,8 @@
  */
 
 #include "AmUriParser.h"
+#include "AmUtils.h"
+#include "format_helper.h"
 #include "log.h"
 
 // Not on Solaris!
@@ -721,4 +723,61 @@ string AmUriParser::nameaddr_str() const
 string AmUriParser::print()
 {
     return nameaddr_str();
+}
+
+bool AmUriParser::patch_uri_param(const string &param, const string &value, string &prev_value, bool rewrite)
+{
+    prev_value = "";
+
+    if (uri_param.empty()) {
+        uri_param = format("{}={}", param, value);
+        return true;
+    }
+
+    if (is_uri_param_exists(param, prev_value) == false) {
+        uri_param += format(";{}={}", param, value);
+        return true;
+    }
+
+    if (rewrite) {
+        auto uri_params_list = explode(URL_decode(uri_param), ";");
+        uri_param.clear();
+        for (const auto &p : uri_params_list) {
+            auto v = explode(p, "=", true);
+            if (v.empty())
+                continue;
+
+            if (uri_param.empty() == false)
+                uri_param += ";";
+
+            if (v[0] == param)
+                uri_param += format("{}={}", param, value);
+            else
+                uri_param += p;
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
+bool AmUriParser::is_uri_param_exists(const string &param, string &prev_value)
+{
+    if (uri_param.empty())
+        return false;
+
+    auto uri_params_list = explode(URL_decode(uri_param), ";");
+    for (const auto &p : uri_params_list) {
+        auto v = explode(p, "=", true);
+        if (v.empty())
+            continue;
+
+        if (v[0] == param && v.size() > 1) {
+            prev_value = v[1];
+            return true;
+        }
+    }
+
+    return false;
 }

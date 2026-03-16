@@ -67,6 +67,9 @@ struct AmUriParser {
     string canon_uri_str() const;
     string nameaddr_str() const;
 
+    bool patch_uri_param(const string &param, const string &value, string &prev_value, bool rewrite = false);
+    bool is_uri_param_exists(const string &param, string &prev_value);
+
     AmUriParser() {}
 
     string print();
