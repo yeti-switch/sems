@@ -1,3 +1,8 @@
+sems (1.183.2) stable; urgency=low
+  * identity_validator: add 'sems_identity_validator_trusted_certificate_not_after_timestamp' metrics
+  * support tel uri headers
+ -- Michael Furmur <furmur@pm.me>  Thu, 19 Mar 2026 00:58:17 +0200
+
 sems (1.183.1) stable; urgency=low
   * fix libsems1.shlibs
  -- Michael Furmur <furmur@pm.me>  Wed, 18 Mar 2026 17:50:27 +0200
