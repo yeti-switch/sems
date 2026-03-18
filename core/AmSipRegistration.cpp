@@ -30,6 +30,7 @@
 #include "AmSession.h"
 #include "AmUtils.h"
 #include "AmSessionContainer.h"
+#include "AmShallowUriParser.h"
 #include "sip/parse_via.h"
 #include "sip/parse_route.h"
 
@@ -217,26 +218,24 @@ void AmSIPRegistration::patch_transport(string &uri, int transport_protocol_id)
     case sip_transport::TCP:
     case sip_transport::TLS:
     {
-        auto transport_name = transport_str(transport_protocol_id);
-        DBG("%s patch uri to use %.*s transport. current value is: '%s'", handle.c_str(), transport_name.len,
-            transport_name.s, uri.c_str());
-        AmUriParser parser;
-        parser.uri = uri;
-        if (!parser.parse_uri()) {
-            ERROR("%s Error parsing '%s' for protocol patching to %.*s. leave it as is", handle.c_str(),
-                  parser.uri.c_str(), transport_name.len, transport_name.s);
+        DBG("%s patch uri to use transport id %d. current value is: '%s'", handle.c_str(), transport_protocol_id,
+            uri.c_str());
+
+        AmShallowUriParser parser;
+        if (!parser.parse_uri(uri)) {
+            ERROR("%s Error parsing '%s' for protocol id patching to %d", handle.c_str(), uri.c_str(),
+                  transport_protocol_id);
             break;
         }
 
-        string next_transport{ c2stlstr(transport_name) };
-        string prev_transport{};
-        if (parser.patch_uri_param("transport", next_transport, &prev_transport)) {
+        if (parser.patch_uri_transport_param(static_cast<sip_transport::sip_transport_id>(transport_protocol_id))) {
             uri = parser.uri_str();
             DBG("%s uri patched to: '%s'", handle.c_str(), uri.c_str());
         } else {
-            ERROR("%s attempt to patch with existent transport parameter: '%s'."
+            const auto &transport_param = parser.get_uri_params().at("transport");
+            ERROR("%s attempt to patch URI with existent transport parameter: '%.*s'."
                   " leave it as is",
-                  handle.c_str(), prev_transport.c_str());
+                  handle.c_str(), transport_param.length(), transport_param.data());
         }
     } break;
     default:
