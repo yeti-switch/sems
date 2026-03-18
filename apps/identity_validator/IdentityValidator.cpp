@@ -29,6 +29,54 @@ static string bytes2HexStr(const std::vector<uint8_t> &bytes)
     return string(res.begin(), res.end());
 }
 
+/* IdentityValidatorMetricGroup */
+
+struct IdentityValidatorMetricGroup : public StatCountersGroupsInterface {
+    static vector<string> metrics_keys_names;
+    static vector<string> metrics_help_strings;
+    enum metric_keys_idx { TRUST_CERT_NOT_AFTER_TIMESTAMP = 0, MAX_KEY_IDX };
+    struct trust_cert_info {
+        map<string, string> labels;
+        unsigned long long  value;
+    };
+    vector<trust_cert_info> trusted_certs;
+    int                     idx;
+
+    IdentityValidatorMetricGroup()
+        : StatCountersGroupsInterface(Gauge)
+    {
+    }
+
+    void add_trust_cert(const string &id, const string &name, unsigned long long value)
+    {
+        trusted_certs.emplace_back();
+
+        auto &labels   = trusted_certs.back().labels;
+        labels["id"]   = id;
+        labels["name"] = name;
+
+        trusted_certs.back().value = value;
+    }
+
+    void serialize(StatsCountersGroupsContainerInterface::iterate_groups_callback_type callback)
+    {
+        for (int i = 0; i < MAX_KEY_IDX; i++) {
+            idx = i;
+            setHelp(metrics_help_strings[idx]);
+            callback(format("{}_{}", MOD_NAME, metrics_keys_names[idx]), *this);
+        }
+    }
+
+    void iterate_counters(iterate_counters_callback_type callback) override
+    {
+        for (const auto &cert : trusted_certs)
+            callback(cert.value, cert.labels);
+    }
+};
+
+vector<string> IdentityValidatorMetricGroup::metrics_keys_names   = { "trusted_certificate_not_after_timestamp" };
+vector<string> IdentityValidatorMetricGroup::metrics_help_strings = { "" };
+
 /* IdentityValidatorEntry */
 
 void IdentityValidatorEntry::getInfo(AmArg &a, const std::chrono::system_clock::time_point &now) const
@@ -117,6 +165,23 @@ IdentityValidator::Counters::Counters()
 {
 }
 
+void IdentityValidator::operator()(const string &, iterate_groups_callback_type callback)
+{
+    AmArg ret;
+    ret.assertArray();
+
+    IdentityValidatorMetricGroup g;
+    {
+        std::unique_lock lock(certificates_mutex);
+        g.trusted_certs.reserve(trusted_certs.size());
+        for (const auto &cert : trusted_certs)
+            for (const auto &cert_in_chain : cert.certs)
+                g.add_trust_cert(std::to_string(cert.id), cert.name, cert_in_chain->not_after().time_since_epoch());
+    }
+
+    g.serialize(callback);
+}
+
 /* PGPoolCfg */
 
 void IdentityValidator::PGPoolCfg::parse(cfg_t *cfg)
@@ -195,6 +260,7 @@ IdentityValidator::IdentityValidator()
     , queue_name(IDENTITY_VALIDATOR_APP_QUEUE)
 {
     event_dispatcher->addEventQueue(queue_name, this);
+    statistics::instance()->add_groups_container(MOD_NAME, this, false);
 }
 
 IdentityValidator::~IdentityValidator()

@@ -171,6 +171,7 @@ class IdentityValidator : public AmThread,
                           public AmEventFdQueue,
                           public AmEventHandler,
                           public RpcTreeHandler,
+                          public StatsCountersGroupsContainerInterface,
                           public Configurable {
   private:
     static IdentityValidator *_instance;
@@ -324,6 +325,9 @@ class IdentityValidator : public AmThread,
 
     static IdentityValidator *instance();
     static void               dispose();
+
+    /* StatsCountersGroupsContainerInterface */
+    void operator()(const string &name, iterate_groups_callback_type callback) override;
 
     static void serializeCertTNAuthList2AmArg(const Botan::X509_Certificate &cert, AmArg &a);
     static void serializeCert2AmArg(const Botan::X509_Certificate &cert, AmArg &a);
