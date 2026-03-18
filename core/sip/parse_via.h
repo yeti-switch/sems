@@ -35,7 +35,7 @@
 struct sip_avp;
 
 struct sip_transport {
-    enum { UNPARSED = 0, UDP, TCP, TLS, SCTP, WS, WSS, OTHER };
+    enum sip_transport_id { UNPARSED = 0, UDP, TCP, TLS, SCTP, WS, WSS, OTHER };
 
     int     type;
     cstring val;

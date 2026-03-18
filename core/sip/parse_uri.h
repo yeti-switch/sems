@@ -33,6 +33,7 @@
 #include "cstring.h"
 
 #include <list>
+#include <string_view>
 
 struct sip_avp;
 
@@ -57,8 +58,10 @@ struct sip_uri {
     ~sip_uri();
 };
 
+sip_uri::uri_scheme     parse_uri_scheme(const char *&c, int len);
+const std::string_view &uri_scheme2str(sip_uri::uri_scheme scheme_id);
+
 int parse_uri(sip_uri *uri, const char *beg, int len, bool no_default_port = false);
-int parse_nameaddr(sip_uri *uri, const char *beg, int len, bool no_default_port = false);
 
 #endif
 

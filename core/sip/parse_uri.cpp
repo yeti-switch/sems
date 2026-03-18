@@ -393,107 +393,7 @@ static int parse_tel_uri(sip_uri *uri, const char *beg, int len)
     return 0;
 }
 
-int parse_nameaddr(sip_uri *uri, const char *beg, int len, bool no_default_port)
-{
-    enum {
-        NAMEADDR_BEG = 0,
-        NAMEAADDR,
-        URI,
-        PARAMS,
-        PNAME,
-        PVALUE,
-    };
-
-    int         st      = NAMEADDR_BEG;
-    const char *c       = beg;
-    const char *uri_str = 0;
-    char        quote   = ' ';
-
-    cstring tmp1, tmp2;
-
-    for (; c != beg + len; c++) {
-        switch (st) {
-        case NAMEADDR_BEG:
-            switch (*c) {
-            case 's':
-            case 'S': return parse_uri(uri, beg, len, no_default_port);
-            case ' ': break;
-            case '\"':
-            case '\'':
-                quote            = *c;
-                st               = NAMEAADDR;
-                uri->name_addr.s = c + 1;
-                break;
-            case '<':
-                uri_str = c + 1;
-                st      = URI;
-                break;
-            }
-        default:
-            st               = NAMEAADDR;
-            uri->name_addr.s = c;
-            break;
-        case NAMEAADDR:
-            if (*c == quote) {
-                st                 = URI;
-                uri->name_addr.len = c - uri->name_addr.s;
-            }
-            break;
-        case URI:
-            if (*c == '<') {
-                uri_str = c + 1;
-            }
-            if (*c == '>') {
-                if (parse_uri(uri, uri_str, c - uri_str, no_default_port)) {
-                    return MALFORMED_URI;
-                }
-                st = PARAMS;
-            }
-            break;
-        case PARAMS:
-            if (*c == ';') {
-                tmp1.set(c + 1, 0);
-                st = PNAME;
-            }
-            break;
-        case PNAME:
-            if (*c == ';') {
-                if (c - tmp1.s) {
-                    tmp1.len = c - tmp1.s;
-                    uri->uri_params.push_back(new sip_avp(tmp1, { 0, 0 }));
-                }
-                tmp1.set(c + 1, 0);
-            } else if (*c == '=') {
-                tmp1.len = c - tmp1.s;
-                tmp2.set(c + 1, 0);
-                st = PVALUE;
-            }
-            break;
-        case PVALUE:
-            if (*c == ';') {
-                tmp2.len = c - tmp2.s;
-                uri->uri_params.push_back(new sip_avp(tmp1, tmp2));
-                st = PNAME;
-            }
-            break;
-        }
-    }
-
-    switch (st) {
-    case PNAME:
-        tmp1.len = beg + len - tmp1.s;
-        uri->uri_params.push_back(new sip_avp(tmp1, { 0, 0 }));
-        break;
-    case PVALUE:
-        tmp2.len = beg + len - tmp2.s;
-        uri->uri_params.push_back(new sip_avp(tmp1, tmp2));
-        break;
-    }
-
-    return 0;
-}
-
-int parse_uri(sip_uri *uri, const char *beg, int len, bool no_default_port)
+sip_uri::uri_scheme parse_uri_scheme(const char *&c, int len)
 {
     enum {
         URI_BEG = 0,
@@ -506,10 +406,10 @@ int parse_uri(sip_uri *uri, const char *beg, int len, bool no_default_port)
         TEL_L   // teL
     };
 
-    int         st = URI_BEG;
-    const char *c  = beg;
+    int         st  = URI_BEG;
+    const char *end = c + len;
 
-    for (; c != beg + len; c++) {
+    for (; c != end; c++) {
         switch (st) {
         case URI_BEG:
             switch (*c) {
@@ -517,68 +417,91 @@ int parse_uri(sip_uri *uri, const char *beg, int len, bool no_default_port)
             case 'S': st = SIP_S; continue;
             case 't':
             case 'T': st = TEL_T; continue;
-            default:  DBG("Unknown URI scheme"); return MALFORMED_URI;
+            default:  return sip_uri::UNKNOWN;
             }
             break;
         case SIP_S:
             switch (*c) {
             case 'i':
             case 'I': st = SIP_I; continue;
-            default:  DBG("Unknown URI scheme"); return MALFORMED_URI;
+            default:  return sip_uri::UNKNOWN;
             }
             break;
         case SIP_I:
             switch (*c) {
             case 'p':
             case 'P': st = SIP_P; continue;
-            default:  DBG("Unknown URI scheme"); return MALFORMED_URI;
+            default:  return sip_uri::UNKNOWN;
             }
             break;
         case SIP_P:
             switch (*c) {
-            case HCOLON:
-                // DBG("scheme: sip");
-                uri->scheme = sip_uri::SIP;
-                return parse_sip_uri(uri, c + 1, len - (c + 1 - beg), no_default_port);
+            case HCOLON: return sip_uri::SIP;
             case 's':
-            case 'S': st = SIPS_S; continue;
-            default:  DBG("Unknown URI scheme"); return MALFORMED_URI;
+            case 'S':    st = SIPS_S; continue;
+            default:     return sip_uri::UNKNOWN;
             }
             break;
         case SIPS_S:
             switch (*c) {
             case HCOLON:
                 // DBG("scheme: sips");
-                uri->scheme = sip_uri::SIPS;
-                return parse_sip_uri(uri, c + 1, len - (c + 1 - beg), no_default_port);
-            default: DBG("Unknown URI scheme"); return MALFORMED_URI;
+                return sip_uri::SIPS;
+            default: return sip_uri::UNKNOWN;
             }
             break;
         case TEL_T:
             switch (*c) {
             case 'e':
             case 'E': st = TEL_E; continue;
-            default:  DBG("Unknown URI scheme"); return MALFORMED_URI;
+            default:  return sip_uri::UNKNOWN;
             }
             break;
         case TEL_E:
             switch (*c) {
             case 'l':
             case 'L': st = TEL_L; continue;
-            default:  DBG("Unknown URI scheme"); return MALFORMED_URI;
+            default:  return sip_uri::UNKNOWN;
             }
             break;
         case TEL_L:
             switch (*c) {
-            case HCOLON:
-                // DBG("scheme: sips");
-                uri->scheme = sip_uri::TEL;
-                return parse_tel_uri(uri, c + 1, len - (c + 1 - beg));
-            default: DBG("Unknown URI scheme"); return MALFORMED_URI;
+            case HCOLON: return sip_uri::TEL;
+            default:     return sip_uri::UNKNOWN;
             }
-        default: DBG("bug: unknown state"); return UNDEFINED_ERR;
+        default: DBG("bug: unknown state"); return sip_uri::UNKNOWN;
         } // switch(st)
     } // for(;c!=beg+len;c++)
+    return sip_uri::UNKNOWN;
+}
+
+const std::string_view &uri_scheme2str(sip_uri::uri_scheme scheme_id)
+{
+    const static std::string_view sip{ "sip" };
+    const static std::string_view sips{ "sips" };
+    const static std::string_view tel{ "tel" };
+    const static std::string_view empty{};
+
+    switch (scheme_id) {
+    case sip_uri::SIP:     return sip;
+    case sip_uri::SIPS:    return sips;
+    case sip_uri::TEL:     return tel;
+    case sip_uri::UNKNOWN: return empty;
+    }
+}
+
+int parse_uri(sip_uri *uri, const char *beg, int len, bool no_default_port)
+{
+    const char *c = beg;
+    uri->scheme   = parse_uri_scheme(c, len);
+    c++;
+
+    switch (uri->scheme) {
+    case sip_uri::SIP:
+    case sip_uri::SIPS:    return parse_sip_uri(uri, c, len - (c - beg), no_default_port);
+    case sip_uri::TEL:     return parse_tel_uri(uri, c, len - (c - beg));
+    case sip_uri::UNKNOWN: DBG("Unknown URI scheme"); return MALFORMED_URI;
+    }
 
     return 0;
 }

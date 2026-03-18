@@ -32,6 +32,7 @@
 
 #include <string.h>
 #include <string>
+#include <string_view>
 
 struct cstring {
     const char  *s;
@@ -89,8 +90,10 @@ struct cstring {
     }
 };
 
-#define c2stlstr(str) string((str).s, (str).len)
+#define c2stlstr(str)  string((str).s, (str).len)
+#define c2stlstrv(str) { (str).s, (str).len }
 
-#define stl2cstr(str) cstring((char *)(str).c_str(), (str).length())
+#define stl2cstr(str)       cstring((char *)(str).c_str(), (str).length())
+#define stlv2cstr(str_view) std::string_view((char *)(str_view).data(), (str_view).length())
 
 #endif
