@@ -1007,6 +1007,32 @@ TEST(Parser, parse_nameaddr_tel_uri)
     ASSERT_EQ(c2stlstr((*i)->value), "hdr_param_v_2");
 }
 
+TEST(Parser, parse_nameaddr_uri_tel_2)
+{
+    // https://www.rfc-editor.org/rfc/rfc3966
+    sip_nameaddr p;
+    string       name_addr_str = "<tel:+1-201-555-0123"
+                                 "?uri_hdr_n_1=uri_hdr_v_1&uri_hdr_n_2=uri_hdr_v_2"
+                                 ">"
+                                 ";hdr_param_n_1=hdr_param_v_1;hdr_param_n_2=hdr_param_v_2";
+
+    const char *s = name_addr_str.c_str();
+    ASSERT_EQ(parse_nameaddr_uri(&p, &s, name_addr_str.size()), 0);
+
+    ASSERT_EQ(p.uri.scheme, sip_uri::TEL);
+    ASSERT_EQ(c2stlstr(p.uri.user), "+1-201-555-0123");
+
+    list<sip_avp *>::iterator i;
+    // uri params
+    ASSERT_EQ(p.uri.hdrs.size(), 2);
+    i = p.uri.hdrs.begin();
+    ASSERT_EQ(c2stlstr((*i)->name), "uri_hdr_n_1");
+    ASSERT_EQ(c2stlstr((*i)->value), "uri_hdr_v_1");
+    i++;
+    ASSERT_EQ(c2stlstr((*i)->name), "uri_hdr_n_2");
+    ASSERT_EQ(c2stlstr((*i)->value), "uri_hdr_v_2");
+}
+
 TEST(Parser, AmUriParser)
 {
     AmUriParser p;

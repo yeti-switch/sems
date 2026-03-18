@@ -297,7 +297,8 @@ static int parse_sip_uri(sip_uri *uri, const char *beg, int len, bool no_default
 static int parse_tel_uri(sip_uri *uri, const char *beg, int len)
 {
     // https://www.rfc-editor.org/rfc/rfc3966#section-3
-    enum { TEL_NUMBER = 0, TEL_PNAME, TEL_PVALUE } st = TEL_NUMBER;
+    enum { TEL_NUMBER = 0, TEL_PNAME, TEL_PVALUE, TEL_HNAME, TEL_HVALUE };
+    int st = TEL_NUMBER;
 
     cstring     tmp1, tmp2;
     const char *c = beg;
@@ -330,19 +331,65 @@ static int parse_tel_uri(sip_uri *uri, const char *beg, int len)
                 break;
             }
             break;
+        case '?':
+            switch (st) {
+            case TEL_NUMBER:
+                uri->user.len = c - uri->user.s;
+                if (!uri->user.len) {
+                    DBG("empty number");
+                    return MALFORMED_URI;
+                }
+                st     = TEL_HNAME;
+                tmp1.s = c + 1;
+                break;
+            case TEL_PNAME:
+                tmp1.len = c - tmp1.s;
+                uri->params.push_back(new sip_avp(tmp1, cstring(0, 0)));
+                st     = TEL_HNAME;
+                tmp1.s = c + 1;
+                break;
+            case TEL_PVALUE:
+                tmp2.len = c - tmp2.s;
+                uri->params.push_back(new sip_avp(tmp1, tmp2));
+                st     = TEL_HNAME;
+                tmp1.s = c + 1;
+                break;
+            }
+            break;
+        case '&':
+            switch (st) {
+            case TEL_HNAME:
+                tmp1.len = c - tmp1.s;
+                if (!tmp1.len) {
+                    DBG("empty URI header name");
+                    return MALFORMED_URI;
+                }
+                uri->hdrs.push_back(new sip_avp(tmp1, cstring(0, 0)));
+                tmp1.s = c + 1;
+                break;
+            case TEL_HVALUE:
+                tmp2.len = c - tmp2.s;
+                uri->hdrs.push_back(new sip_avp(tmp1, tmp2));
+                st     = TEL_HNAME;
+                tmp1.s = c + 1;
+                break;
+            }
+            break;
         case '=':
             switch (st) {
             case TEL_NUMBER: DBG("not allowed symbol"); return MALFORMED_URI;
             case TEL_PNAME:
+            case TEL_HNAME:
                 tmp1.len = c - tmp1.s;
                 if (!tmp1.len) {
-                    DBG("empty header name");
+                    DBG("empty param/header name");
                     return MALFORMED_URI;
                 }
                 tmp2.s = c + 1;
-                st     = TEL_PVALUE;
+                st     = (st == TEL_PNAME) ? TEL_PVALUE : TEL_HVALUE;
                 break;
             case TEL_PVALUE: break;
+            case TEL_HVALUE: break;
             }
             break;
             /*
@@ -387,6 +434,18 @@ static int parse_tel_uri(sip_uri *uri, const char *beg, int len)
     case TEL_PVALUE:
         tmp2.len = c - tmp2.s;
         uri->params.push_back(new sip_avp(tmp1, tmp2));
+        break;
+    case TEL_HNAME:
+        tmp1.len = c - tmp1.s;
+        if (!tmp1.len) {
+            DBG("empty URI header name");
+            return MALFORMED_URI;
+        }
+        uri->hdrs.push_back(new sip_avp(tmp1, cstring(0, 0)));
+        break;
+    case TEL_HVALUE:
+        tmp2.len = c - tmp2.s;
+        uri->hdrs.push_back(new sip_avp(tmp1, tmp2));
         break;
     }
 
