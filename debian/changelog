@@ -1,3 +1,8 @@
+sems (1.183.0) stable; urgency=low
+  * trans_layer: check transports size on set_trsp_socket()
+  * add add AmShallowUriParser
+ -- Michael Furmur <furmur@pm.me>  Wed, 18 Mar 2026 16:05:31 +0200
+
 sems (1.182.2) stable; urgency=low
   * identity_validator: add CRL checking. new options:
     * crl_processing = true
