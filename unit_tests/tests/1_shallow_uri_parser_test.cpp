@@ -95,6 +95,25 @@ TEST(ShallowUriParser, parse_uri_tel_with_params)
     ASSERT_TRUE(p.get_uri_params().at("lr").empty());
 }
 
+TEST(ShallowUriParser, parse_uri_tel_with_params_and_headers)
+{
+    string             input = "tel:+1234567890;phone-context=example.com;lr?h1=v1&h2";
+    AmShallowUriParser p;
+    ASSERT_TRUE(p.parse_uri(input));
+    ASSERT_EQ(p.get_uri_scheme(), sip_uri::TEL);
+    ASSERT_EQ(p.get_uri_user(), "+1234567890");
+
+    ASSERT_EQ(p.get_uri_params().size(), 2);
+    ASSERT_EQ(p.get_uri_params().at("phone-context"), "example.com");
+    ASSERT_TRUE(p.get_uri_params().contains("lr"));
+    ASSERT_TRUE(p.get_uri_params().at("lr").empty());
+
+    ASSERT_EQ(p.get_uri_headers().size(), 2);
+    ASSERT_EQ(p.get_uri_headers().at("h1"), "v1");
+    ASSERT_TRUE(p.get_uri_headers().contains("h2"));
+    ASSERT_TRUE(p.get_uri_headers().at("h2").empty());
+}
+
 TEST(ShallowUriParser, parse_uri_unknown_scheme)
 {
     string             input = "http:invalid";
@@ -257,9 +276,15 @@ TEST(ShallowUriParser, uri_str_with_headers)
     AmShallowUriParser p;
     ASSERT_TRUE(p.parse_uri(input));
     string result = p.uri_str();
-    ASSERT_TRUE(result.find("sip:user@host") == 0);
-    ASSERT_NE(result.find("Replaces=callid"), string::npos);
-    ASSERT_NE(result.find("To=tag"), string::npos);
+    ASSERT_EQ(p.uri_str(), "sip:user@host?Replaces=callid&To=tag");
+}
+
+TEST(ShallowUriParser, uri_str_tel_with_params_and_headers)
+{
+    string             input = "tel:42;p1=pv1;p2?h1=hv1&h2";
+    AmShallowUriParser p;
+    ASSERT_TRUE(p.parse_uri(input));
+    ASSERT_EQ(p.uri_str(), "tel:42;p1=pv1;p2?h1=hv1&h2");
 }
 
 // nameaddr_str
