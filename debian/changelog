@@ -1,3 +1,7 @@
+sems (1.183.1) stable; urgency=low
+  * fix libsems1.shlibs
+ -- Michael Furmur <furmur@pm.me>  Wed, 18 Mar 2026 17:50:27 +0200
+
 sems (1.183.0) stable; urgency=low
   * trans_layer: check transports size on set_trsp_socket()
   * add add AmShallowUriParser
