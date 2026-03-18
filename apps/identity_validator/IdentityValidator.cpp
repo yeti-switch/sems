@@ -63,7 +63,7 @@ struct IdentityValidatorMetricGroup : public StatCountersGroupsInterface {
         for (int i = 0; i < MAX_KEY_IDX; i++) {
             idx = i;
             setHelp(metrics_help_strings[idx]);
-            callback(format("{}_{}", MOD_NAME, metrics_keys_names[idx]), *this);
+            callback(metrics_keys_names[idx], *this);
         }
     }
 
@@ -74,7 +74,8 @@ struct IdentityValidatorMetricGroup : public StatCountersGroupsInterface {
     }
 };
 
-vector<string> IdentityValidatorMetricGroup::metrics_keys_names   = { "trusted_certificate_not_after_timestamp" };
+vector<string> IdentityValidatorMetricGroup::metrics_keys_names   = { MOD_NAME
+                                                                      "_trusted_certificate_not_after_timestamp" };
 vector<string> IdentityValidatorMetricGroup::metrics_help_strings = { "" };
 
 /* IdentityValidatorEntry */
