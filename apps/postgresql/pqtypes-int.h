@@ -52,5 +52,6 @@
 /* array types */
 #define INT2ARRAYOID    1005
 #define INT4ARRAYOID    1007
+#define TEXTARRAYOID    1009
 #define VARCHARARRAYOID 1015
 #define INETARRAYOID    1041

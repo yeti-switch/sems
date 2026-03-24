@@ -362,7 +362,7 @@ static bool iterate_pg_array(const char *value, AmArg &ret, std::function<AmArg(
     return true;
 }
 
-AmArg get_result(unsigned int oid, bool is_binary, const char *value, bool is_null)
+AmArg get_result(unsigned int oid, bool is_binary, const char *value, bool is_null, const string& query)
 {
     AmArg ret;
 
@@ -374,6 +374,7 @@ AmArg get_result(unsigned int oid, bool is_binary, const char *value, bool is_nu
     switch (oid) {
     case VARCHAROID:
     case CHAROID:
+    case NAMEOID:
     case TEXTOID:
     case INETOID:
     case UUIDOID:
@@ -395,14 +396,14 @@ AmArg get_result(unsigned int oid, bool is_binary, const char *value, bool is_nu
     case TIMESTAMPTZOID:
     {
         if (is_binary) {
-            ERROR("binary 'timestamp/timestamptz' are not supported");
+            ERROR("%s - binary 'timestamp/timestamptz' are not supported", query.c_str());
             break;
         }
         struct tm tm;
         /* TODO: full format for timestamptz is 2021-08-17 18:06:22.358156+03
            parse microseconds and timezone */
         if (nullptr == strptime(value, "%Y-%m-%d %H:%M:%S", &tm)) {
-            ERROR("failed to parse oid %d: %s", oid, value);
+            ERROR("%s - failed to parse oid %d: %s", query.c_str(), oid, value);
             break;
         }
         tm.tm_isdst = 0; // ignore daylight saving time
@@ -443,29 +444,30 @@ AmArg get_result(unsigned int oid, bool is_binary, const char *value, bool is_nu
     case JSONBOID: json2arg(value, ret); break;
     case INT2ARRAYOID:
         if (is_binary) {
-            ERROR("binary int2[] is not supported");
+            ERROR("%s - binary int2[] is not supported", query.c_str());
             break;
         }
         if (!iterate_pg_array(value, ret, [](const char *item_value) -> AmArg { return AmArg(atoi(item_value)); }))
-            ERROR("error on int2[] parsing: %s", value);
+            ERROR("%s - error on int2[] parsing: %s", query.c_str(), value);
         break;
     case INT4ARRAYOID:
         if (is_binary) {
-            ERROR("binary int4[] is not supported");
+            ERROR("%s - binary int4[] is not supported", query.c_str());
             break;
         }
         if (!iterate_pg_array(value, ret, [](const char *item_value) -> AmArg { return AmArg(atol(item_value)); }))
-            ERROR("error on int4[] parsing: %s", value);
+            ERROR("%s - error on int4[] parsing: %s", query.c_str(), value);
         break;
+    case TEXTARRAYOID:
     case VARCHARARRAYOID:
         if (!iterate_pg_array(value, ret, [](const char *item_value) -> AmArg { return AmArg(item_value); }))
-            ERROR("error on varchar[] parsing: %s", value);
+            ERROR("%s - error on text[]/varchar[] parsing: %s", query.c_str(), value);
         break;
     case INETARRAYOID:
         if (!iterate_pg_array(value, ret, [](const char *item_value) -> AmArg { return AmArg(item_value); }))
-            ERROR("error on inet[] parsing: %s", value);
+            ERROR("%s - error on inet[] parsing: %s", query.c_str(), value);
         break;
-    default: ERROR("unsupported oid:%u is_null:%d value:%s", oid, is_null, value);
+    default: ERROR("%s - unsupported oid:%u is_null:%d value:%s", query.c_str(), oid, is_null, value);
     } // switch(oid)
 
     return ret;

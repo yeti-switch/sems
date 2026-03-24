@@ -66,7 +66,7 @@ void PGTransactionImpl::make_result(PGresult *res, bool single)
         AmArg row;
         for (int j = 0; j < fields; j++) {
             row.push(field_names[j],
-                     get_result(field_types[j], field_format[j], PQgetvalue(res, i, j), PQgetisnull(res, i, j)));
+                     get_result(field_types[j], field_format[j], PQgetvalue(res, i, j), PQgetisnull(res, i, j), query->get_current_query()->get_query()));
         }
         if (single)
             parent->handler->onTuple(parent, row);

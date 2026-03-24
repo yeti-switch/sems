@@ -27,7 +27,7 @@ void QueryParams::getParams(AmArg &ret)
         AmArg param;
         param["oid"]    = p.get_oid();
         param["binary"] = p.is_binary_format();
-        param["value"]  = get_result(p.get_oid(), p.is_binary_format(), p.get_value());
+        param["value"]  = get_result(p.get_oid(), p.is_binary_format(), p.get_value(), false, get_query());
         param["size"]   = p.get_length();
         ret.push(param);
     }
