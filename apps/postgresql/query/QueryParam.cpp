@@ -362,7 +362,7 @@ static bool iterate_pg_array(const char *value, AmArg &ret, std::function<AmArg(
     return true;
 }
 
-AmArg get_result(unsigned int oid, bool is_binary, const char *value, bool is_null, const string& query)
+AmArg get_result(unsigned int oid, bool is_binary, const char *value, bool is_null, const string &query)
 {
     AmArg ret;
 

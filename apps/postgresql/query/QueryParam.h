@@ -31,7 +31,7 @@ class QueryParam {
     bool         is_binary_format();
 };
 
-AmArg                   get_result(unsigned int oid, bool is_binary, const char *value, bool is_null = false, const string& query = "");
+AmArg get_result(unsigned int oid, bool is_binary, const char *value, bool is_null = false, const string &query = "");
 std::vector<QueryParam> getParams(const std::vector<AmArg> &params);
 
 unsigned int pg_typname2oid(const string &sql_type);

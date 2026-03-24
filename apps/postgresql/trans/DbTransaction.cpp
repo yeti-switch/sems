@@ -110,14 +110,12 @@ IQuery *DbTransaction<isolation, rw>::get_current_query(bool parent)
         return 0;
     if (parent)
         return tr_impl->query;
-    if (!is_pipeline())
-        return tr_impl->query->get_current_query();
-
     QueryChain *chain = dynamic_cast<QueryChain *>(tr_impl->query);
     if (!chain)
-        return tr_impl->query;
+        return tr_impl->query->get_current_query();
 
     uint32_t num = chain->get_result_got();
+    // both pipeline and non-pipeline: subtract 1 to account for BEGIN result
     if (num <= 1)
         return chain->get_query(0);
     else if (num - 1 >= chain->get_size())

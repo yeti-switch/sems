@@ -1,6 +1,7 @@
 #include "QueryChain.h"
 #include "../conn/Connection.h"
 #include "../trans/Transaction.h"
+#include <algorithm>
 
 int QueryChain::exec()
 {
@@ -19,14 +20,9 @@ int QueryChain::exec()
 
 IQuery *QueryChain::get_current_query()
 {
-    if (current >= get_size())
-        return childs[childs.size() - 1]; // finished last query
-    else if (!current)
-        return childs[current]; // incomplete first query
-    else if (childs[current]->is_finished())
-        return childs[current]; // finished current query
-    else
-        return childs[current - 1]; // incomplete current query
+    size_t send_idx = (current < childs.size()) ? current : childs.size() - 1;
+    size_t recv_idx = ((size_t)got_result < childs.size()) ? (size_t)got_result : childs.size() - 1;
+    return childs[std::min(send_idx, recv_idx)];
 }
 
 void QueryChain::put_result()
