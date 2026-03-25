@@ -47,13 +47,14 @@ struct IdentityValidatorMetricGroup : public StatCountersGroupsInterface {
     {
     }
 
-    void add_trust_cert(const string &id, const string &name, unsigned long long value)
+    void add_trust_cert(const string &id, const string &name, const string &cn, unsigned long long value)
     {
         trusted_certs.emplace_back();
 
         auto &labels   = trusted_certs.back().labels;
         labels["id"]   = id;
         labels["name"] = name;
+        labels["cn"]   = cn;
 
         trusted_certs.back().value = value;
     }
@@ -177,7 +178,8 @@ void IdentityValidator::operator()(const string &, iterate_groups_callback_type 
         g.trusted_certs.reserve(trusted_certs.size());
         for (const auto &cert : trusted_certs)
             for (const auto &cert_in_chain : cert.certs)
-                g.add_trust_cert(std::to_string(cert.id), cert.name, cert_in_chain->not_after().time_since_epoch());
+                g.add_trust_cert(std::to_string(cert.id), cert.name, cert_in_chain->subject_dn().to_string(),
+                                 cert_in_chain->not_after().time_since_epoch());
     }
 
     g.serialize(callback);
