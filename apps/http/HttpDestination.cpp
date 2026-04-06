@@ -198,6 +198,7 @@ HttpDestination::HttpDestination(const string &name)
     , requests_processed(
           stat_group(Counter, MOD_NAME, "requests_processed").addAtomicCounter().addLabel("destination", name))
     , requests_failed(stat_group(Counter, MOD_NAME, "requests_failed").addAtomicCounter().addLabel("destination", name))
+    , certificate_not_after_counter(0)
 {
 }
 
@@ -234,7 +235,8 @@ void HttpDestination::initNotAfterCounter(const string &name)
     while (true) {
         try {
             certs.push_back(Botan::X509_Certificate(in));
-        } catch (const Botan::Exception &) {
+        } catch (const Botan::Exception &exp) {
+            ERROR("error loading certificate: %s", exp.what());
             break;
         }
     }
@@ -242,7 +244,10 @@ void HttpDestination::initNotAfterCounter(const string &name)
     certificate_not_after_counter = &stat_group(Gauge, "http_client", "certificate_not_after_timestamp")
                                          .addAtomicCounter()
                                          .addLabel("destination", name);
-    certificate_not_after_counter->set(certs[0].not_after().time_since_epoch());
+    if (certs.empty())
+        certificate_not_after_counter->set(0);
+    else
+        certificate_not_after_counter->set(certs[0].not_after().time_since_epoch());
 }
 
 int HttpDestination::parse(const string &name, cfg_t *cfg, const DefaultValues &values, bool is_auth = false)
@@ -667,6 +672,29 @@ void HttpDestination::showStats(AmArg &ret)
     ret["requests_failed"]           = static_cast<unsigned long>(requests_failed.get());
 }
 
+bool HttpDestination::certReload()
+{
+    if (certificate.empty() || !certificate_not_after_counter)
+        return false;
+
+    std::vector<Botan::X509_Certificate> certs;
+    Botan::DataSource_Stream             in(certificate);
+    while (true) {
+        try {
+            certs.push_back(Botan::X509_Certificate(in));
+        } catch (const Botan::Exception &exp) {
+            ERROR("error loading certificate: %s", exp.what());
+            break;
+        }
+    }
+
+    if (certs.empty())
+        certificate_not_after_counter->set(0);
+    else
+        certificate_not_after_counter->set(certs[0].not_after().time_since_epoch());
+    return true;
+}
+
 int HttpDestinationsMap::configure_destination(const string &name, cfg_t *cfg, const DefaultValues &values,
                                                bool is_auth = false)
 {
@@ -714,6 +742,12 @@ void HttpDestinationsMap::dump(AmArg &ret)
     ret.assertStruct();
     for (HttpDestinationsMap::const_iterator i = begin(); i != end(); i++)
         i->second.dump(i->first, ret[i->first]);
+}
+
+void HttpDestinationsMap::certReload()
+{
+    for (HttpDestinationsMap::iterator i = begin(); i != end(); i++)
+        i->second.certReload();
 }
 
 bool HttpDestinationsMap::need_requeue()

@@ -132,6 +132,7 @@ class HttpClient : public AmThread,
     async_rpc_handler showDnsCache;
     rpc_handler       resetDnsCache;
     rpc_handler       setEventsLogLevel;
+    rpc_handler       certReload;
 
     /* true if event consumed */
     template <typename EventType> bool check_http_event_sync_ctx(const EventType &u);

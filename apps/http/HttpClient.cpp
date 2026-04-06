@@ -323,6 +323,8 @@ void HttpClient::init_rpc_tree()
     reg_method(req, "post", "post request", "", &HttpClient::postRequest, this);
     reg_method(req, "get", "get request", "", &HttpClient::getRequest, this);
     reg_method(req, "multi", "multi request", "", &HttpClient::multiRequest, this);
+    auto &certificates = reg_leaf(req, "certificates");
+    reg_method(certificates, "reload", "reload certificates", "", &HttpClient::certReload, this);
     auto &cache = reg_leaf(req, "dns_cache");
     reg_method(cache, "reset", "reset dns_cache", "", &HttpClient::resetDnsCache, this);
     auto &set = reg_leaf(root, "set");
@@ -432,6 +434,11 @@ bool HttpClient::showDnsCache(const string &connection_id, const AmArg &request_
 void HttpClient::resetDnsCache(const AmArg &, AmArg &)
 {
     resolve_timer.set(1);
+}
+
+void HttpClient::certReload(const AmArg &, AmArg &)
+{
+    destinations.certReload();
 }
 
 void HttpClient::setEventsLogLevel(const AmArg &arg, AmArg &ret)

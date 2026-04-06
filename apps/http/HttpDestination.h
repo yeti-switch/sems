@@ -143,6 +143,7 @@ struct HttpDestination {
     void send_postponed_events(HttpClient *client);
     bool check_queue();
     void showStats(AmArg &ret);
+    bool certReload();
 };
 
 class HttpDestinationsMap : public std::map<string, HttpDestination> {
@@ -153,6 +154,7 @@ class HttpDestinationsMap : public std::map<string, HttpDestination> {
     int  configure(cfg_t *cfg, DefaultValues &values);
     void dump();
     void dump(AmArg &ret);
+    void certReload();
 
     bool need_requeue();
 };
