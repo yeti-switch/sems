@@ -227,6 +227,24 @@ extern int http_dest_header_func(cfg_t *cfg, cfg_opt_t * /*opt*/, int argc, cons
     return 0;
 }
 
+void HttpDestination::initNotAfterCounter(const string &name)
+{
+    std::vector<Botan::X509_Certificate> certs;
+    Botan::DataSource_Stream             in(certificate);
+    while (true) {
+        try {
+            certs.push_back(Botan::X509_Certificate(in));
+        } catch (const Botan::Exception &) {
+            break;
+        }
+    }
+
+    certificate_not_after_counter = &stat_group(Gauge, "http_client", "certificate_not_after_timestamp")
+                                         .addAtomicCounter()
+                                         .addLabel("destination", name);
+    certificate_not_after_counter->set(certs[0].not_after().time_since_epoch());
+}
+
 int HttpDestination::parse(const string &name, cfg_t *cfg, const DefaultValues &values, bool is_auth = false)
 {
     bool need_destination = false;
@@ -293,6 +311,9 @@ int HttpDestination::parse(const string &name, cfg_t *cfg, const DefaultValues &
         ERROR("can't access the certificate file %s: %m", certificate.c_str());
         return -1;
     }
+
+    if (!certificate.empty())
+        initNotAfterCounter(name);
 
     if (!certificate_key.empty() && ::access(certificate_key.c_str(), F_OK | R_OK) != 0) {
         ERROR("can't access the certificate_key file %s: %m", certificate_key.c_str());

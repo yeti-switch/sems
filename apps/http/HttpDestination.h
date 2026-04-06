@@ -70,7 +70,8 @@ struct HttpDestination {
 
     string content_type;
 
-    int parse(const string &name, cfg_t *cfg, const DefaultValues &values, bool is_auth);
+    int  parse(const string &name, cfg_t *cfg, const DefaultValues &values, bool is_auth);
+    void initNotAfterCounter(const string &name);
 
     bool need_requeue() const { return fail_action.requeue(); }
 
@@ -122,6 +123,7 @@ struct HttpDestination {
     AtomicCounter    &count_pending_events;
     AtomicCounter    &requests_processed;
     AtomicCounter    &requests_failed;
+    AtomicCounter    *certificate_not_after_counter;
 
     string succ_codes_str;
 
