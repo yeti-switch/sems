@@ -1,0 +1,181 @@
+@startuml Media Transport State Machine
+title AmMediaTransport — Media State Machine
+skinparam state {
+    BackgroundColor #f5f5f5
+    BorderColor #333
+    ArrowColor #333
+    FontSize 12
+}
+
+state "RTP" as RTP : state2str() = "RTP"
+state "UDPTL" as UDPTL : state2str() = "UDPTL"
+state "SRTP" as SRTP : state2str() = "SRTP"
+state "DTLS" as DTLS : state2str() = "DTLS"
+state "ZRTP" as ZRTP : state2str() = "ZRTP"
+state "DTLS-UDPTL" as DTLS_UDPTL : state2str() = "DTLS-UDPTL"
+
+state "ICE" as ICE : state2str() = "ICE"
+state "ICE-RESTART" as ICE_RESTART : state2str() = "ICE-RESTART"
+state "ICE-RTP" as ICE_RTP : state2str() = "ICE-RTP"
+state "ICE-SRTP" as ICE_SRTP : state2str() = "ICE-SRTP"
+state "ICE-DTLS" as ICE_DTLS : state2str() = "ICE-DTLS"
+state "ICE-ZRTP" as ICE_ZRTP : state2str() = "ICE-ZRTP"
+state "ICE-UDPTL" as ICE_UDPTL : state2str() = "ICE-UDPTL"
+state "ICE-DTLS-UDPTL" as ICE_DTLS_UDPTL : state2str() = "ICE-DTLS-UDPTL"
+
+' === Initial state creation via updateState<T>() ===
+[*] --> RTP : updateState<AmMediaRtpState>()
+[*] --> DTLS : updateState<AmMediaDtlsState>()
+[*] --> ZRTP : updateState<AmMediaZrtpState>()
+[*] --> SRTP : updateState<AmMediaSrtpState>()
+[*] --> ICE : updateState<AmMediaIceState>()
+
+' === Non-ICE transitions ===
+RTP --> UDPTL : update()\n[args.udptl == true]
+
+DTLS --> SRTP : onSrtpKeysAvailable()\n[is_dtls_srtp == true]
+DTLS --> DTLS_UDPTL : onSrtpKeysAvailable()\n[is_dtls_srtp == false]
+
+ZRTP --> SRTP : onSrtpKeysAvailable()
+
+' === ICE transitions ===
+ICE --> ICE_RESTART : update()\n[args.need_restart == true]
+
+ICE --> ICE_RTP : allowStunConnection()\n[isRtp() && !is_udptl]
+ICE --> ICE_SRTP : allowStunConnection()\n[isSrtp() || isSecured()]
+ICE --> ICE_DTLS : allowStunConnection()\n[isDtls()]
+ICE --> ICE_ZRTP : allowStunConnection()\n[isZrtp()]
+ICE --> ICE_UDPTL : allowStunConnection()\n[!isSecured() && is_udptl]
+ICE --> ICE_DTLS_UDPTL : allowStunConnection()\n[isSecured() && is_udptl]
+
+ICE_RESTART --> ICE_RTP : allowStunConnection()\n[isRtp() && !is_udptl]
+ICE_RESTART --> ICE_SRTP : allowStunConnection()\n[isSrtp() || isSecured()]
+ICE_RESTART --> ICE_DTLS : allowStunConnection()\n[isDtls()]
+ICE_RESTART --> ICE_ZRTP : allowStunConnection()\n[isZrtp()]
+ICE_RESTART --> ICE_UDPTL : allowStunConnection()\n[!isSecured() && is_udptl]
+ICE_RESTART --> ICE_DTLS_UDPTL : allowStunConnection()\n[isSecured() && is_udptl]
+
+' === ICE composite state transitions ===
+ICE_DTLS --> ICE_SRTP : onSrtpKeysAvailable()\n[is_dtls_srtp == true]
+ICE_DTLS --> ICE_DTLS_UDPTL : onSrtpKeysAvailable()\n[is_dtls_srtp == false]
+
+ICE_ZRTP --> ICE_SRTP : onSrtpKeysAvailable()
+
+' === ICE composite update triggers restart ===
+ICE_RTP --> ICE_RESTART : update()\n[args.need_restart == true]
+ICE_SRTP --> ICE_RESTART : update()\n[args.need_restart == true]
+ICE_DTLS --> ICE_RESTART : update()\n[args.need_restart == true]
+ICE_ZRTP --> ICE_RESTART : update()\n[args.need_restart == true]
+ICE_UDPTL --> ICE_RESTART : update()\n[args.need_restart == true]
+ICE_DTLS_UDPTL --> ICE_RESTART : update()\n[args.need_restart == true]
+
+note right of ICE
+  nextState() logic (priority order):
+  1. isSecured() && is_udptl → ICE-DTLS-UDPTL
+  2. isSecured() && !is_udptl → ICE-SRTP
+  3. isSrtp() → ICE-SRTP
+  4. isDtls() → ICE-DTLS
+  5. is_udptl → ICE-UDPTL
+  6. isZrtp() → ICE-ZRTP
+  7. default → ICE-RTP
+end note
+
+note bottom of DTLS
+  is_dtls_srtp flag is set
+  from args.dtls_srtp in
+  init() and update()
+end note
+
+@enduml
+
+
+@startuml ICE Context State Machine
+title IceContext — ICE Negotiation States
+skinparam state {
+    BackgroundColor #e8f4fd
+    BorderColor #2196F3
+    ArrowColor #1565C0
+    FontSize 12
+}
+
+state "ICE_INITIAL" as INIT
+state "ICE_CONNECTIVITY_CHECK" as CHECK
+state "ICE_NOMINATIONS" as NOM
+state "ICE_KEEP_ALIVE" as KA
+
+[*] --> INIT
+
+INIT --> CHECK : initContext()\n[pairs not empty]
+
+CHECK --> NOM : updateStunTimers()\n[all pairs finished checks\n(none WAITING/FROZEN/IN_PROGRESS)]
+
+NOM --> KA : updateStunTimers()\n[current_candidate == PAIR_SUCCEEDED]
+NOM --> KA : updateStunTimers()\n[nominated pair found\n&& isIceControlled]
+
+NOM --> CHECK : addConnection()\n[new candidate added]
+KA --> CHECK : addConnection()\n[new candidate added]
+
+KA --> NOM : allowCandidate()\n[pair state == PAIR_WAITING]
+
+NOM --> NOM : failedCandidate()
+KA --> NOM : failedCandidate()
+
+INIT -[dashed]-> INIT : reset()
+CHECK -[dashed]-> INIT : reset()
+NOM -[dashed]-> INIT : reset()
+KA -[dashed]-> INIT : reset()
+
+@enduml
+
+
+@startuml ICE Candidate Pair State Machine
+title AmStunConnection — ICE Candidate Pair States
+skinparam state {
+    BackgroundColor #fff3e0
+    BorderColor #FF9800
+    ArrowColor #E65100
+    FontSize 12
+}
+
+state "PAIR_FROZEN" as FROZEN
+state "PAIR_WAITING" as WAITING
+state "PAIR_IN_PROGRESS" as IN_PROGRESS
+state "PAIR_RETRANSMIT" as RETRANSMIT
+state "PAIR_FAILED" as FAILED
+state "PAIR_SUCCEEDED" as SUCCEEDED
+
+[*] --> FROZEN
+
+FROZEN --> WAITING : checkState() /\ninitContext()
+
+WAITING --> IN_PROGRESS : checkState()\n[send STUN request,\ncount = 0]
+
+IN_PROGRESS --> RETRANSMIT : checkState()\n[retransmit timeout]
+
+RETRANSMIT --> FAILED : checkState()\n[count == STUN_INTERVALS_COUNT\n(7 retransmits exhausted)]
+
+SUCCEEDED --> IN_PROGRESS : checkState()\n[keep-alive check]
+FAILED --> IN_PROGRESS : checkState()\n[retry check]
+
+WAITING --> SUCCEEDED : allow_candidate()\n[valid STUN response]
+IN_PROGRESS --> SUCCEEDED : allow_candidate()\n[valid STUN response]
+RETRANSMIT --> SUCCEEDED : allow_candidate()\n[valid STUN response]
+
+FAILED --> WAITING : allow_candidate()\n[valid STUN response,\nretry from WAITING]
+
+IN_PROGRESS --> FAILED : check_response()\n[invalid response,\nnot role conflict]
+IN_PROGRESS --> WAITING : check_response()\n[STUN_ERROR_ROLECONFLICT\n→ role swap & retry]
+
+note right of RETRANSMIT
+  Retransmit intervals defined
+  in retransmit_intervals[7]
+  (STUN_INTERVALS_COUNT = 7)
+end note
+
+note right of SUCCEEDED
+  From SUCCEEDED, checkState()
+  sends keep-alive STUN binding
+  requests periodically
+end note
+
+@enduml
