@@ -545,6 +545,7 @@ class AmRtpStream : public AmObject
         return &zrtp_context;
     }
     void initZrtp();
+    void startZrtp();
     void zrtpSessionActivated(srtp_profile_t srtp_profile, const vector<uint8_t> &local_key,
                               const vector<uint8_t> &remote_key);
     int  send_zrtp(unsigned char *buffer, unsigned int size);

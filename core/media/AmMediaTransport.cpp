@@ -433,7 +433,8 @@ void AmMediaTransport::getSdpOffer(SdpMedia &offer)
     default:
 #ifdef WITH_ZRTP
         if (stream->isZrtpEnabled() && zrtp_enable) {
-            offer.zrtp_hash.hash = stream->getZrtpContext()->getLocalHash(stream->get_ssrc());
+            stream->initZrtp();
+            offer.zrtp_hash.hash = stream->getZrtpContext()->getLocalHash();
             if (!offer.zrtp_hash.hash.empty())
                 offer.zrtp_hash.is_use = true;
         }
@@ -520,7 +521,8 @@ void AmMediaTransport::getSdpAnswer(const SdpMedia &offer, SdpMedia &answer)
         answer.fmt = T38_FMT;
 #ifdef WITH_ZRTP
     } else if (stream->isZrtpEnabled() && zrtp_enable && offer.zrtp_hash.is_use) {
-        answer.zrtp_hash.hash = stream->getZrtpContext()->getLocalHash(stream->get_ssrc());
+        stream->initZrtp();
+        answer.zrtp_hash.hash = stream->getZrtpContext()->getLocalHash();
         if (!answer.zrtp_hash.hash.empty())
             answer.zrtp_hash.is_use = true;
 #endif /*WITH_ZRTP*/

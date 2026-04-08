@@ -32,6 +32,7 @@ static int zrtp_startSrtpSession(void *clientData, const bzrtpSrtpSecrets_t *srt
 zrtpContext::zrtpContext()
     : context(0)
     , l_ssrc(0)
+    , inited(false)
     , started(false)
     , activated(false)
 {
@@ -46,6 +47,21 @@ zrtpContext::~zrtpContext()
         DBG("destroy zrtp context %p for ssrc %d", context, l_ssrc);
         bzrtp_destroyBzrtpContext((bzrtpContext_t *)context, l_ssrc);
     }
+}
+
+void zrtpContext::createContext(unsigned int ssrc)
+{
+    if (context)
+        return;
+
+    l_ssrc  = ssrc;
+    context = bzrtp_createBzrtpContext();
+    bzrtpCallbacks_t callbacks{ .bzrtp_statusMessage               = NULL,
+                                .bzrtp_sendData                    = zrtp_sendData,
+                                .bzrtp_srtpSecretsAvailable        = zrtp_srtpSecretsAvailable,
+                                .bzrtp_startSrtpSession            = zrtp_startSrtpSession,
+                                .bzrtp_contextReadyForExportedKeys = NULL };
+    bzrtp_setCallbacks((bzrtpContext_t *)context, &callbacks);
 }
 
 void zrtpContext::addSubscriber(ZrtpContextSubscriber *subscriber)
@@ -68,7 +84,7 @@ std::string zrtpContext::getRemoteHash()
     return remote_hash;
 }
 
-void zrtpContext::init(uint8_t type, const std::vector<uint8_t> &values)
+void zrtpContext::setCryptoTypes(uint8_t type, const std::vector<uint8_t> &values)
 {
     if (!context)
         throw string("zrtp context not created");
@@ -76,35 +92,37 @@ void zrtpContext::init(uint8_t type, const std::vector<uint8_t> &values)
         bzrtp_setSupportedCryptoTypes((bzrtpContext_t *)context, type, (uint8_t *)values.data(), values.size());
 }
 
+void zrtpContext::init()
+{
+    if (!context)
+        throw string("zrtp context not created");
+    if (inited)
+        return;
+    bzrtp_initBzrtpContext((bzrtpContext_t *)context, l_ssrc);
+    bzrtp_setClientData((bzrtpContext_t *)context, l_ssrc, this);
+    inited = true;
+}
+
 void zrtpContext::start()
 {
     if (!context)
+        throw string("zrtp context not created");
+    if (!inited)
+        throw string("zrtp context not inited");
+    if (started)
         return;
-    else if (!started && bzrtp_startChannelEngine((bzrtpContext_t *)context, l_ssrc))
+
+    if (bzrtp_startChannelEngine((bzrtpContext_t *)context, l_ssrc))
         throw string("error start zrtp channel engine");
     else
         DBG("start zrtp context for ssrc %d", l_ssrc);
     started = true;
 }
 
-std::string zrtpContext::getLocalHash(unsigned int ssrc)
+std::string zrtpContext::getLocalHash()
 {
-    l_ssrc = ssrc;
-
-    if (!context) {
-        context = bzrtp_createBzrtpContext();
-        bzrtpCallbacks_t callbacks{ .bzrtp_statusMessage               = NULL,
-                                    .bzrtp_sendData                    = zrtp_sendData,
-                                    .bzrtp_srtpSecretsAvailable        = zrtp_srtpSecretsAvailable,
-                                    .bzrtp_startSrtpSession            = zrtp_startSrtpSession,
-                                    .bzrtp_contextReadyForExportedKeys = NULL };
-        bzrtp_setCallbacks((bzrtpContext_t *)context, &callbacks);
-        bzrtp_initBzrtpContext((bzrtpContext_t *)context, ssrc);
-        bzrtp_setClientData((bzrtpContext_t *)context, l_ssrc, this);
-    }
-
     string hash(70, 0);
-    bzrtp_getSelfHelloHash((bzrtpContext_t *)context, ssrc, (uint8_t *)hash.c_str(), hash.size());
+    bzrtp_getSelfHelloHash((bzrtpContext_t *)context, l_ssrc, (uint8_t *)hash.c_str(), hash.size());
     return hash.c_str() + strlen(ZRTP_VERSION) + 1;
 }
 

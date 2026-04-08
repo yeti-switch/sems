@@ -19,6 +19,7 @@ class zrtpContext {
     void                                *context;
     uint32_t                             l_ssrc;
     uint32_t                             now;
+    bool                                 inited;
     bool                                 started;
     bool                                 activated;
     srtp_profile_t                       srtp_profile;
@@ -26,16 +27,19 @@ class zrtpContext {
     vector<uint8_t>                      local_key, remote_key;
     std::vector<ZrtpContextSubscriber *> subscribers;
 
+
   public:
     zrtpContext();
     ~zrtpContext();
 
     void addSubscriber(ZrtpContextSubscriber *describer);
 
-    string getLocalHash(unsigned int ssrc);
+    void   createContext(unsigned int ssrc);
+    string getLocalHash();
     void   setRemoteHash(const string &hash);
     string getRemoteHash();
-    void   init(uint8_t type, const std::vector<uint8_t> &values);
+    void   setCryptoTypes(uint8_t type, const std::vector<uint8_t> &values);
+    void   init();
     void   start();
     bool   isStarted() { return started; }
     bool   isActivated() { return activated; }

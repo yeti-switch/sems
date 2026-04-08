@@ -1051,7 +1051,7 @@ int AmRtpStream::init(const AmSdp &local, const AmSdp &remote, bool sdp_offer_ow
                 CLASS_DBG("init rtcp (%s, %d) stream:%p, state:%s, type:%s, cur_rtp_conn:%p", address.data(), port,
                           to_void(this), cur_rtcp_trans->state2str(), cur_rtcp_trans->type2str(),
                           cur_rtcp_trans->getCurRtpConn());
-                cur_rtcp_trans->updateState<AmMediaRtpState>(args);
+                cur_rtcp_trans->updateState<AmMediaZrtpState>(args);
             }
 
             connection_is_muted = cur_rtp_trans->isMute(AmStreamConnection::ZRTP_CONN);
@@ -1375,11 +1375,17 @@ void AmRtpStream::zrtpSessionActivated(srtp_profile_t srtp_profile, const vector
 void AmRtpStream::initZrtp()
 {
     MEDIA_interface &media_if = AmConfig.getMediaIfaceInfo(l_if);
-    zrtp_context.init(ZRTP_HASH_TYPE, media_if.srtp->zrtp_hashes);
-    zrtp_context.init(ZRTP_CIPHERBLOCK_TYPE, media_if.srtp->zrtp_ciphers);
-    zrtp_context.init(ZRTP_AUTHTAG_TYPE, media_if.srtp->zrtp_authtags);
-    zrtp_context.init(ZRTP_KEYAGREEMENT_TYPE, media_if.srtp->zrtp_dhmodes);
-    zrtp_context.init(ZRTP_SAS_TYPE, media_if.srtp->zrtp_sas);
+    zrtp_context.createContext(get_ssrc());
+    zrtp_context.setCryptoTypes(ZRTP_HASH_TYPE, media_if.srtp->zrtp_hashes);
+    zrtp_context.setCryptoTypes(ZRTP_CIPHERBLOCK_TYPE, media_if.srtp->zrtp_ciphers);
+    zrtp_context.setCryptoTypes(ZRTP_AUTHTAG_TYPE, media_if.srtp->zrtp_authtags);
+    zrtp_context.setCryptoTypes(ZRTP_KEYAGREEMENT_TYPE, media_if.srtp->zrtp_dhmodes);
+    zrtp_context.setCryptoTypes(ZRTP_SAS_TYPE, media_if.srtp->zrtp_sas);
+    zrtp_context.init();
+}
+
+void AmRtpStream::startZrtp()
+{
     zrtp_context.start();
 }
 

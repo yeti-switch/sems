@@ -11,14 +11,14 @@ AmMediaZrtpState::AmMediaZrtpState(AmMediaTransport *transport)
 AmMediaState *AmMediaZrtpState::init(const AmMediaStateArgs &args)
 {
     addConnections(args);
-    transport->getRtpStream()->initZrtp();
+    transport->getRtpStream()->startZrtp();
     return this;
 }
 
 AmMediaState *AmMediaZrtpState::update(const AmMediaStateArgs &args)
 {
     updateConnections(args);
-    transport->getRtpStream()->initZrtp();
+    transport->getRtpStream()->startZrtp();
     return this;
 }
 
@@ -72,7 +72,6 @@ AmMediaState *AmMediaZrtpState::onSrtpKeysAvailable(uint8_t transport_type, uint
                                                     const string &local_key, const string &remote_key)
 {
     transport->getConnFactory()->store_srtp_cred(srtp_profile, local_key, remote_key);
-    transport->removeCurRtpConn();
     transport->removeCurRtcpConn();
 
     auto srtp_state = new AmMediaSrtpState(transport);
