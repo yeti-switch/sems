@@ -1,4 +1,4 @@
-#if defined __cpp_lib_format || defined __glibcxx_format
+#if __has_include(<format>)
 #include <format>
 using std::format;
 #else
