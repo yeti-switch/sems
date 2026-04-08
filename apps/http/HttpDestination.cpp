@@ -232,7 +232,7 @@ void HttpDestination::initNotAfterCounter(const string &name)
 {
     std::vector<Botan::X509_Certificate> certs;
     Botan::DataSource_Stream             in(certificate);
-    while (true) {
+    while (!in.end_of_data()) {
         try {
             certs.push_back(Botan::X509_Certificate(in));
         } catch (const Botan::Exception &exp) {
@@ -679,7 +679,7 @@ bool HttpDestination::certReload()
 
     std::vector<Botan::X509_Certificate> certs;
     Botan::DataSource_Stream             in(certificate);
-    while (true) {
+    while (!in.end_of_data()) {
         try {
             certs.push_back(Botan::X509_Certificate(in));
         } catch (const Botan::Exception &exp) {

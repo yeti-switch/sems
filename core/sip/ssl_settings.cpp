@@ -15,7 +15,7 @@ void settings::load_certificates()
 {
     std::vector<Botan::X509_Certificate> certs;
     Botan::DataSource_Stream             in(certificate_path);
-    while (true) {
+    while (!in.end_of_data()) {
         try {
             certs.push_back(Botan::X509_Certificate(in));
         } catch (const Botan::Exception &) {
@@ -60,7 +60,7 @@ bool settings::checkCertificateAndKey(const char *interface_name, const char *in
                  role_name, certificate_path.c_str());
             std::vector<Botan::X509_Certificate> certs;
             Botan::DataSource_Stream             in(certificate_path);
-            while (true) {
+            while (!in.end_of_data()) {
                 try {
                     certs.push_back(Botan::X509_Certificate(in));
                     auto &t = certs.back().not_after();
