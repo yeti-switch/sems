@@ -1,3 +1,9 @@
+sems (1.184.0) stable; urgency=low
+  * media: fix sending SRTCP packets after DTLS negotiation for RTP
+  * http_client: add sems_http_client_certificate_not_after_timestamp metric
+  * http_client: certificate.reload rpc command
+ -- Michael Furmur <furmur@pm.me>  Wed, 08 Apr 2026 20:43:11 +0300
+
 sems (1.183.4) stable; urgency=low
   * identity_validator: add cn label to cert expiration timestamp metrics
  -- Michael Furmur <furmur@pm.me>  Wed, 25 Mar 2026 11:52:57 +0200
