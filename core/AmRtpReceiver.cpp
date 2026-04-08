@@ -115,12 +115,12 @@ AmRtpReceiverThread::AmRtpReceiverThread()
 
 AmRtpReceiverThread::~AmRtpReceiverThread()
 {
-    DBG("RTP receiver has been recycled.");
+    DBG3("RTP receiver has been recycled.");
 }
 
 void AmRtpReceiverThread::on_stop()
 {
-    DBG("requesting RTP receiver to stop.");
+    DBG3("requesting RTP receiver to stop.");
     stop_event.fire();
 }
 

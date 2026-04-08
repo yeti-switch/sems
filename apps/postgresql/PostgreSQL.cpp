@@ -161,7 +161,7 @@ int PostgreSQL::init()
 
     init_rpc();
 
-    DBG("PostgreSQL Client initialized");
+    DBG3("PostgreSQL Client initialized");
     return 0;
 }
 
@@ -215,7 +215,7 @@ void PostgreSQL::run()
     epoll_unlink(epoll_fd);
     close(epoll_fd);
 
-    DBG("PostgreSQL Client stopped");
+    DBG3("PostgreSQL Client stopped");
 }
 
 void PostgreSQL::on_stop()

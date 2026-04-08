@@ -339,7 +339,7 @@ static void signal_handler(int sig)
         if (!is_shutting_down.get()) {
             is_shutting_down.set(true);
 
-            DBG("Stopping SIP stack after signal");
+            DBG3("Stopping SIP stack after signal");
             sip_ctrl.stop();
         }
     } else {
@@ -802,40 +802,40 @@ error:
 
     AmPlugIn::instance()->shutdown();
     // session container stops active sessions
-    DBG("Disposing session container");
+    DBG3("Disposing session container");
     AmSessionContainer::dispose();
 
 
-    DBG("** Transaction table dump: **");
+    DBG3("** Transaction table dump: **");
     dumps_transactions();
-    DBG("*****************************");
+    DBG3("*****************************");
 
     cleanup_transaction();
 
     if (AmConfig.enable_rtsp) {
-        DBG("Disposing RTSP client");
+        DBG3("Disposing RTSP client");
         RtspClient::dispose();
     }
 
-    DBG("Disposing RTP receiver");
+    DBG3("Disposing RTP receiver");
     AmRtpReceiver::dispose();
 
-    DBG("Stop session processor");
+    DBG3("Stop session processor");
     AmSessionProcessor::stop();
 
-    DBG("Disposing media processor");
+    DBG3("Disposing media processor");
     AmMediaProcessor::dispose();
 
-    DBG("Disposing stun processor");
+    DBG3("Disposing stun processor");
     stun_processor::dispose();
 
-    DBG("Disposing audio file recorder");
+    DBG3("Disposing audio file recorder");
     AmAudioFileRecorderProcessor::dispose();
 
-    DBG("Disposing pcap file recorder");
+    DBG3("Disposing pcap file recorder");
     PcapFileRecorderProcessor::dispose();
 
-    DBG("Disposing event dispatcher");
+    DBG3("Disposing event dispatcher");
     AmEventDispatcher::dispose();
 
     // async_file_writer::instance()->stop();
@@ -862,10 +862,10 @@ error:
 
     AmThreadWatcher::instance()->cleanup();
 
-    DBG("Disposing plug-ins");
+    DBG3("Disposing plug-ins");
     AmPlugIn::dispose();
 
-    INFO("Disposing app and wheel timer");
+    DBG3("Disposing app and wheel timer");
     AmAppTimer::dispose();
     wheeltimer::dispose();
 

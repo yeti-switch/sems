@@ -94,7 +94,7 @@ AmPlugIn::AmPlugIn()
 
 static void delete_plugin_factory(std::pair<string, AmPluginFactory *> pf)
 {
-    DBG("decreasing reference to plug-in factory: %s", pf.first.c_str());
+    DBG3("decreasing reference to plug-in factory: %s", pf.first.c_str());
     dec_ref(pf.second);
 }
 
@@ -105,7 +105,7 @@ AmPlugIn::~AmPlugIn()
     std::for_each(name2seh.begin(), name2seh.end(), delete_plugin_factory);
     std::for_each(plugins_objects.begin(), plugins_objects.end(),
                   [](std::pair<std::tuple<int, string>, AmPluginFactory *> pf) {
-                      DBG("decreasing reference to plug-in factory: %s", std::get<1>(pf.first).c_str());
+                      DBG3("decreasing reference to plug-in factory: %s", std::get<1>(pf.first).c_str());
                       dec_ref(pf.second);
                   });
     std::for_each(name2config.begin(), name2config.end(), delete_plugin_factory);
@@ -149,7 +149,7 @@ void AmPlugIn::init()
 
 static void shutdown_plugin_factory(std::pair<std::tuple<int, string>, AmPluginFactory *> pf)
 {
-    DBG("shutdown plug-in: %s", std::get<1>(pf.first).c_str());
+    DBG3("shutdown plug-in: %s", std::get<1>(pf.first).c_str());
     pf.second->onShutdown();
 }
 

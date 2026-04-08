@@ -166,12 +166,12 @@ void AmSessionContainer::run()
         if (!more && (!_container_closed.get()))
             _run_cond.set(false);
     }
-    DBG("Session cleaner terminating");
+    DBG3("Session cleaner terminating");
 }
 
 void AmSessionContainer::broadcastShutdown()
 {
-    DBG("brodcasting ServerShutdown system event to %u sessions...", AmSession::getSessionNum());
+    DBG3("brodcasting ServerShutdown system event to %u sessions...", AmSession::getSessionNum());
     AmEventDispatcher::instance()->broadcast(new AmSystemEvent(AmSystemEvent::ServerShutdown));
 }
 
@@ -184,7 +184,7 @@ void AmSessionContainer::on_stop()
     } else {
         broadcastShutdown();
 
-        DBG("waiting for active event queues to stop...");
+        DBG3("waiting for active event queues to stop...");
 
         for (unsigned int i = 0; (!AmEventDispatcher::instance()->empty() &&
                                   (!AmConfig.max_shutdown_time || i < AmConfig.max_shutdown_time * 1000 / 10));
@@ -192,12 +192,12 @@ void AmSessionContainer::on_stop()
             usleep(10000);
 
         if (!AmEventDispatcher::instance()->empty()) {
-            WARN("Not all sessions cleanly ended!");
+            WARN("Not all sessions cleanly ended. waiting for them");
         }
 
-        DBG("cleaning sessions...");
+        DBG3("cleaning sessions...");
         while (clean_sessions())
-            usleep(10000);
+            usleep(1000);
     }
 
     _run_cond.set(true); // so that thread stops

@@ -13,7 +13,7 @@ class PrometheusExporterFactory : public AmConfigFactory {
     }
     ~PrometheusExporterFactory() override
     {
-        DBG("~PrometheusExporterFactory");
+        DBG3("~PrometheusExporterFactory");
         PrometheusExporter::dispose();
     }
 

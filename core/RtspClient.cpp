@@ -280,7 +280,7 @@ void RtspClient::postEvent(AmEvent *e)
     AmSystemEvent *sys_ev = dynamic_cast<AmSystemEvent *>(e);
 
     if (sys_ev && sys_ev->sys_event == AmSystemEvent::ServerShutdown) {
-        DBG("stopping RtspClient...");
+        DBG3("stopping RtspClient...");
 
         tostop = true;
         event_fire();
@@ -360,7 +360,7 @@ void RtspClient::run()
 
     AmEventDispatcher::instance()->delEventQueue(RTSP_EVENT_QUEUE);
 
-    DBG("RtspClient stopped");
+    DBG3("RtspClient stopped");
 }
 
 

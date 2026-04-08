@@ -197,7 +197,7 @@ void SIPRegistrarClient::run()
 
     setThreadName("sip-reg-client");
 
-    DBG("SIPRegistrarClient starting...");
+    DBG3("SIPRegistrarClient starting...");
 
     AmDynInvokeFactory *uac_auth_f = AmPlugIn::instance()->getFactory4Di("uac_auth");
     if (uac_auth_f == NULL) {
@@ -270,7 +270,7 @@ void SIPRegistrarClient::run()
 
     onServerShutdown();
 
-    DBG("SIPRegistrarClient ending...");
+    DBG3("SIPRegistrarClient ending...");
 }
 
 void SIPRegistrarClient::checkTimeouts()
@@ -376,7 +376,7 @@ void SIPRegistrarClient::onShutdown()
 void SIPRegistrarClient::onServerShutdown()
 {
     // TODO: properly wait until unregistered, with timeout
-    DBG("shutdown SIP registrar client: deregistering");
+    DBG3("shutdown SIP registrar client: deregistering");
     for (auto it = registrations.begin(); it != registrations.end(); it++) {
         it->second->doUnregister();
         delete it->second;

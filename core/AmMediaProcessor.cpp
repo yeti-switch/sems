@@ -101,7 +101,7 @@ AmMediaProcessor::AmMediaProcessor()
 
 AmMediaProcessor::~AmMediaProcessor()
 {
-    DBG("Media processor has been recycled.");
+    DBG3("Media processor has been recycled.");
 }
 
 void AmMediaProcessor::init()
@@ -362,7 +362,7 @@ AmMediaProcessorThread::~AmMediaProcessorThread() {}
 
 void AmMediaProcessorThread::on_stop()
 {
-    DBG("requesting media processor to stop.");
+    DBG3("requesting media processor to stop.");
     stop_requested = true;
 }
 

@@ -211,7 +211,7 @@ void RedisApp::process_internal_reply(RedisConnection *c, int result, const AmOb
         return;
     }
 
-    DBG("script '%s' loaded with hash '%s'", script.name.c_str(), hash);
+    DBG3("script '%s' loaded with hash '%s'", script.name.c_str(), hash);
     conn->on_script_loaded(script, hash);
 }
 

@@ -372,7 +372,7 @@ void SipRegistrar::run()
     epoll_unlink(epoll_fd);
     close(epoll_fd);
 
-    DBG("SIPRegistrar stopped");
+    DBG3("SIPRegistrar stopped");
 }
 
 void SipRegistrar::on_stop()

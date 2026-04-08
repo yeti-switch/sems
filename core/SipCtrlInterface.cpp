@@ -819,7 +819,7 @@ int _SipCtrlInterface::run()
         stopped.wait_for();
     }
 
-    DBG("SIP control interface ending");
+    DBG3("SIP control interface ending");
     return 0;
 }
 
@@ -852,14 +852,14 @@ template <typename T> void cleanup_with_stop_delete(T *&workers, unsigned short 
 template <typename T> void cleanup_with_decref(T *&sockets, unsigned short &n)
 {
     cleanup_array(sockets, n, [&sockets](int i) {
-        DBG("dec_ref(%p)", sockets[i]);
+        DBG3("dec_ref(%p)", sockets[i]);
         dec_ref(sockets[i]);
     });
 }
 
 void _SipCtrlInterface::cleanup()
 {
-    DBG("Stopping SIP control interface threads");
+    DBG3("Stopping SIP control interface threads");
 
     if (NULL != trsp_server) {
         trsp_server->stop();

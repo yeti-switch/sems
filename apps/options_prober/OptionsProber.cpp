@@ -169,7 +169,7 @@ int OptionsProber::onLoad()
 
 void OptionsProber::onServerShutdown()
 {
-    DBG("shutdown SIP prober client");
+    DBG3("shutdown SIP prober client");
 }
 
 void OptionsProber::addProberUnsafe(SipSingleProbe *p)
@@ -257,7 +257,7 @@ void OptionsProber::process(AmEvent *ev)
     if (ev->event_id == E_SYSTEM) {
         auto sys_ev = dynamic_cast<AmSystemEvent *>(ev);
         if (sys_ev) {
-            DBG("received system event");
+            DBG3("received system event");
             if (sys_ev->sys_event == AmSystemEvent::ServerShutdown) {
                 stop_event.fire();
             }

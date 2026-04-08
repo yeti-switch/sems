@@ -267,10 +267,10 @@ int UACAuthFactory::configure(const std::string &config)
             std::string str_qop_name = cfg_getnstr(cfg, OPT_ALLOWED_QOPS, j);
             if ("auth" == str_qop_name) {
                 allowed_qops |= UACAuth::QOP_AUTH;
-                DBG("enable 'auth' qop");
+                DBG3("enable 'auth' qop");
             } else if ("auth-int" == str_qop_name) {
                 allowed_qops |= UACAuth::QOP_AUTH_INT;
-                DBG("enable 'auth-int' qop");
+                DBG3("enable 'auth-int' qop");
             } else {
                 ERROR("unknown qop type: '%s'. (expected: auth, auth-int)", str_qop_name.data());
                 return -1;

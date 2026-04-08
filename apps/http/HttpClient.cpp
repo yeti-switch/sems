@@ -513,7 +513,7 @@ void HttpClient::run()
     epoll_unlink(epoll_fd);
     close(epoll_fd);
 
-    DBG("HttpClient stopped");
+    DBG3("HttpClient stopped");
 }
 
 void HttpClient::on_stop()

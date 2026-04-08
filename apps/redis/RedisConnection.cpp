@@ -21,7 +21,7 @@ RedisConnection::RedisConnection(const char *name, RedisConnectionStateListener 
 
 RedisConnection::~RedisConnection()
 {
-    CLASS_DBG("RedisConnection::~RedisConnection()");
+    CLASS_DBG3("RedisConnection::~RedisConnection()");
 }
 
 static void connectCallback_static(const redisAsyncContext *c, int status)
@@ -161,7 +161,7 @@ void RedisConnection::roleCallback(struct redisAsyncContext *, void *r, void *)
     } else {
         AmArg result;
         redisReply2Amarg(result, reply);
-        DBG("redis connection '%s' role success: %s", name.data(), AmArg::print(result).c_str());
+        DBG3("redis connection '%s' role success: %s", name.data(), AmArg::print(result).c_str());
         master.set(result[0] == "master");
         connected.set(true);
         state_listener->on_connect(this);

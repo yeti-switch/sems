@@ -87,21 +87,21 @@ void _AmAudioFileRecorderProcessor::run()
     AmEventDispatcher::instance()->delEventQueue(RECORDER_QUEUE_NAME);
 
     audio_events_lock.lock();
-    DBG("%ld unprocessed events on stop", audio_events.size());
+    DBG3("%ld unprocessed events on stop", audio_events.size());
     for (AudioEventsQueue::iterator it = audio_events.begin(); it != audio_events.end(); ++it) {
         delete *it;
     }
     audio_events_lock.unlock();
 
-    DBG("%ld mono recorders on stop", mono_recorders.size());
+    DBG3("%ld mono recorders on stop", mono_recorders.size());
     for (auto r : mono_recorders)
         delete r.second;
 
-    DBG("%ld stereo recorders on stop", stereo_recorders.size());
+    DBG3("%ld stereo recorders on stop", stereo_recorders.size());
     for (auto r : stereo_recorders)
         delete r.second;
 
-    DBG("Audio recorder stopped");
+    DBG3("Audio recorder stopped");
     stopped.set(true);
 }
 

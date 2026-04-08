@@ -227,24 +227,24 @@ bool AmEventDispatcher::empty()
 
 void AmEventDispatcher::dump()
 {
-    DBG("*** dumping Event dispatcher buckets ***");
+    DBG3("*** dumping Event dispatcher buckets ***");
     for (size_t i = 0; i < EVENT_DISPATCHER_BUCKETS; i++) {
         queues_mut[i].lock();
         if (!queues[i].empty()) {
-            DBG("queues[%zu].size() = %zu", i, queues[i].size());
+            DBG3("queues[%zu].size() = %zu", i, queues[i].size());
             for (EvQueueMapIter it = queues[i].begin(); it != queues[i].end(); it++) {
-                DBG("\t%s -> %p", it->first.c_str(), it->second.q);
+                DBG3("\t%s -> %p", it->first.c_str(), it->second.q);
             }
         }
         queues_mut[i].unlock();
 
         id_lookup_mut[i].lock();
         if (!id_lookup[i].empty()) {
-            DBG("id_lookup[%zu].size() = %zu", i, id_lookup[i].size());
+            DBG3("id_lookup[%zu].size() = %zu", i, id_lookup[i].size());
         }
         id_lookup_mut[i].unlock();
     }
-    DBG("*** End of Event dispatcher bucket dump ***");
+    DBG3("*** End of Event dispatcher bucket dump ***");
 }
 
 void AmEventDispatcher::iterate(QueueEntryIterateHandler callback)

@@ -268,7 +268,7 @@ IdentityValidator::IdentityValidator()
 
 IdentityValidator::~IdentityValidator()
 {
-    CLASS_DBG("IdentityValidator::~IdentityValidator()");
+    CLASS_DBG3("IdentityValidator::~IdentityValidator()");
     event_dispatcher->delEventQueue(queue_name);
 }
 
@@ -370,7 +370,7 @@ void IdentityValidator::run()
     epoll_unlink(epoll_fd);
     close(epoll_fd);
 
-    DBG("async '%s' stopped", name);
+    DBG3("async '%s' stopped", name);
 }
 
 void IdentityValidator::on_stop()

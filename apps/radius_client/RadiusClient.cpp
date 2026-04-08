@@ -194,7 +194,7 @@ void RadiusClient::run()
     close(epoll_fd);
     AmEventDispatcher::instance()->delEventQueue(RADIUS_EVENT_QUEUE);
 
-    DBG("RadiusClient stopped");
+    DBG3("RadiusClient stopped");
 }
 
 void RadiusClient::on_stop()

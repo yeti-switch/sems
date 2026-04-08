@@ -117,7 +117,7 @@ void EventQueueWorker::run()
 
         runcond.wait_for();
 
-        DBG("running processing loop");
+        DBG3("running processing loop");
         process_queues_mut.lock();
         while (!process_queues.empty()) {
 
@@ -142,7 +142,7 @@ void EventQueueWorker::run()
 
 void EventQueueWorker::on_stop()
 {
-    DBG("requesting worker to stop.");
+    DBG3("requesting worker to stop.");
     stop_requested.set(true);
     runcond.set(true);
     join();

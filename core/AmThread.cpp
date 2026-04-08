@@ -120,8 +120,8 @@ void AmThread::stop(bool join_afer_stop)
     pthread_getname_np(_td, thread_name, 16);
 
     // gives the thread a chance to clean up
-    DBG("Thread %s %lu (%lu) calling on_stop, give it a chance to clean up", thread_name,
-        static_cast<unsigned long int>(_pid), static_cast<unsigned long int>(_td));
+    DBG3("Thread %s %lu (%lu) calling on_stop, give it a chance to clean up", thread_name,
+         static_cast<unsigned long int>(_pid), static_cast<unsigned long int>(_td));
 
     try {
         on_stop();
@@ -129,7 +129,7 @@ void AmThread::stop(bool join_afer_stop)
     }
 
     if (join_afer_stop) {
-        DBG("join thread %lu", static_cast<unsigned long int>(_td));
+        DBG3("join thread %lu", static_cast<unsigned long int>(_td));
         _m_td.unlock();
         pthread_join(_td, nullptr);
     } else {
@@ -138,7 +138,7 @@ void AmThread::stop(bool join_afer_stop)
             if (res == EINVAL) {
                 WARN("pthread_detach failed with code EINVAL: thread already in detached state");
             } else if (res == ESRCH) {
-                DBG("pthread_detach failed with code ESRCH: thread could not be found");
+                DBG3("pthread_detach failed with code ESRCH: thread could not be found");
             } else {
                 WARN("pthread_detach failed with code %i", res);
             }
@@ -146,8 +146,8 @@ void AmThread::stop(bool join_afer_stop)
         _m_td.unlock();
     }
 
-    DBG("Thread %s %lu (%lu) finished detach", thread_name, static_cast<unsigned long int>(_pid),
-        static_cast<unsigned long int>(_td));
+    DBG3("Thread %s %lu (%lu) finished detach", thread_name, static_cast<unsigned long int>(_pid),
+         static_cast<unsigned long int>(_td));
 }
 
 void AmThread::cancel()
@@ -240,7 +240,7 @@ void AmThreadWatcher::add(AmThread *t)
 
 void AmThreadWatcher::cleanup()
 {
-    DBG("cleanup threads garbage collector");
+    DBG3("cleanup threads garbage collector");
     _cleanup.set(true);
     _run_cond.set(true);
     join();
@@ -256,7 +256,7 @@ void AmThreadWatcher::run()
 
         _run_cond.wait_for();
 
-        DBG("Thread watcher starting its work");
+        DBG3("Thread watcher starting its work");
 
         try {
             std::queue<AmThread *> n_thread_queue;
@@ -268,19 +268,19 @@ void AmThreadWatcher::run()
                 AmThread *cur_thread = thread_queue.front();
                 thread_queue.pop();
 
-                DBG("thread %lu is to be processed in thread watcher",
-                    static_cast<unsigned long int>(cur_thread->_pid));
+                DBG3("thread %lu is to be processed in thread watcher",
+                     static_cast<unsigned long int>(cur_thread->_pid));
 
                 if (_cleanup.get()) {
-                    DBG("request thread %lu to stop and join it", static_cast<unsigned long int>(cur_thread->_pid));
+                    DBG3("request thread %lu to stop and join it", static_cast<unsigned long int>(cur_thread->_pid));
                     cur_thread->stop(true);
                 }
 
                 if (cur_thread->is_stopped()) {
-                    DBG("thread %lu has been destroyed", static_cast<unsigned long int>(cur_thread->_pid));
+                    DBG3("thread %lu has been destroyed", static_cast<unsigned long int>(cur_thread->_pid));
                     delete cur_thread;
                 } else {
-                    DBG("thread %lu still running", static_cast<unsigned long int>(cur_thread->_pid));
+                    DBG3("thread %lu still running", static_cast<unsigned long int>(cur_thread->_pid));
                     n_thread_queue.push(cur_thread);
                 }
             } // while(!thread_queue.empty())
@@ -292,9 +292,9 @@ void AmThreadWatcher::run()
             ERROR("unexpected exception, state may be invalid!");
         }
 
-        DBG("Thread watcher completed");
+        DBG3("Thread watcher completed");
         _run_cond.set(thread_queue.empty());
     }
 
-    DBG("Thread watcher finished");
+    DBG3("Thread watcher finished");
 }

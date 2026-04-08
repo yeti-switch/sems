@@ -71,7 +71,7 @@ int RadiusConnection::init()
         ERROR("can't resolve %s", server.c_str());
         return -1;
     }
-    DBG("%s -> %s", server.c_str(), get_addr_str(&a).c_str());
+    DBG3("%s -> %s", server.c_str(), get_addr_str(&a).c_str());
     am_set_port(&a, port);
 
     if (::connect(sock, (struct sockaddr *)&a, sizeof(struct sockaddr))) {
@@ -297,7 +297,7 @@ int RadiusConnection::avp_info::add2packet(RadiusPacket *p, const map<string, st
 int RadiusConnection::parse_avps(avps_t &avps, const AmArg &raw_avps)
 {
     if (isArgUndef(raw_avps)) {
-        DBG("empty avps configuration. skip parsing");
+        DBG3("empty avps configuration. skip parsing");
         return 0;
     }
     for (unsigned int i = 0; i < raw_avps.size(); i++) {

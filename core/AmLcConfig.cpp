@@ -1911,7 +1911,7 @@ int AmLcConfig::readAcl(cfg_t *cfg, trsp_acl &acl, const std::string &if_name)
         networks++;
     }
 
-    DBG("parsed %d networks from key %s", networks, if_name.c_str());
+    DBG3("parsed %d networks from key %s", networks, if_name.c_str());
 
     std::string method = cfg_getstr(cfg, PARAM_METHOD_NAME);
     if (method == "drop") {

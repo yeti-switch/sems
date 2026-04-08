@@ -976,7 +976,7 @@ int trsp_server_socket::bind(const string &bind_ip, unsigned short bind_port)
     actual_port = port = bind_port;
     actual_ip = ip = bind_ip;
 
-    DBG("TCP transport bound to %s/%i", ip.c_str(), port);
+    DBG3("TCP transport bound to %s/%i", ip.c_str(), port);
 
     return 0;
 }
@@ -1102,7 +1102,7 @@ trsp::~trsp()
 void trsp::add_socket(trsp_server_socket *sock)
 {
     sock->add_event(evbase);
-    DBG("Added SIP server %s transport on %s:%i", sock->get_transport(), sock->get_ip(), sock->get_port());
+    DBG3("Added SIP server %s transport on %s:%i", sock->get_transport(), sock->get_ip(), sock->get_port());
 }
 
 /** @see AmThread */
@@ -1114,7 +1114,7 @@ void trsp::run()
     /* Start the event loop. */
     event_base_dispatch(evbase);
 
-    DBG("SIP server thread finished");
+    DBG3("SIP server thread finished");
 }
 
 /** @see AmThread */

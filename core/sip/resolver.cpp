@@ -1545,7 +1545,7 @@ void _resolver::clear_cache()
         }
         bucket->unlock();
     }
-    DBG("resolver::clear_cache() %d entries removed", removed);
+    DBG3("resolver::clear_cache() %d entries removed", removed);
 }
 
 unsigned int _resolver::count_cache()
@@ -1620,7 +1620,7 @@ void _resolver::run()
             i = 0;
     }
 
-    DBG("resolver thread finished");
+    DBG3("resolver thread finished");
 }
 
 void dns_handle::dump(AmArg &ret)

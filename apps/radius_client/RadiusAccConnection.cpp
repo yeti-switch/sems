@@ -15,17 +15,17 @@ RadiusAccConnection::RadiusAccConnection(unsigned int connection_id, string &nam
 
 int RadiusAccConnection::init()
 {
-    DBG("loading start avps");
+    DBG3("loading start avps");
     if (parse_avps(start_avps, start_avps_raw)) {
         ERROR("can't parse start_avps");
         return 1;
     }
-    DBG("loading interim avps");
+    DBG3("loading interim avps");
     if (parse_avps(interim_avps, interim_avps_raw)) {
         ERROR("can't parse interim_avps");
         return 1;
     }
-    DBG("loading stop avps");
+    DBG3("loading stop avps");
     if (parse_avps(stop_avps, stop_avps_raw)) {
         ERROR("can't parse stop_avps");
         return 1;

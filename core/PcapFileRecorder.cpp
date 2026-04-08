@@ -70,13 +70,13 @@ void _PcapFileRecorderProcessor::run()
 
     AmEventDispatcher::instance()->delEventQueue(PCAP_QUEUE_NAME);
     pcap_events_lock.lock();
-    DBG("%ld unprocessed events on stop", pcap_events.size());
+    DBG3("%ld unprocessed events on stop", pcap_events.size());
     for (PcapEventsQueue::iterator it = pcap_events.begin(); it != pcap_events.end(); ++it) {
         delete *it;
     }
     pcap_events_lock.unlock();
 
-    DBG("pcap recorder stopped");
+    DBG3("pcap recorder stopped");
     stopped.set(true);
 }
 

@@ -231,7 +231,7 @@ void AmSessionProcessorThread::run()
 
 void AmSessionProcessorThread::on_stop()
 {
-    DBG("requesting session to stop.");
+    DBG3("requesting session to stop.");
     stop_requested.set(true);
     runcond.set(true);
 }

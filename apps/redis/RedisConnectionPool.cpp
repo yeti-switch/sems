@@ -80,7 +80,7 @@ RedisConnectionPool::RedisConnectionPool(const char *name, const string &queue_n
 
 RedisConnectionPool::~RedisConnectionPool()
 {
-    CLASS_DBG("RedisConnectionPool::~RedisConnectionPool()");
+    CLASS_DBG3("RedisConnectionPool::~RedisConnectionPool()");
     event_dispatcher->delEventQueue(queue_name);
 
     for (auto &ctx : persistent_reply_contexts)
@@ -167,7 +167,7 @@ void RedisConnectionPool::run()
     epoll_unlink(epoll_fd);
     close(epoll_fd);
 
-    DBG("async redis '%s' stopped", name);
+    DBG3("async redis '%s' stopped", name);
 }
 
 void RedisConnectionPool::process(AmEvent *ev)

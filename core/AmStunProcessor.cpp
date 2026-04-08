@@ -49,7 +49,7 @@ void AmStunProcessor::run()
         }
     } while (!stopped);
 
-    DBG("stun processor stopped");
+    DBG3("stun processor stopped");
 }
 
 void AmStunProcessor::on_stop()

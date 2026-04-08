@@ -60,7 +60,7 @@ void RpcServerThread::run()
 
 void RpcServerThread::on_stop()
 {
-    DBG("stop server thread");
+    DBG3("stop server thread");
     ev_pending.set(true);
     is_stop.set(true);
     join();
@@ -214,7 +214,7 @@ void RpcServerThreadpool::addThreads(unsigned int cnt)
 
 void RpcServerThreadpool::cleanup()
 {
-    DBG("cleanup RPC server threads %lu", threads.size());
+    DBG3("cleanup RPC server threads %lu", threads.size());
     threads_mut.lock();
     for (auto thread : threads) {
         thread->stop();

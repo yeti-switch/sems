@@ -279,11 +279,11 @@ int JsonRPCServerModule::reconfigure(const std::string &config)
 
 int JsonRPCServerModule::load()
 {
-    DBG("using server listen address %s", host.c_str());
-    DBG("using server port %d", port);
-    DBG("using %d server threads", threads);
+    DBG3("using server listen address %s", host.c_str());
+    DBG3("using server port %d", port);
+    DBG3("using %d server threads", threads);
     if (tcp_md5_password.size()) {
-        DBG("use tcp md5 password");
+        DBG3("use tcp md5 password");
     }
     DBG3("starting server loop thread");
     server_loop = JsonRPCServerLoop::instance();
