@@ -72,7 +72,8 @@ class AmMediaTransport : public AmMediaConnectionsHolder,
     }
     void        allowStunConnection(const sockaddr_storage *remote_addr, uint32_t priority);
     void        allowStunPair(const sockaddr_storage *remote_addr);
-    void        onSrtpKeysAvailable();
+    void        onSrtpKeysAvailable(uint8_t transport_type, uint16_t srtp_profile, const string &local_key,
+                                    const string &remote_key);
     void        onCloseDtlsSession();
     const char *state2str();
     const char *state2strUnsafe();

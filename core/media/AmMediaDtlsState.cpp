@@ -55,8 +55,10 @@ void AmMediaDtlsState::updateConnections(const AmMediaStateArgs &args)
         [&](auto conn, bool &stop) { conn->setRAddr(*args.address, *args.port); });
 }
 
-AmMediaState *AmMediaDtlsState::onSrtpKeysAvailable()
+AmMediaState *AmMediaDtlsState::onSrtpKeysAvailable(uint8_t transport_type, uint16_t srtp_profile,
+                                                    const string &local_key, const string &remote_key)
 {
+    transport->getConnFactory()->store_srtp_cred(srtp_profile, local_key, remote_key);
     if (is_dtls_srtp) {
         auto srtp_state = new AmMediaSrtpState(transport);
         return srtp_state->initSrtp(AmStreamConnection::DTLS_CONN);

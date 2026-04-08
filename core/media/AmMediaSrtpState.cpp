@@ -95,6 +95,33 @@ AmMediaState *AmMediaSrtpState::initSrtp(AmStreamConnection::ConnectionType base
     return this;
 }
 
+AmMediaState *AmMediaSrtpState::onSrtpKeysAvailable(uint8_t transport_type, uint16_t srtp_profile,
+                                                    const string &local_key, const string &remote_key)
+{
+    if (transport_type != transport->getTransportType())
+        return this;
+
+    transport->getConnFactory()->store_srtp_cred(srtp_profile, local_key, remote_key);
+
+    auto &cred = transport->getConnFactory()->srtp_cred;
+
+    transport->findCurRtpConn([&](auto conn) {
+        if (AmSrtpConnection *srtp_conn = dynamic_cast<AmSrtpConnection *>(conn)) {
+            CLASS_DBG("update SRTP keys, state:%s, type:%s", state2str(), transport->type2str());
+            srtp_conn->update_keys(cred.srtp_profile, cred.local_key, cred.remote_keys);
+        }
+    });
+
+    transport->findCurRtcpConn([&](auto conn) {
+        if (AmSrtpConnection *srtp_conn = dynamic_cast<AmSrtpConnection *>(conn)) {
+            CLASS_DBG("update SRTCP keys, state:%s, type:%s", state2str(), transport->type2str());
+            srtp_conn->update_keys(cred.srtp_profile, cred.local_key, cred.remote_keys);
+        }
+    });
+
+    return this;
+}
+
 const char *AmMediaSrtpState::state2str()
 {
     static const char *state = "SRTP";

@@ -107,12 +107,13 @@ void AmMediaTransport::allowStunPair(const sockaddr_storage *remote_addr)
         state.reset(next_state);
 }
 
-void AmMediaTransport::onSrtpKeysAvailable()
+void AmMediaTransport::onSrtpKeysAvailable(uint8_t transport_type, uint16_t srtp_profile, const string &local_key,
+                                           const string &remote_key)
 {
     AmLock        l(state_mutex);
     AmMediaState *next_state = 0;
     if (state)
-        next_state = state->onSrtpKeysAvailable();
+        next_state = state->onSrtpKeysAvailable(transport_type, srtp_profile, local_key, remote_key);
 
     if (state.get() != next_state)
         state.reset(next_state);

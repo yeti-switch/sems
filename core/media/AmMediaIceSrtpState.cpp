@@ -44,7 +44,8 @@ void AmMediaIceSrtpState::updateConnections(const AmMediaStateArgs &args)
     });
 }
 
-AmMediaState *AmMediaIceSrtpState::onSrtpKeysAvailable()
+AmMediaState *AmMediaIceSrtpState::onSrtpKeysAvailable(uint8_t transport_type, uint16_t srtp_profile,
+                                                       const string &local_key, const string &remote_key)
 {
     return this;
 }

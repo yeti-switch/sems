@@ -21,8 +21,10 @@ AmMediaState *AmMediaIceDtlsState::update(const AmMediaStateArgs &args)
     return AmMediaIceState::update(args);
 }
 
-AmMediaState *AmMediaIceDtlsState::onSrtpKeysAvailable()
+AmMediaState *AmMediaIceDtlsState::onSrtpKeysAvailable(uint8_t transport_type, uint16_t srtp_profile,
+                                                       const string &local_key, const string &remote_key)
 {
+    transport->getConnFactory()->store_srtp_cred(srtp_profile, local_key, remote_key);
     if (is_dtls_srtp) {
         auto ice_srtp_state = new AmMediaIceSrtpState(transport);
         return ice_srtp_state->initSrtp(AmStreamConnection::DTLS_CONN);

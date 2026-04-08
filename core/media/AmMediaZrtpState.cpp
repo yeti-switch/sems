@@ -68,8 +68,11 @@ void AmMediaZrtpState::updateConnections(const AmMediaStateArgs &args)
     }
 }
 
-AmMediaState *AmMediaZrtpState::onSrtpKeysAvailable()
+AmMediaState *AmMediaZrtpState::onSrtpKeysAvailable(uint8_t transport_type, uint16_t srtp_profile,
+                                                    const string &local_key, const string &remote_key)
 {
+    transport->getConnFactory()->store_srtp_cred(srtp_profile, local_key, remote_key);
+    transport->removeCurRtpConn();
     transport->removeCurRtcpConn();
 
     auto srtp_state = new AmMediaSrtpState(transport);
