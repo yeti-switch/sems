@@ -32,7 +32,6 @@
 #include "AmB2BMedia.h"
 #include "AmSipSubscription.h"
 
-
 #define MAX_RELAY_STREAMS 3 // voice, video, rtt
 
 enum {

@@ -451,10 +451,15 @@ void AmB2BSession::onSipRequest(const AmSipRequest &req)
             auto code = std::get<0>(res.value());
             if (code < 0) {
                 // relay failed, generate error reply
-                DBG("relay failed, replying error");
+                DBG("relay failed with code=%d, replying error", code);
                 AmSipReply n_reply;
                 errCode2RelayedReply(n_reply, code, 500);
                 dlg->reply(req, n_reply.code, n_reply.reason);
+
+                if (code == -1) {
+                    DBG("terminate leg");
+                    terminateLeg();
+                }
             }
         }
 
@@ -589,10 +594,14 @@ void AmB2BSession::onSipReply(const AmSipRequest &req, const AmSipReply &reply, 
             }
         } else {
             auto code = std::get<0>(res.value());
+            DBG("relay failed with code=%d", code);
             if (code > 0) {
                 auto reason = std::get<1>(res.value());
                 relayError(n_reply.cseq_method, n_reply.cseq, true, static_cast<int>(code), reason.c_str());
                 relayed_req.erase(t);
+            } else if (code == -1) {
+                DBG("terminate leg");
+                terminateLeg();
             }
         }
     } else {
