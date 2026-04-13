@@ -592,6 +592,7 @@ void AmB2BSession::onSipReply(const AmSipRequest &req, const AmSipReply &reply, 
             if (code > 0) {
                 auto reason = std::get<1>(res.value());
                 relayError(n_reply.cseq_method, n_reply.cseq, true, static_cast<int>(code), reason.c_str());
+                relayed_req.erase(t);
             }
         }
     } else {
