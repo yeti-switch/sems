@@ -32,6 +32,7 @@
 #include "AmB2BMedia.h"
 #include "AmSipSubscription.h"
 
+
 #define MAX_RELAY_STREAMS 3 // voice, video, rtt
 
 enum {
@@ -349,7 +350,7 @@ class AmB2BSession : public AmSession, protected RelayController {
     virtual const string &getOtherId() const { return other_id; }
 
     /** Relay one event to the other side. @return 0 on success */
-    virtual int relayEvent(AmEvent *ev);
+    virtual std::optional<std::tuple<int, std::string>> relayEvent(AmEvent *ev);
 
     void set_sip_relay_only(bool r);
 
@@ -427,9 +428,9 @@ class AmB2BCallerSession : public AmB2BSession {
     int reinviteCaller(const AmSipReply &callee_reply);
 
   protected:
-    AmSipRequest invite_req;
-    virtual void createCalleeSession();
-    int          relayEvent(AmEvent *ev);
+    AmSipRequest                                invite_req;
+    virtual void                                createCalleeSession();
+    std::optional<std::tuple<int, std::string>> relayEvent(AmEvent *ev);
 
     /** Tell if the session should
      *  relay early media SDPs to

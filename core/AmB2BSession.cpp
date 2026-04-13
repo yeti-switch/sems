@@ -442,8 +442,8 @@ void AmB2BSession::onSipRequest(const AmSipRequest &req)
             }
         }
 
-        int res = relayEvent(r_ev);
-        if (res == 0) {
+        auto res = relayEvent(r_ev);
+        if (res == std::nullopt) {
             // successfuly relayed, store the request
             if (req.method != SIP_METH_ACK)
                 recvd_req.insert(std::make_pair(req.cseq, req));
@@ -451,7 +451,7 @@ void AmB2BSession::onSipRequest(const AmSipRequest &req)
             // relay failed, generate error reply
             DBG("relay failed, replying error");
             AmSipReply n_reply;
-            errCode2RelayedReply(n_reply, res, 500);
+            errCode2RelayedReply(n_reply, std::get<0>(res.value()), 500);
             dlg->reply(req, n_reply.code, n_reply.reason);
         }
 
@@ -687,17 +687,17 @@ int AmB2BSession::onSdpCompleted(const AmSdp &local_sdp, const AmSdp &remote_sdp
     return 0;
 }
 
-int AmB2BSession::relayEvent(AmEvent *ev)
+std::optional<std::tuple<int, std::string>> AmB2BSession::relayEvent(AmEvent *ev)
 {
     DBG3("AmB2BSession::relayEvent: to other_id='%s'", other_id.c_str());
 
     if (!other_id.empty()) {
         if (!AmSessionContainer::instance()->postEvent(other_id, ev))
-            return -1;
+            return std::make_tuple(-1, string());
     } else {
         delete ev;
     }
-    return 0;
+    return std::nullopt;
 }
 
 void AmB2BSession::onOtherBye(const AmSipRequest & /*req*/)
@@ -1279,7 +1279,7 @@ void AmB2BCallerSession::onB2BEvent(B2BEvent *ev)
         AmB2BSession::onB2BEvent(ev);
 }
 
-int AmB2BCallerSession::relayEvent(AmEvent *ev)
+std::optional<std::tuple<int, std::string>> AmB2BCallerSession::relayEvent(AmEvent *ev)
 {
     if (getOtherId().empty() && !getStopped()) {
         bool         create_callee = false;
