@@ -1,15 +1,15 @@
-#include "RegShaper.h"
+#include "RequestShaper.h"
 #include "log.h"
 
 #include <ctime>
 #include <limits>
 
-bool RegShaper::check_rate_limit(const string &key, timep &next_attempt_time)
+bool RequestShaper::check_rate_limit(const string &key, timep &next_attempt_time)
 {
     return check_rate_limit(key, system_clock::now(), next_attempt_time);
 }
 
-bool RegShaper::check_rate_limit(const string &key, const timep &now, timep &next_attempt_time)
+bool RequestShaper::check_rate_limit(const string &key, const timep &now, timep &next_attempt_time)
 {
     if (!enabled)
         return false;
@@ -52,7 +52,7 @@ bool RegShaper::check_rate_limit(const string &key, const timep &now, timep &nex
     return true;
 }
 
-milliseconds RegShaper::diff(const timep &tp1, const timep &tp2)
+milliseconds RequestShaper::diff(const timep &tp1, const timep &tp2)
 {
     return std::chrono::duration_cast<milliseconds>(tp1 - tp2);
 }

@@ -50,7 +50,7 @@
 EXPORT_PLUGIN_CLASS_FACTORY(SIPRegistrarClient);
 EXPORT_PLUGIN_CONF_FACTORY(SIPRegistrarClient);
 
-static void reg2arg(const map<string, AmSIPRegistration *>::iterator &it, AmArg &ret, const RegShaper::timep &now)
+static void reg2arg(const map<string, AmSIPRegistration *>::iterator &it, AmArg &ret, const RequestShaper::timep &now)
 {
     AmArg                                r;
     AmSIPRegistration                   *reg = it->second;
@@ -325,7 +325,7 @@ void SIPRegistrarClient::checkTimeouts()
 
 void SIPRegistrarClient::checkPostponedRegs()
 {
-    RegShaper::timep now_point(std::chrono::system_clock::now());
+    RequestShaper::timep now_point(std::chrono::system_clock::now());
     reg_mut.lock();
     for (auto it = registrations.begin(); it != registrations.end(); it++) {
         AmSIPRegistration *reg = it->second;
@@ -819,7 +819,7 @@ struct RegistrationMetricGroup : public StatCountersGroupsInterface {
     {
     }
 
-    void add_reg(RegShaper::timep &now, const string &handle, AmSIPRegistration &reg)
+    void add_reg(RequestShaper::timep &now, const string &handle, AmSIPRegistration &reg)
     {
         data.emplace_back();
         auto &labels = data.back().labels;
@@ -894,8 +894,8 @@ void SIPRegistrarClient::operator()(const string &, iterate_groups_callback_type
 
     RegistrationMetricGroup g;
     {
-        AmLock           l(reg_mut);
-        RegShaper::timep now(std::chrono::system_clock::now());
+        AmLock               l(reg_mut);
+        RequestShaper::timep now(std::chrono::system_clock::now());
         g.data.reserve(registrations.size());
         for (const auto &reg_it : registrations) {
             g.add_reg(now, reg_it.first, *reg_it.second);
@@ -910,8 +910,8 @@ void SIPRegistrarClient::getSnapshot(AmArg &ret, std::function<void(unsigned lon
     ret.assertArray();
     RegistrationMetricGroup g;
     {
-        AmLock           l(reg_mut);
-        RegShaper::timep now(std::chrono::system_clock::now());
+        AmLock               l(reg_mut);
+        RequestShaper::timep now(std::chrono::system_clock::now());
         g.data.reserve(registrations.size());
         for (const auto &reg_it : registrations) {
             g.add_reg(now, reg_it.first, *reg_it.second);
@@ -1079,7 +1079,7 @@ void SIPRegistrarClient::listRegistrations(const AmArg &, AmArg &ret)
 
     AmLock l(reg_mut);
 
-    RegShaper::timep now(std::chrono::system_clock::now());
+    RequestShaper::timep now(std::chrono::system_clock::now());
 
     for (auto it = registrations.begin(); it != registrations.end(); it++) {
         reg2arg(it, ret, now);

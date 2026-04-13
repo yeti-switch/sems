@@ -13,7 +13,7 @@ using std::string;
 using std::chrono::milliseconds;
 using std::chrono::system_clock;
 
-class RegShaper {
+class RequestShaper {
   public:
     typedef system_clock::time_point timep;
     typedef string                   ThrottlingHashKey;
@@ -33,7 +33,7 @@ class RegShaper {
     milliseconds diff(const timep &tp1, const timep &tp2);
 
   public:
-    RegShaper()
+    RequestShaper()
         : enabled(false)
         , min_interval(milliseconds::zero())
     {

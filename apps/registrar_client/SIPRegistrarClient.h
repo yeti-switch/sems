@@ -31,7 +31,7 @@
 #include "AmSipRegistration.h"
 #include "AmApi.h"
 #include "ampi/BusAPI.h"
-#include "RegShaper.h"
+#include "RequestShaper.h"
 #include "RpcTreeHandler.h"
 #include "RegClientClickhouse.h"
 
@@ -69,9 +69,9 @@ class SIPRegistrarClient : public AmDynInvokeFactory,
     RegHash registrations;
     RegHash registrations_by_id;
 
-    RegShaper shaper;
-    int       default_expires;
-    int       shaper_min_interval_per_domain;
+    RequestShaper shaper;
+    int           default_expires;
+    int           shaper_min_interval_per_domain;
 
     bool               add_reg(const string &reg_id, AmSIPRegistration *new_reg);
     AmSIPRegistration *remove_reg(const string &reg_id);
