@@ -448,11 +448,14 @@ void AmB2BSession::onSipRequest(const AmSipRequest &req)
             if (req.method != SIP_METH_ACK)
                 recvd_req.insert(std::make_pair(req.cseq, req));
         } else {
-            // relay failed, generate error reply
-            DBG("relay failed, replying error");
-            AmSipReply n_reply;
-            errCode2RelayedReply(n_reply, std::get<0>(res.value()), 500);
-            dlg->reply(req, n_reply.code, n_reply.reason);
+            auto code = std::get<0>(res.value());
+            if (code < 0) {
+                // relay failed, generate error reply
+                DBG("relay failed, replying error");
+                AmSipReply n_reply;
+                errCode2RelayedReply(n_reply, code, 500);
+                dlg->reply(req, n_reply.code, n_reply.reason);
+            }
         }
 
         return;
@@ -567,20 +570,28 @@ void AmB2BSession::onSipReply(const AmSipRequest &req, const AmSipReply &reply, 
 
         DBG("relaying B2B SIP reply %u %s", n_reply.code, n_reply.reason.c_str());
 
-        relayEvent(new B2BSipReplyEvent(n_reply, true, t->second.method, getLocalTag()));
+        auto res = relayEvent(new B2BSipReplyEvent(n_reply, true, t->second.method, getLocalTag()));
 
-        if (reply.code >= 200) {
-            if ((reply.code < 300) && (t->second.method == SIP_METH_INVITE)) {
-                DBG("not removing relayed INVITE transaction yet...");
-            } else {
-                // grab cseq-mqpping in case of REFER
-                if ((reply.code < 300) && (reply.cseq_method == SIP_METH_REFER)) {
-                    if (subs->subscriptionExists(SingleSubscription::Subscriber, "refer", int2str(reply.cseq))) {
-                        // remember mapping for refer event package event-id
-                        insertMappedReferID(reply.cseq, t->second.cseq);
+        if (res == std::nullopt) {
+            if (reply.code >= 200) {
+                if ((reply.code < 300) && (t->second.method == SIP_METH_INVITE)) {
+                    DBG("not removing relayed INVITE transaction yet...");
+                } else {
+                    // grab cseq-mqpping in case of REFER
+                    if ((reply.code < 300) && (reply.cseq_method == SIP_METH_REFER)) {
+                        if (subs->subscriptionExists(SingleSubscription::Subscriber, "refer", int2str(reply.cseq))) {
+                            // remember mapping for refer event package event-id
+                            insertMappedReferID(reply.cseq, t->second.cseq);
+                        }
                     }
+                    relayed_req.erase(t);
                 }
-                relayed_req.erase(t);
+            }
+        } else {
+            auto code = std::get<0>(res.value());
+            if (code > 0) {
+                auto reason = std::get<1>(res.value());
+                relayError(n_reply.cseq_method, n_reply.cseq, true, static_cast<int>(code), reason.c_str());
             }
         }
     } else {
