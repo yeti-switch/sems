@@ -11,6 +11,7 @@
 #include <botan/uuid.h>
 #include <botan/system_rng.h>
 #include <botan/internal/oid_map.h>
+#include <botan/mac.h>
 
 static const char *jwt_field_tn  = "tn";
 static const char *jwt_field_uri = "uri";
@@ -412,6 +413,34 @@ bool AmIdentity::verify(const Botan::Public_Key *key, unsigned int expire)
     verifier.update((uint8_t *)base64_payload.c_str(), base64_payload.size());
 
     bool ret = verifier.check_signature((uint8_t *)signature.c_str(), signature.size());
+    if (!ret) {
+        last_errstr  = "Signature verification Failed";
+        last_errcode = ERR_VERIFICATION;
+    }
+    return ret;
+}
+
+bool AmIdentity::verify(const std::string &secret, unsigned int expire)
+{
+    last_errcode = 0;
+    last_errstr.clear();
+
+    if (expire) {
+        time_t t = time(0);
+        if ((t - created) > expire) {
+            last_errcode = ERR_EXPIRE_TIMEOUT;
+            last_errstr  = "Expired Timeout";
+            return false;
+        }
+    }
+
+    std::string signing_input = base64_url_encode(jwt_header) + "." + base64_url_encode(jwt_payload);
+
+    auto mac = Botan::MessageAuthenticationCode::create("HMAC(SHA-256)");
+    mac->set_key(reinterpret_cast<const uint8_t *>(secret.data()), secret.size());
+    mac->update(reinterpret_cast<const uint8_t *>(signing_input.data()), signing_input.size());
+
+    bool ret = mac->verify_mac(reinterpret_cast<const uint8_t *>(signature.data()), signature.size());
     if (!ret) {
         last_errstr  = "Signature verification Failed";
         last_errcode = ERR_VERIFICATION;

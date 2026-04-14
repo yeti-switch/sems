@@ -67,6 +67,7 @@ class AmIdentity {
     bool verify_attestation(Botan::Public_Key *key, unsigned int expire, const IdentData &orig, const IdentData &dest);
 
     bool verify(const Botan::Public_Key *key, unsigned int expire = 0);
+    bool verify(const std::string &secret, unsigned int expire = 0);
 
     std::string generate(Botan::Private_Key *key, bool raw = false);
 
