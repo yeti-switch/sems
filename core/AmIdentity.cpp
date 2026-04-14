@@ -437,6 +437,12 @@ bool AmIdentity::verify(const std::string &secret, unsigned int expire)
     std::string signing_input = base64_url_encode(jwt_header) + "." + base64_url_encode(jwt_payload);
 
     auto mac = Botan::MessageAuthenticationCode::create("HMAC(SHA-256)");
+    if (!mac) {
+        last_errstr  = "Unsupported alg 'HS256'";
+        last_errcode = ERR_UNSUPPORTED;
+        return false;
+    }
+
     mac->set_key(reinterpret_cast<const uint8_t *>(secret.data()), secret.size());
     mac->update(reinterpret_cast<const uint8_t *>(signing_input.data()), signing_input.size());
 
