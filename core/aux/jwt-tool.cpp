@@ -12,6 +12,9 @@
 #include <botan/pkix_types.h>
 #include <botan/system_rng.h>
 #include <botan/pkcs8.h>
+#include <botan/mac.h>
+
+#include "base64url.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -240,9 +243,9 @@ class options_parser {
 
 int encode(int argc, char *argv[])
 {
-    options_parser p("--key=key_path [opts]");
+    options_parser p("{--key=key_path | --secret=secret_key_value} [opts]");
     AmIdentity     identity;
-    string         key_path;
+    string         key_path, secret;
 
     identity.set_x5u_url("https://curl.haxx.se/ca/cacert.pem");
     identity.set_attestation(AmIdentity::AT_C);
@@ -261,8 +264,11 @@ int encode(int argc, char *argv[])
             .add('v', "-v", "show intermediate data", false, [&verbose](const char *) { verbose++; })
             .add_long("x5u", "--x5u=uri", "set uri (default: https://curl.haxx.se/ca/cacert.pem)", required_argument,
                       [&identity](const char *value) { identity.set_x5u_url(value); })
-            .add_long("key", "--key=key_path", "set private key path for signing (mandatory)", required_argument,
-                      [&key_path](const char *value) { key_path = value; })
+            .add_long("key", "--key=key_path", "set private key path for signing (mandatory or secret)",
+                      required_argument, [&key_path](const char *value) { key_path = value; })
+            .add_long("secret", "--secret=secret_key_value",
+                      "set secret key value for HS256 signing (mandatory or key)", required_argument,
+                      [&secret](const char *value) { secret = value; })
             .add_long("ppt", "--ppt=shaken|div|div-o", "passport type (default: shaken)", required_argument,
                       [&identity, &p](const char *value) {
                           AmIdentity::PassportType t;
@@ -329,8 +335,18 @@ int encode(int argc, char *argv[])
         return 1;
     }
 
-    if (key_path.empty()) {
-        p.print_hint("missing mandatory option '--key'");
+    if (key_path.empty() && secret.empty()) {
+        p.print_hint("missing mandatory option '--key' or '--secret'");
+        return 1;
+    }
+
+    if (!key_path.empty() && !secret.empty()) {
+        p.print_hint("options '--key' and '--secret' are mutually exclusive");
+        return 1;
+    }
+
+    if (!secret.empty() && !raw) {
+        p.print_hint("option '--secret' requires '--raw'");
         return 1;
     }
 
@@ -340,9 +356,42 @@ int encode(int argc, char *argv[])
         return 1;
     }
 
-    std::unique_ptr<Botan::Private_Key> key;
-
     try {
+        if (!secret.empty()) {
+            AmArg &header  = identity.get_header();
+            AmArg &payload = identity.get_payload();
+
+            header["typ"] = "JWT";
+            header["alg"] = "HS256";
+
+            std::string jwt_header  = arg2json(header);
+            std::string jwt_payload = arg2json(payload);
+
+            std::string base64_header  = base64_url_encode(jwt_header);
+            std::string base64_payload = base64_url_encode(jwt_payload);
+
+            std::string signing_input = base64_header + "." + base64_payload;
+
+            auto mac = Botan::MessageAuthenticationCode::create("HMAC(SHA-256)");
+            mac->set_key(reinterpret_cast<const uint8_t *>(secret.data()), secret.size());
+            mac->update(reinterpret_cast<const uint8_t *>(signing_input.data()), signing_input.size());
+            auto sig = mac->final();
+
+            std::string sig_str(reinterpret_cast<const char *>(sig.data()), sig.size());
+            std::string result = signing_input + "." + base64_url_encode(sig_str);
+
+            if (verbose) {
+                printf("header:\n%s\n\n", getFormattedJSON(jwt_header));
+                printf("payload:\n%s\n\n", getFormattedJSON(jwt_payload));
+                printf("output:\n");
+            }
+
+            cout << result << endl;
+            return 0;
+        }
+
+        std::unique_ptr<Botan::Private_Key> key;
+
         std::ifstream ifs;
         ifs.open(key_path);
         if (!ifs.is_open())
