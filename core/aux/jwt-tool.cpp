@@ -490,13 +490,15 @@ int verify(int argc, char *argv[])
 {
     string     in;
     AmIdentity identity;
-    string     cert_path, root_cert_path, key_path;
+    string     cert_path, root_cert_path, key_path, secret;
     bool       raw = false;
 
     optind = 2;
     options_parser p("\n    --cert=cert_path [ --trusted=root_cert_path ] (-i FILE | INPUT)"
                      "\n  OR"
-                     "\n    --key=key_path (-i FILE | INPUT)");
+                     "\n    --key=key_path (-i FILE | INPUT)"
+                     "\n  OR"
+                     "\n    --secret=secret_key_value --raw (-i FILE | INPUT)");
     if (p.add('i', "-i file", "input file ('-' for stdin)", true, [&in](const char *value) { in = value; })
             .add_long("cert", "--cert=cert_path", "set certificate path to verify signature (mandatory or key)",
                       optional_argument, [&cert_path](const char *value) { cert_path = value; })
@@ -505,14 +507,26 @@ int verify(int argc, char *argv[])
                       [&root_cert_path](const char *value) { root_cert_path = value; })
             .add_long("key", "--key=key_path", "set public key path to verify signature (mandatory or cert)",
                       optional_argument, [&key_path](const char *value) { key_path = value; })
+            .add_long("secret", "--secret=secret_key_value", "set secret key value for HS256 verification",
+                      required_argument, [&secret](const char *value) { secret = value; })
             .add_long("raw", "--raw", "verify raw JWT", no_argument, [&raw](const char *) { raw = true; })
             .parse(argc, argv))
     {
         return 1;
     }
 
-    if (key_path.empty() && cert_path.empty()) {
-        p.print_hint("specify --key or --cert");
+    if (key_path.empty() && cert_path.empty() && secret.empty()) {
+        p.print_hint("specify --key, --cert, or --secret");
+        return 1;
+    }
+
+    if (!secret.empty() && (!key_path.empty() || !cert_path.empty())) {
+        p.print_hint("option '--secret' is mutually exclusive with '--key' and '--cert'");
+        return 1;
+    }
+
+    if (!secret.empty() && !raw) {
+        p.print_hint("option '--secret' requires '--raw'");
         return 1;
     }
 
@@ -546,11 +560,6 @@ int verify(int argc, char *argv[])
         return 1;
     }
 
-    if (key_path.empty() && cert_path.empty()) {
-        p.print_hint("missed mandatory --key or --cert");
-        return 1;
-    }
-
     printf("input:\n%s\n\n", in.data());
 
     try {
@@ -558,6 +567,28 @@ int verify(int argc, char *argv[])
         std::string last_error;
 
         AmIdentity identity;
+
+        if (!secret.empty()) {
+            printf("\nverify signature with secret...\n");
+
+            if (!identity.parse(in, raw)) {
+                last_errcode = identity.get_last_error(last_error);
+                printf("parse error: %d %s\n", last_errcode, last_error.data());
+                return 1;
+            }
+
+            int ret = identity.verify(secret, time(0) - identity.get_created() + 2);
+            if (!ret) {
+                last_errcode = identity.get_last_error(last_error);
+                printf("verify error: %d %s\n", last_errcode, last_error.data());
+                return 1;
+            }
+
+            printf("header:\n%s\n\n", getFormattedJSON(identity.get_jwt_header()));
+            printf("payload:\n%s\n\n", getFormattedJSON(identity.get_jwt_payload()));
+            printf("signature verified\n");
+            return 0;
+        }
 
         vector<Botan::X509_Certificate>    cert_chain;
         std::unique_ptr<Botan::Public_Key> key;
