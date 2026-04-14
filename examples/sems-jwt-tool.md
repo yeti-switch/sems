@@ -67,7 +67,7 @@ openssl pkcs8 -topk8 -nocrypt -in key_pkcs1.pem -out key.pem
 openssl ec -in key.pem -pubout -out pub.pem
 ```
 
-### sems-jwt-tool examples
+### sems-jwt-tool examples raw jwt alg="ES256"
 ```sh
 #gen JWT token
 sems-jwt-tool encode --key key.pem --raw --claim=id:1/i --claim=iat:$(date +%s)/i --claim=exp:$(($(date +%s) + 38400))/i
@@ -77,4 +77,16 @@ sems-jwt-tool encode --key key.pem --raw --claim=id:1/i --claim=iat:$(date +%s)/
 
 #gen&verify JWT token
 sems-jwt-tool encode --key key.pem --raw --claim=id:1/i --claim=iat:$(date +%s)/i --claim=exp:$(($(date +%s) + 38400))/i | sems-jwt-tool verify -i - --raw --key pub.pem
+```
+
+### sems-jwt-tool examples raw jwt alg="HS256"
+```sh
+#gen JWT token
+./sems-jwt-tool encode --secret=some_test_key --raw --claim=id:1/i --claim=iat:$(date +%s)/i --claim=exp:$(($(date +%s) + 38400))/i
+
+#gen&decode JWT token
+./sems-jwt-tool encode --secret=some_test_key --raw --claim=id:1/i --claim=iat:$(date +%s)/i --claim=exp:$(($(date +%s) + 38400))/i | sems-jwt-tool decode -i - --raw
+
+#gen&verify JWT token
+./sems-jwt-tool encode --secret=some_test_key --raw --claim=id:1/i --claim=iat:$(date +%s)/i --claim=exp:$(($(date +%s) + 38400))/i | sems-jwt-tool verify -i - --raw --secret=some_test_key
 ```
