@@ -76,5 +76,5 @@ sems-jwt-tool encode --key key.pem --raw --claim=id:1/i --claim=iat:$(date +%s)/
 sems-jwt-tool encode --key key.pem --raw --claim=id:1/i --claim=iat:$(date +%s)/i --claim=exp:$(($(date +%s) + 38400))/i | sems-jwt-tool decode -i - --raw
 
 #gen&verify JWT token
-sems-jwt-tool encode --key key.pem --raw --claim=id:1/i --claim=iat:$(date +%s)/i --claim=exp:$(($(date +%s) + 38400))/i | sems-jwt-tool decode -i - --raw --key pub.pem
+sems-jwt-tool encode --key key.pem --raw --claim=id:1/i --claim=iat:$(date +%s)/i --claim=exp:$(($(date +%s) + 38400))/i | sems-jwt-tool verify -i - --raw --key pub.pem
 ```
