@@ -17,6 +17,7 @@ static const char *jwt_field_uri = "uri";
 
 static const char *jwt_hdr_claim_alg = "alg";
 static const char *alg_value_es256   = "ES256";
+static const char *alg_value_hs256   = "HS256";
 
 static const char *jwt_hdr_claim_x5u = "x5u";
 
@@ -531,12 +532,19 @@ bool AmIdentity::parse(const std::string_view &value, bool raw)
         AmArg &alg_arg = header[jwt_hdr_claim_alg], &x5u_arg = header[jwt_hdr_claim_x5u],
               &ppt_arg = header[jwt_hdr_claim_ppt], &type_arg = header[jwt_hdr_claim_typ];
 
-        if (strcmp(alg_arg.asCStr(), alg_value_es256)) {
-            last_errcode = ERR_UNSUPPORTED;
-            last_errstr  = "Unsupported alg. 'ES256' expected";
-            return false;
-        }
-        if (!raw) {
+        if (raw) {
+            if (strcmp(alg_arg.asCStr(), alg_value_es256) && strcmp(alg_arg.asCStr(), alg_value_hs256)) {
+                last_errcode = ERR_UNSUPPORTED;
+                last_errstr  = "Unsupported alg. Expected 'ES256' or 'HS256'";
+                return false;
+            }
+        } else {
+            if (strcmp(alg_arg.asCStr(), alg_value_es256)) {
+                last_errcode = ERR_UNSUPPORTED;
+                last_errstr  = "Unsupported alg. 'ES256' expected";
+                return false;
+            }
+
             if (strcmp(type_arg.asCStr(), typ_value_passport)) {
                 last_errcode = ERR_UNSUPPORTED;
                 last_errstr  = "Unsupported typ. 'passport' expected";
