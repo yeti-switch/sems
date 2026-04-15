@@ -11,7 +11,10 @@
 
 #include <unistd.h>
 
-#define CFG_OPT_NAME_EXPORT_METRICS "export_metrics"
+#define CFG_OPT_NAME_EXPORT_METRICS               "export_metrics"
+#define CFG_OPT_NAME_MIN_INTERVAL_MSEC            "min_interval_msec"
+#define CFG_OPT_NAME_MIN_INTERVAL_PER_DOMAIN_MSEC "min_interval_per_domain_msec"
+#define CFG_SEC_NAME_DOMAIN                       "domain"
 
 #define DEFAULT_EXPIRES 1800
 
@@ -38,14 +41,19 @@ OptionsProber::OptionsProber(const string &name)
     : AmDynInvokeFactory(MOD_NAME)
     , AmConfigFactory(MOD_NAME)
     , AmEventFdQueue(this)
+    , min_interval_per_domain(0)
     , uac_auth_i(nullptr)
 {
 }
 
 int OptionsProber::configure(const std::string &config)
 {
-    cfg_opt_t opt[] = { CFG_BOOL(CFG_OPT_NAME_EXPORT_METRICS, cfg_false, CFGF_NONE), CFG_END() };
-    cfg_t    *cfg   = cfg_init(opt, CFGF_NONE);
+    cfg_opt_t domain_opt[] = { CFG_INT(CFG_OPT_NAME_MIN_INTERVAL_MSEC, 0, CFGF_NODEFAULT), CFG_END() };
+    cfg_opt_t opt[]        = { CFG_BOOL(CFG_OPT_NAME_EXPORT_METRICS, cfg_false, CFGF_NONE),
+                               CFG_SEC(CFG_SEC_NAME_DOMAIN, domain_opt, CFGF_TITLE | CFGF_MULTI),
+                               CFG_INT(CFG_OPT_NAME_MIN_INTERVAL_PER_DOMAIN_MSEC, 0, CFGF_NODEFAULT),
+                               CFG_INT(CFG_OPT_NAME_MIN_INTERVAL_MSEC, 0, CFGF_NODEFAULT), CFG_END() };
+    cfg_t    *cfg          = cfg_init(opt, CFGF_NONE);
     if (!cfg)
         return -1;
     switch (cfg_parse_buf(cfg, config.c_str())) {
@@ -60,6 +68,24 @@ int OptionsProber::configure(const std::string &config)
         return -1;
     }
 
+    if (cfg_size(cfg, CFG_OPT_NAME_MIN_INTERVAL_MSEC)) {
+        int i = cfg_getint(cfg, CFG_OPT_NAME_MIN_INTERVAL_MSEC);
+        if (i) {
+            DBG("set shaper global min interval to %dmsec", i);
+            shaper.set_min_interval(i);
+        }
+    }
+    if (cfg_size(cfg, CFG_OPT_NAME_MIN_INTERVAL_PER_DOMAIN_MSEC)) {
+        int i = cfg_getint(cfg, CFG_OPT_NAME_MIN_INTERVAL_PER_DOMAIN_MSEC);
+        if (i) {
+            DBG("set shaper min interval per domain to %dmsec", i);
+            min_interval_per_domain = i;
+        }
+    }
+    for (int i = 0; i < cfg_size(cfg, CFG_SEC_NAME_DOMAIN); i++) {
+        cfg_t *domain = cfg_getnsec(cfg, CFG_SEC_NAME_DOMAIN, i);
+        domain_intervals.emplace(domain->title, cfg_getint(domain, CFG_OPT_NAME_MIN_INTERVAL_MSEC));
+    }
     if (cfg_true == cfg_getbool(cfg, CFG_OPT_NAME_EXPORT_METRICS))
         statistics::instance()->add_groups_container("options_prober", this, false);
 
@@ -69,6 +95,7 @@ int OptionsProber::configure(const std::string &config)
 
 int OptionsProber::reconfigure(const std::string &config)
 {
+    domain_intervals.clear();
     return configure(config);
 }
 
@@ -108,6 +135,9 @@ void OptionsProber::run()
             if (f == timer) {
                 checkTimeouts();
                 timer.read();
+            } else if (f == postponed_timer) {
+                checkPostponed();
+                postponed_timer.read();
             } else if (f == -queue_fd()) {
                 clear_pending();
                 processEvents();
@@ -129,19 +159,33 @@ void OptionsProber::run()
 void OptionsProber::checkTimeouts()
 {
     // DBG("check timeouts");
-    SipSingleProbe::timep now(std::chrono::system_clock::now());
-
+    SipSingleProbe::timep    now(std::chrono::system_clock::now());
+    bool                     is_postponed_req_exists = false;
     vector<SipSingleProbe *> probers_to_remove;
 
     AmLock l(probers_mutex);
     for (auto &p : probers_by_id) {
-        if (p.second->process(now)) {
+        if (p.second->postponed) {
+            // ignore postponed: it will be handled in checkPostponed()
+        } else if (p.second->needProcess(now) && processWithShaper(p.second, now)) {
             probers_to_remove.push_back(p.second);
         }
+        is_postponed_req_exists = is_postponed_req_exists || p.second->postponed;
     }
 
     for (auto &p : probers_to_remove) {
         removeProberUnsafe(p);
+    }
+
+    // reset postponed_timer if needed
+    if (is_postponed_req_exists) {
+        if (postponed_timer.is_active() == false) {
+            postponed_timer.set(shaper.get_postponed_timer_interval_ms() * 1000);
+        }
+    } else {
+        if (postponed_timer.is_active()) {
+            postponed_timer.set(0, false);
+        }
     }
 }
 
@@ -157,6 +201,8 @@ int OptionsProber::onLoad()
 
     timer.set(TIMEOUT_CHECKING_INTERVAL);
     timer.link(epoll_fd);
+    postponed_timer.set(0, false);
+    postponed_timer.link(epoll_fd);
 
     init_rpc();
 
@@ -223,6 +269,12 @@ void OptionsProber::processCtlEvent(OptionsProberCtlEvent &e)
                 delete p;
                 continue;
             }
+            uint32_t interval  = min_interval_per_domain;
+            auto     domain_it = domain_intervals.find(p->ruri_domain);
+            if (domain_it != domain_intervals.end())
+                interval = domain_it->second;
+            if (interval)
+                shaper.set_key_min_interval(p->ruri_domain, interval);
             addProberUnsafe(p);
         }
     } break; // SipProbesCtlEvent::Add
@@ -250,6 +302,41 @@ void OptionsProber::processCtlEvent(OptionsProberCtlEvent &e)
     } break; // SipProbesCtlEvent::Remove
     default: ERROR("got ctl event with unexpected action: %d", e.action);
     }
+}
+
+void OptionsProber::checkPostponed()
+{
+    RequestShaper::timep     now_point(std::chrono::system_clock::now());
+    vector<SipSingleProbe *> probers_to_remove;
+
+    AmLock l(probers_mutex);
+    for (auto &p : probers_by_id) {
+        if (!p.second->postponed || now_point < p.second->postponed_next_attempt)
+            continue;
+
+        DBG("%s(%u) postponing timeout. Do OPTIONS.", p.second->getTag().c_str(), p.second->getId());
+
+        p.second->postponed = false;
+
+        if (p.second->process(now_point)) {
+            probers_to_remove.push_back(p.second);
+        }
+    }
+    for (auto &p : probers_to_remove) {
+        removeProberUnsafe(p);
+    }
+}
+
+bool OptionsProber::processWithShaper(SipSingleProbe *p, SipSingleProbe::timep now)
+{
+    if (shaper.check_rate_limit(p->ruri_domain, p->postponed_next_attempt)) {
+        DBG("%s(%u): rate limit reached for %s. postpone sending request", p->getTag().c_str(), p->getId(),
+            p->ruri_domain.c_str());
+        p->postponed = true;
+        return false;
+    }
+
+    return p->process(now);
 }
 
 void OptionsProber::process(AmEvent *ev)

@@ -15,6 +15,7 @@ using std::string;
 class SipSingleProbe : public AmBasicSipEventHandler, public DialogControl, public CredentialHolder {
   public:
     using timep = std::chrono::system_clock::time_point;
+    friend class OptionsProber;
 
   private:
     AmBasicSipDialog dlg;
@@ -22,10 +23,12 @@ class SipSingleProbe : public AmBasicSipEventHandler, public DialogControl, publ
     AmSipRequest     req;
     timep            recheck_time;
     timep            last_send_time;
+    timep            postponed_next_attempt;
     string           tag;
     string           options_hdrs;
     int              options_flags;
     bool             active_dialog;
+    bool             postponed;
 
     int                       last_reply_code;
     string                    last_reply_reason;
@@ -52,6 +55,7 @@ class SipSingleProbe : public AmBasicSipEventHandler, public DialogControl, publ
     string               auth_username;
     string               auth_password;
 
+
     void patch_transport(string &uri, int transport_protocol_id);
 
     string preprocess_append_headers();
@@ -77,6 +81,7 @@ class SipSingleProbe : public AmBasicSipEventHandler, public DialogControl, publ
      * @return true if prober has to be removed
      */
     bool process(timep &now);
+    bool needProcess(timep &now);
 
     void onSipReply(const AmSipRequest &req, const AmSipReply &reply, AmBasicSipDialog::Status old_status) override;
 

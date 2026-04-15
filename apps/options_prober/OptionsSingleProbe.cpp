@@ -58,6 +58,7 @@ static AmArgHashValidator SipProbeAmArgValidator({
 SipSingleProbe::SipSingleProbe()
     : dlg(this)
     , active_dialog(false)
+    , postponed(false)
     , last_reply_code(0)
     , transport_protocol_id(sip_transport::UDP)
     , sip_schema_id(sip_uri::SIP)
@@ -287,6 +288,11 @@ bool SipSingleProbe::process(timep &now)
     recheck_time   = now + interval;
 
     return false;
+}
+
+bool SipSingleProbe::needProcess(timep &now)
+{
+    return now >= recheck_time && !active_dialog;
 }
 
 void SipSingleProbe::onSipReply(const AmSipRequest &req, const AmSipReply &reply, AmBasicSipDialog::Status old_status)

@@ -28,7 +28,7 @@ class RequestShaper {
     ThrottlingHash              throttling_hash;
     ThrottlingIntervalsHash     throttling_intervals_hash;
     ThrottlingHashValue         global_last_req_time;
-    std::optional<milliseconds> postponed_regs_timer_interval;
+    std::optional<milliseconds> postponed_timer_interval;
 
     milliseconds diff(const timep &tp1, const timep &tp2);
 
@@ -57,9 +57,9 @@ class RequestShaper {
 
     void set_min_interval(int msec)
     {
-        min_interval                  = milliseconds(msec);
-        enabled                       = true;
-        postponed_regs_timer_interval = min_interval;
+        min_interval             = milliseconds(msec);
+        enabled                  = true;
+        postponed_timer_interval = min_interval;
     }
 
     int get_min_interval() { return min_interval.count(); }
@@ -71,18 +71,18 @@ class RequestShaper {
             WARN("global min interval(%ld) is greater than min interval(%ld) for key %s", min_interval.count(),
                  interval.count(), key.c_str());
         }
-        throttling_intervals_hash.emplace(key, interval);
+        throttling_intervals_hash.insert_or_assign(key, interval);
         enabled = true;
 
-        if (postponed_regs_timer_interval.has_value()) {
-            postponed_regs_timer_interval = std::min(postponed_regs_timer_interval.value(), interval);
+        if (postponed_timer_interval.has_value()) {
+            postponed_timer_interval = std::min(postponed_timer_interval.value(), interval);
         } else {
-            postponed_regs_timer_interval = interval;
+            postponed_timer_interval = interval;
         }
     }
 
-    unsigned int get_postponed_regs_timer_interval_ms()
+    unsigned int get_postponed_timer_interval_ms()
     {
-        return postponed_regs_timer_interval.value_or(milliseconds::zero()).count();
+        return postponed_timer_interval.value_or(milliseconds::zero()).count();
     }
 };

@@ -7,6 +7,7 @@
 #include "AmEventFdQueue.h"
 #include "AmSipEvent.h"
 #include "RpcTreeHandler.h"
+#include "RequestShaper.h"
 
 class OptionsProber : public AmDynInvokeFactory,
                       public AmConfigFactory,
@@ -18,7 +19,12 @@ class OptionsProber : public AmDynInvokeFactory,
                       public StatsCountersGroupsContainerInterface {
     int       epoll_fd;
     AmTimerFd timer;
+    AmTimerFd postponed_timer;
     AmEventFd stop_event;
+
+    RequestShaper                   shaper;
+    std::map<std::string, uint32_t> domain_intervals;
+    uint32_t                        min_interval_per_domain;
 
     // probers container
     std::map<unsigned int, SipSingleProbe *> probers_by_id;
@@ -36,6 +42,8 @@ class OptionsProber : public AmDynInvokeFactory,
     void addProberUnsafe(SipSingleProbe *p);
     void removeProberUnsafe(SipSingleProbe *p);
     void processCtlEvent(OptionsProberCtlEvent &e);
+    void checkPostponed();
+    bool processWithShaper(SipSingleProbe *p, SipSingleProbe::timep now);
 
   public:
     OptionsProber() = delete;
