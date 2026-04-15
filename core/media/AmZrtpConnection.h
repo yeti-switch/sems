@@ -4,6 +4,7 @@
 #ifdef WITH_ZRTP
 
 #include "AmRtpConnection.h"
+#include "sip/types.h"
 #include <vector>
 
 extern "C" typedef struct bzrtpSrtpSecrets_struct bzrtpSrtpSecrets_t;
@@ -22,7 +23,7 @@ class zrtpContext {
     bool                                 inited;
     bool                                 started;
     bool                                 activated;
-    srtp_profile_t                       srtp_profile;
+    CryptoProfile                        srtp_profile;
     string                               remote_hash;
     vector<uint8_t>                      local_key, remote_key;
     std::vector<ZrtpContextSubscriber *> subscribers;
@@ -47,7 +48,7 @@ class zrtpContext {
     int  onRecvData(uint8_t *data, unsigned int size);
     int  onSendData(uint8_t *data, unsigned int size);
     int  onActivated(const bzrtpSrtpSecrets_t *srtpSecrets);
-    bool getZrtpKeysMaterial(srtp_profile_t &srtp_profile, vector<uint8_t> &local_key, vector<uint8_t> &remote_key);
+    bool getZrtpKeysMaterial(CryptoProfile &srtp_profile, vector<uint8_t> &local_key, vector<uint8_t> &remote_key);
 
     void iterate(uint32_t timestamp);
 };

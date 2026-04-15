@@ -152,26 +152,38 @@ int zrtpContext::onActivated(const bzrtpSrtpSecrets_t *srtpSecrets)
     memcpy(remote_key.data() + srtpSecrets->peerSrtpKeyLength, srtpSecrets->peerSrtpSalt,
            srtpSecrets->peerSrtpSaltLength);
 
+    srtp_profile = CP_NONE;
+
     if (srtpSecrets->authTagAlgo == ZRTP_AUTHTAG_HS32) {
-        if (srtpSecrets->cipherAlgo == ZRTP_CIPHER_AES3) {
-            srtp_profile = static_cast<srtp_profile_t>(CP_AES256_CM_SHA1_32); // TODO(): not supported libsrtp
-            //             } else if(srtpSecrets->cipherAlgo == ZRTP_CIPHER_AES2){
-            //                 srtp_profile = CP_AES192_CM_SHA1_32;
-        } else {
-            srtp_profile = srtp_profile_aes128_cm_sha1_32;
-        }
+        if (srtpSecrets->cipherAlgo == ZRTP_CIPHER_AES1)
+            srtp_profile = CP_AES128_CM_SHA1_32;
+        else if (srtpSecrets->cipherAlgo == ZRTP_CIPHER_AES2)
+            srtp_profile = CP_AES192_CM_SHA1_32;
+        else if (srtpSecrets->cipherAlgo == ZRTP_CIPHER_AES3)
+            srtp_profile = CP_AES256_CM_SHA1_32;
     } else if (srtpSecrets->authTagAlgo == ZRTP_AUTHTAG_HS80) {
-        if (srtpSecrets->cipherAlgo == ZRTP_CIPHER_AES3) {
-            srtp_profile = static_cast<srtp_profile_t>(CP_AES256_CM_SHA1_80); // TODO(): not supported libsrtp
-            //             } else if(srtpSecrets->cipherAlgo == ZRTP_CIPHER_AES2){
-            //                 srtp_profile = CP_AES192_CM_SHA1_80;
-        } else {
-            srtp_profile = srtp_profile_aes128_cm_sha1_80;
-        }
-    } else {
+        if (srtpSecrets->cipherAlgo == ZRTP_CIPHER_AES1)
+            srtp_profile = CP_AES128_CM_SHA1_80;
+        else if (srtpSecrets->cipherAlgo == ZRTP_CIPHER_AES2)
+            srtp_profile = CP_AES192_CM_SHA1_80;
+        else if (srtpSecrets->cipherAlgo == ZRTP_CIPHER_AES3)
+            srtp_profile = CP_AES256_CM_SHA1_80;
+#ifdef ZRTP_AUTHTAG_GCM
+    } else if (srtpSecrets->authTagAlgo == ZRTP_AUTHTAG_GCM) {
+        if (srtpSecrets->cipherAlgo == ZRTP_CIPHER_AES1)
+            srtp_profile = CP_AEAD_AES_128_GCM;
+        else if (srtpSecrets->cipherAlgo == ZRTP_CIPHER_AES3)
+            srtp_profile = CP_AEAD_AES_256_GCM;
+        // unsupported profiles
+        // ZRTP_CIPHER_AES2
+#endif /*ZRTP_AUTHTAG_GCM*/
+    }
+
+    if (srtp_profile == CP_NONE) {
         CLASS_ERROR("encryption methods with keys derived using ZRTP are not supported");
         return 1;
     }
+
     activated = true;
     for (auto &subscriber : subscribers) {
         subscriber->zrtpSessionActivated((srtp_profile_t)srtp_profile, local_key, remote_key);
@@ -179,7 +191,7 @@ int zrtpContext::onActivated(const bzrtpSrtpSecrets_t *srtpSecrets)
     return 0;
 }
 
-bool zrtpContext::getZrtpKeysMaterial(srtp_profile_t &srtpprofile, vector<uint8_t> &lkey, vector<uint8_t> &rkey)
+bool zrtpContext::getZrtpKeysMaterial(CryptoProfile &srtpprofile, vector<uint8_t> &lkey, vector<uint8_t> &rkey)
 {
     if (!activated)
         return false;

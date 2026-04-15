@@ -479,6 +479,10 @@ class MEDIA_interface : public PI_interface<MEDIA_info *> {
             return ZRTP_AUTHTAG_SK32;
         if (str == "SK64")
             return ZRTP_AUTHTAG_SK64;
+#ifdef ZRTP_AUTHTAG_GCM
+        if (str == "GCM")
+            return ZRTP_AUTHTAG_GCM;
+#endif /*ZRTP_AUTHTAG_GCM*/
 #endif /*WITH_ZRTP*/
         return 0;
     }

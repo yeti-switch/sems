@@ -119,7 +119,7 @@ static void print_supported_zrtp_attributes()
            "    ciphers algorithms:\n"
            "       AES1, AES2, AES3, 2FS1, 2FS2, 2FS3\n"
            "    authtag algorithms:\n"
-           "       HS32, HS80, SK32, SK64\n"
+           "       HS32, HS80, SK32, SK64, GCM\n"
            "    dhmode algorithms:\n"
            "       DH2K, EC25, DH3K, EC38, EC52, PRSH, MULT\n"
            "    sas algorithms:\n"

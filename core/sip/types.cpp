@@ -56,12 +56,11 @@ string profile_t_2_str(int pt, bool alternative)
     case CP_AES256_CM_SHA1_80: return alternative ? "AES_CM_256_HMAC_SHA1_80" : "AES_256_CM_HMAC_SHA1_80";
     case CP_AES256_CM_SHA1_32: return alternative ? "AES_CM_256_HMAC_SHA1_32" : "AES_256_CM_HMAC_SHA1_32";
     case CP_NULL_SHA1_80:      return "NULL_HMAC_SHA1_80";
-    case CP_NULL_SHA1_32:
-        return "NULL_HMAC_SHA1_32";
-        //         case CP_AEAD_AES_128_GCM: return "AEAD_AES_256_GCM";
-        //         case CP_AEAD_AES_256_GCM: return "AEAD_AES_256_GCM";
-        //         case CP_AES192_CM_SHA1_80: return "AES_CM_192_HMAC_SHA1_80";
-        //         case CP_AES192_CM_SHA1_32: return "AES_CM_192_HMAC_SHA1_32";
+    case CP_NULL_SHA1_32:      return "NULL_HMAC_SHA1_32";
+    case CP_AEAD_AES_128_GCM:  return "AEAD_AES_128_GCM";
+    case CP_AEAD_AES_256_GCM:  return "AEAD_AES_256_GCM";
+    case CP_AES192_CM_SHA1_80: return "AES_CM_192_HMAC_SHA1_80";
+    case CP_AES192_CM_SHA1_32: return "AES_CM_192_HMAC_SHA1_32";
     default:
     {
         std::ostringstream stringStream;

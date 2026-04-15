@@ -232,15 +232,12 @@ int srtp::profile_get_master_key_length(srtp_profile_t profile)
     switch ((int)profile) {
     case CP_AES128_CM_SHA1_80:
     case CP_AES128_CM_SHA1_32:
-        //         case CP_AEAD_AES_128_GCM:
-        return SRTP_AES_128_KEY_LEN;
-        //         case CP_AES192_CM_SHA1_80:
-        //         case CP_AES192_CM_SHA1_32:
-        //             return SRTP_AES_192_KEY_LEN;
+    case CP_AEAD_AES_128_GCM:  return SRTP_AES_128_KEY_LEN;
+    case CP_AES192_CM_SHA1_80:
+    case CP_AES192_CM_SHA1_32: return SRTP_AES_192_KEY_LEN;
     case CP_AES256_CM_SHA1_80:
     case CP_AES256_CM_SHA1_32:
-        //         case CP_AEAD_AES_256_GCM:
-        return SRTP_AES_256_KEY_LEN;
+    case CP_AEAD_AES_256_GCM:  return SRTP_AES_256_KEY_LEN;
     }
 
     return 0;
@@ -251,15 +248,13 @@ int srtp::profile_get_master_salt_length(srtp_profile_t profile)
     switch ((int)profile) {
     case CP_AES128_CM_SHA1_80:
     case CP_AES128_CM_SHA1_32:
-        //     case CP_AES192_CM_SHA1_80:
-        //     case CP_AES192_CM_SHA1_32:
-    case CP_AES256_CM_SHA1_80:
-    case CP_AES256_CM_SHA1_32:
     case CP_NULL_SHA1_80:
-        return SRTP_SALT_LEN;
-        //     case CP_AEAD_AES_128_GCM:
-        //     case CP_AEAD_AES_256_GCM:
-        //         return SRTP_AEAD_SALT_LEN;
+    case CP_AES192_CM_SHA1_80:
+    case CP_AES192_CM_SHA1_32:
+    case CP_AES256_CM_SHA1_80:
+    case CP_AES256_CM_SHA1_32: return SRTP_SALT_LEN;
+    case CP_AEAD_AES_128_GCM:
+    case CP_AEAD_AES_256_GCM:  return SRTP_AEAD_SALT_LEN;
     }
 
     return 0;
@@ -269,26 +264,14 @@ void srtp::crypto_policy_set_from_profile_for_rtp(srtp_crypto_policy_t *policy, 
 {
     switch ((int)profile) {
     case CP_AES128_CM_SHA1_80: srtp_crypto_policy_set_aes_cm_128_hmac_sha1_80(policy); break;
-    case CP_AES128_CM_SHA1_32:
-        srtp_crypto_policy_set_aes_cm_128_hmac_sha1_32(policy);
-        break;
-        //         case CP_AES192_CM_SHA1_80:
-        //             srtp_crypto_policy_set_aes_cm_192_hmac_sha1_80(policy);
-        //             break;
-        //         case CP_AES192_CM_SHA1_32:
-        //             srtp_crypto_policy_set_aes_cm_192_hmac_sha1_32(policy);
-        //             break;
+    case CP_AES128_CM_SHA1_32: srtp_crypto_policy_set_aes_cm_128_hmac_sha1_32(policy); break;
+    case CP_AES192_CM_SHA1_80: srtp_crypto_policy_set_aes_cm_192_hmac_sha1_80(policy); break;
+    case CP_AES192_CM_SHA1_32: srtp_crypto_policy_set_aes_cm_192_hmac_sha1_32(policy); break;
     case CP_AES256_CM_SHA1_80: srtp_crypto_policy_set_aes_cm_256_hmac_sha1_80(policy); break;
     case CP_AES256_CM_SHA1_32: srtp_crypto_policy_set_aes_cm_256_hmac_sha1_32(policy); break;
-    case CP_NULL_SHA1_80:
-        srtp_crypto_policy_set_null_cipher_hmac_sha1_80(policy);
-        break;
-        //         case CP_AEAD_AES_128_GCM:
-        //             srtp_crypto_policy_set_aes_gcm_128_16_auth(policy);
-        //             break;
-        //         case CP_AEAD_AES_256_GCM:
-        //             srtp_crypto_policy_set_aes_gcm_256_16_auth(policy);
-        //             break;
+    case CP_NULL_SHA1_80:      srtp_crypto_policy_set_null_cipher_hmac_sha1_80(policy); break;
+    case CP_AEAD_AES_128_GCM:  srtp_crypto_policy_set_aes_gcm_128_16_auth(policy); break;
+    case CP_AEAD_AES_256_GCM:  srtp_crypto_policy_set_aes_gcm_256_16_auth(policy); break;
     }
 }
 

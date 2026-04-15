@@ -29,12 +29,15 @@ enum CryptoProfile {
     CP_AES128_CM_SHA1_32 = 2,
     CP_NULL_SHA1_80      = 5,
     CP_NULL_SHA1_32      = 6, // see rfc5764 4.1.2
-    CP_AES256_CM_SHA1_80 = 3,
-    CP_AES256_CM_SHA1_32 = 4, // see https://tools.ietf.org/id/draft-lennox-avtcore-dtls-srtp-bigaes-01.html
-    //    CP_AEAD_AES_128_GCM = 7, CP_AEAD_AES_256_GCM = 8,                                                        //
-    //    see rfc7714 14.2 CP_AES192_CM_SHA1_80 = 17, CP_AES192_CM_SHA1_32 = 18 // unused numbers
+    CP_AEAD_AES_128_GCM  = 7,
+    CP_AEAD_AES_256_GCM  = 8, // see rfc7714 14.2
     // see https://www.iana.org/assignments/srtp-protection/srtp-protection.xhtml
-    CP_MAX = 7
+    // below are the profiles that are missing srtp profile_id.
+    CP_AES192_CM_SHA1_80 = 0x20,
+    CP_AES192_CM_SHA1_32 = 0x21,
+    CP_AES256_CM_SHA1_80 = 0x22,
+    CP_AES256_CM_SHA1_32 = 0x23, // see rfc6188 5
+    CP_MAX               = 0x24
 };
 
 enum IceCandidateType {

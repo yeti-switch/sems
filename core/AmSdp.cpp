@@ -2060,28 +2060,28 @@ static CryptoProfile crypto_profile(std::string profile, bool &alternative)
         return CP_AES128_CM_SHA1_32;
     else if (profile_uc == "AES_CM_128_HMAC_SHA1_80")
         return CP_AES128_CM_SHA1_80;
-    //    else if(profile_uc == "AES_CM_192_HMAC_SHA1_32")
-    //        return CP_AES192_CM_SHA1_32;
-    //    else if(profile_uc == "AES_CM_192_HMAC_SHA1_80")
-    //        return CP_AES192_CM_SHA1_80;
+    else if (profile_uc == "AES_CM_192_HMAC_SHA1_32")
+        return CP_AES192_CM_SHA1_32;
+    else if (profile_uc == "AES_CM_192_HMAC_SHA1_80")
+        return CP_AES192_CM_SHA1_80;
+    else if (profile_uc == "AES_256_CM_HMAC_SHA1_32")
+        return CP_AES256_CM_SHA1_32;
+    else if (profile_uc == "AES_256_CM_HMAC_SHA1_80")
+        return CP_AES256_CM_SHA1_80;
     else if (profile_uc == "AES_CM_256_HMAC_SHA1_32") {
         alternative = true;
         return CP_AES256_CM_SHA1_32;
     } else if (profile_uc == "AES_CM_256_HMAC_SHA1_80") {
         alternative = true;
         return CP_AES256_CM_SHA1_80;
-    } else if (profile_uc == "AES_256_CM_HMAC_SHA1_32")
-        return CP_AES256_CM_SHA1_32;
-    else if (profile_uc == "AES_256_CM_HMAC_SHA1_80")
-        return CP_AES256_CM_SHA1_80;
-    //    else if(profile_uc == "AEAD_AES_128_GCM")
-    //        return CP_AEAD_AES_128_GCM;
-    //    else if(profile_uc == "AEAD_AES_256_GCM")
-    //        return CP_AEAD_AES_256_GCM;
-    else if (profile_uc == "NULL_HMAC_SHA1_32")
+    } else if (profile_uc == "NULL_HMAC_SHA1_32")
         return CP_NULL_SHA1_32;
     else if (profile_uc == "NULL_HMAC_SHA1_80")
         return CP_NULL_SHA1_80;
+    else if (profile_uc == "AEAD_AES_128_GCM")
+        return CP_AEAD_AES_128_GCM;
+    else if (profile_uc == "AEAD_AES_256_GCM")
+        return CP_AEAD_AES_256_GCM;
     else
         return CP_NONE;
 }
