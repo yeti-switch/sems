@@ -1,3 +1,12 @@
+sems (1.185.0) stable; urgency=low
+  * options_prober: add throttling capability
+  * AmIdentity: add HS256 support
+  * postgresql: fix broken graceful shutdown
+  * AmB2BSession: relayEvent refactoring
+  * zrtp: fix srtcp and srtp packets sending and zrtp session parameters configuration
+  * zrtp: gcm support
+ -- Michael Furmur <furmur@pm.me>  Wed, 15 Apr 2026 21:35:43 +0300
+
 sems (1.184.0) stable; urgency=low
   * media: fix sending SRTCP packets after DTLS negotiation for RTP
   * http_client: add sems_http_client_certificate_not_after_timestamp metric
