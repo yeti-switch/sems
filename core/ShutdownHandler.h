@@ -6,6 +6,7 @@
 class ShutdownHandlersProcessor;
 
 class ShutdownHandler {
+  protected:
     // descriptive name for RPC output
     std::string name;
     // queue name for GracefulShutdownRequested, GracefulShutdownCancelled events

@@ -140,6 +140,9 @@ int PostgreSQL::configure(const std::string &config)
     events_queue_name = cfg_getstr(cfg, PARAM_EVENTS_QUEUE_NAME);
     log_pg_events     = cfg_getbool(cfg, PARAM_LOG_PG_EVENTS_NAME);
 
+    // for ShutdownHandler
+    queue_name = events_queue_name;
+
     cfg_free(cfg);
     return 0;
 }
