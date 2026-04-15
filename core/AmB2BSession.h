@@ -348,7 +348,14 @@ class AmB2BSession : public AmSession, protected RelayController {
     virtual void          setOtherId(const string &n_other_id) { other_id = n_other_id; }
     virtual const string &getOtherId() const { return other_id; }
 
-    /** Relay one event to the other side. @return 0 on success */
+    /** Relay one event to the other side.
+     *  @return nullopt on success, or a tuple<int,string> where:
+     *    - code == -1  : target session not found; caller should terminate the leg;
+     *                    use errCode2RelayedReply to convert error code to SIP response code for SIP reply
+     *    - code < -1   : negated error code (e.g. -488); relay failed and session is not finished
+     *                    use errCode2RelayedReply to convert error code to SIP response code for SIP reply
+     *    - code > 0    : SIP response code; the session was terminated and the
+     *                    caller must invoke relayError(method, cseq, forward, code, reason) */
     virtual std::optional<std::tuple<int, std::string>> relayEvent(AmEvent *ev);
 
     void set_sip_relay_only(bool r);
