@@ -1,4 +1,5 @@
 sems (1.185.0) stable; urgency=low
+  * fix IceContext deadlock
   * options_prober: add throttling capability
   * AmIdentity: add HS256 support
   * postgresql: fix broken graceful shutdown
