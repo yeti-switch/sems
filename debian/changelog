@@ -1,3 +1,8 @@
+sems (1.186.0) stable; urgency=low
+  * refactor AmIdentity. split JWT and STIR/SHAKEN functionality. add AmJwt class
+  * media: fixed crash on ice udptl
+ -- Michael Furmur <furmur@pm.me>  Sat, 18 Apr 2026 01:05:13 +0300
+
 sems (1.185.0) stable; urgency=low
   * fix IceContext deadlock
   * options_prober: add throttling capability
