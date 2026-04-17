@@ -1,5 +1,6 @@
 #include "AmMediaTransport.h"
 #include "AmMediaSrtpState.h"
+#include "AmMediaSecureUdptlState.h"
 
 AmMediaSrtpState::AmMediaSrtpState(AmMediaTransport *transport)
     : AmMediaState(transport)
@@ -93,6 +94,15 @@ AmMediaState *AmMediaSrtpState::initSrtp(AmStreamConnection::ConnectionType base
     });
 
     return this;
+}
+
+AmMediaState *AmMediaSrtpState::update(const AmMediaStateArgs &args)
+{
+    if (args.dtls_srtp.has_value() && !args.dtls_srtp.value()) {
+        auto sec = new AmMediaSecureUdptlState(transport);
+        return sec->init(args);
+    }
+    return AmMediaState::update(args);
 }
 
 AmMediaState *AmMediaSrtpState::onSrtpKeysAvailable(uint8_t transport_type, uint16_t srtp_profile,

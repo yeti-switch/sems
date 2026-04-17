@@ -1,5 +1,6 @@
 #include "AmMediaTransport.h"
 #include "AmMediaIceSrtpState.h"
+#include "AmMediaIceSecureUdptlState.h"
 #include "AmMediaState.h"
 
 AmMediaIceSrtpState::AmMediaIceSrtpState(AmMediaTransport *transport)
@@ -23,6 +24,10 @@ AmMediaState *AmMediaIceSrtpState::initSrtp(AmStreamConnection::ConnectionType b
 
 AmMediaState *AmMediaIceSrtpState::update(const AmMediaStateArgs &args)
 {
+    if (args.udptl.value_or(false)) {
+        auto sec = new AmMediaIceSecureUdptlState(transport);
+        return sec->init(args);
+    }
     updateConnections(args);
     return AmMediaIceState::update(args);
 }

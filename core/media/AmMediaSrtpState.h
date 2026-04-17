@@ -10,6 +10,7 @@ class AmMediaSrtpState : public virtual AmMediaState {
     virtual AmMediaState *initSrtp(AmStreamConnection::ConnectionType base_conn_type);
     AmMediaState         *onSrtpKeysAvailable(uint8_t transport_type, uint16_t srtp_profile, const string &local_key,
                                               const string &remote_key) override;
+    AmMediaState         *update(const AmMediaStateArgs &args) override;
     void                  addConnections(const AmMediaStateArgs &args) override;
     void                  updateConnections(const AmMediaStateArgs &args) override;
     const char           *state2str() override;

@@ -334,6 +334,11 @@ class AmRtpStream : public AmObject
     AmMediaTransport          *cur_rtcp_trans;
     AmMediaTransport          *cur_udptl_trans;
 
+    AmMediaTransport *getCurUdptlTrans() const
+    {
+        return cur_udptl_trans ? cur_udptl_trans : cur_rtp_trans;
+    }
+
     /** marker flag */
     bool begin_talk;
 
