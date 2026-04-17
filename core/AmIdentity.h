@@ -2,9 +2,9 @@
 
 #include <string>
 #include <vector>
-#include <botan/pk_keys.h>
+#include <memory>
 
-#include "AmArg.h"
+#include "AmJwt.h"
 
 /* related standards:
  * https://tools.ietf.org/html/rfc8224 Authenticated Identity Management in the Session Initiation Protocol (SIP)
@@ -19,13 +19,8 @@
  * openssl req -new -x509 -key test.key.pem -out test.pem -days 730 -subj "/C=UA/O=root/CN=sjwttest"
  */
 
-#define ERR_EXPIRE_TIMEOUT 1
-#define ERR_VERIFICATION   2
-#define ERR_COMPACT_FORM   3
-#define ERR_HEADER_VALUE   4
-#define ERR_JWT_VALUE      5
-#define ERR_EQUAL_X5U      6
-#define ERR_UNSUPPORTED    7
+#define ERR_HEADER_VALUE 4
+#define ERR_EQUAL_X5U    6
 
 struct IdentData {
     std::vector<std::string> uris;
@@ -49,7 +44,6 @@ class AmIdentity {
       private:
         passport_type_id                ppt_id;
         static std::vector<std::string> names;
-        // static const char *names[];
 
       public:
         PassportType(passport_type_id ppt_id = ES256_PASSPORT_SHAKEN);
@@ -62,6 +56,7 @@ class AmIdentity {
     };
 
     AmIdentity();
+    explicit AmIdentity(std::unique_ptr<AmJwt> jwt);
     ~AmIdentity();
 
     bool verify_attestation(Botan::Public_Key *key, unsigned int expire, const IdentData &orig, const IdentData &dest);
@@ -69,12 +64,12 @@ class AmIdentity {
     bool verify(const Botan::Public_Key *key, unsigned int expire = 0);
     bool verify(const std::string &secret, unsigned int expire = 0);
 
-    std::string generate(Botan::Private_Key *key, bool raw = false);
+    std::string generate(Botan::Private_Key *key);
 
-    std::string generate_firebase_assertion(Botan::Private_Key *key, unsigned int expire, const std::string &kid,
-                                            const std::string &iss);
+    bool parse(const std::string_view &value);
 
-    bool parse(const std::string_view &value, bool raw = false);
+    AmJwt       &jwt() { return *jwt_; }
+    const AmJwt &jwt() const { return *jwt_; }
 
     void                           set_passport_type(PassportType::passport_type_id type);
     PassportType::passport_type_id get_passport_type();
@@ -107,34 +102,26 @@ class AmIdentity {
 
     int get_last_error(std::string &err);
 
-    AmArg &get_header() { return header; }
-    AmArg &get_payload() { return payload; }
+    AmArg &get_header() { return jwt_->get_header(); }
+    AmArg &get_payload() { return jwt_->get_payload(); }
 
-    std::string &get_jwt_header() { return jwt_header; }
-    std::string &get_jwt_payload() { return jwt_payload; }
+    std::string &get_jwt_header() { return jwt_->get_jwt_header(); }
+    std::string &get_jwt_payload() { return jwt_->get_jwt_payload(); }
 
   private:
+    std::unique_ptr<AmJwt> jwt_;
+
     // header claims
     PassportType type;    // ppt
     std::string  x5u_url; // x5u
 
     // payload claims
-    time_t       created;   // iat
     std::string  orig_id;   // orig_id
     IdentData    orig_data; // orig
     IdentData    dest_data; // dest
     IdentData    div_data;  // div (div, div-o only)
     ident_attest at;        // attest (shaken only)
     std::string  opt;       // opt (div-o only)
-
-    // ES256 signature
-    std::string signature;
-
-    std::string jwt_header;
-    AmArg       header;
-
-    std::string jwt_payload;
-    AmArg       payload;
 
     int         last_errcode;
     std::string last_errstr;

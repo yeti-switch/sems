@@ -2,7 +2,7 @@
 #include "HttpPostConnection.h"
 #include "http_client_cfg.h"
 #include "AmLcConfig.h"
-#include "AmIdentity.h"
+#include "AmJwt.h"
 #include "AmUtils.h"
 #include "HttpClient.h"
 #include "jsonArg.h"
@@ -578,10 +578,10 @@ void HttpDestination::credentials_refresh(HttpClient *client, const string &name
 {
     Botan::DataSource_Memory            ds(key_data);
     std::unique_ptr<Botan::Private_Key> pk = Botan::PKCS8::load_key(ds);
-    AmIdentity                          identity;
+    AmJwt                               jwt;
     AmArg                               data;
 
-    data["assertion"]  = identity.generate_firebase_assertion(pk.get(), token_lifetime, jwt_kid, jwt_iss);
+    data["assertion"]  = jwt.generate_firebase_assertion(pk.get(), token_lifetime, jwt_kid, jwt_iss);
     data["grant_type"] = "urn:ietf:params:oauth:grant-type:jwt-bearer";
 
     HttpPostEvent *ev = new HttpPostEvent(name, arg2json(data), string());

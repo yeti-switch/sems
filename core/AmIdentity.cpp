@@ -1,24 +1,18 @@
-﻿#include "AmIdentity.h"
+#include "AmIdentity.h"
 #include "log.h"
-#include "base64url.h"
 #include "jsonArg.h"
 #include "AmSession.h"
 #include "AmArgValidator.h"
 #include "format_helper.h"
 
-#include <botan/data_src.h>
-#include <botan/x509cert.h>
 #include <botan/uuid.h>
 #include <botan/system_rng.h>
-#include <botan/internal/oid_map.h>
-#include <botan/mac.h>
 
 static const char *jwt_field_tn  = "tn";
 static const char *jwt_field_uri = "uri";
 
 static const char *jwt_hdr_claim_alg = "alg";
 static const char *alg_value_es256   = "ES256";
-static const char *alg_value_hs256   = "HS256";
 
 static const char *jwt_hdr_claim_x5u = "x5u";
 
@@ -42,10 +36,6 @@ static const char *identity_hdr_param_info = "info";
 static const char *identity_hdr_param_alg  = "alg";
 static const char *identity_hdr_param_ppt  = "ppt";
 
-static AmArgHashValidator JwtHeaderValidator({
-    { jwt_hdr_claim_alg, true, { AmArg::CStr } }
-});
-
 static AmArgHashValidator IdentityHeaderValidator({
     { jwt_hdr_claim_alg, true, { AmArg::CStr } },
     { jwt_hdr_claim_x5u, true, { AmArg::CStr } },
@@ -64,7 +54,6 @@ static AmArgHashValidator IdentityShakenPayloadValidator({
 static AmArgHashValidator IdentityDivPayloadValidator({
     {  jwt_payload_claim_iat, true,    { AmArg::Int } },
     { jwt_payload_claim_orig, true, { AmArg::Struct } },
-    { jwt_payload_claim_dest, true, { AmArg::Struct } },
     {  jwt_payload_claim_div, true, { AmArg::Struct } }
 });
 
@@ -173,7 +162,15 @@ const string &AmIdentity::PassportType::get_name()
 }
 
 AmIdentity::AmIdentity()
-    : type(PassportType::ES256_PASSPORT_SHAKEN)
+    : jwt_(std::make_unique<AmJwt>())
+    , type(PassportType::ES256_PASSPORT_SHAKEN)
+    , last_errcode(0)
+{
+}
+
+AmIdentity::AmIdentity(std::unique_ptr<AmJwt> jwt)
+    : jwt_(std::move(jwt))
+    , type(PassportType::ES256_PASSPORT_SHAKEN)
     , last_errcode(0)
 {
 }
@@ -277,181 +274,63 @@ std::string &AmIdentity::get_orig_id()
 
 time_t AmIdentity::get_created()
 {
-    return created;
+    return jwt_->get_iat();
 }
 
-std::string AmIdentity::generate(Botan::Private_Key *key, bool raw)
+std::string AmIdentity::generate(Botan::Private_Key *key)
 {
-    static auto ecdsa_oid(Botan::OID_Map::global_registry().str2oid("ECDSA"));
-
-    if (key->object_identifier() != ecdsa_oid) {
-        const auto &key_oid = key->object_identifier();
-        DBG("got key type %s while %s expected", key_oid.to_formatted_string().c_str(),
-            ecdsa_oid.to_formatted_string().c_str());
-        throw Botan::Exception(format("unexpected key type {}", key_oid.to_formatted_string()));
-    }
-
-    auto &rng = Botan::system_rng();
-
-    Botan::PK_Signer signer(*key, rng, "SHA-256");
+    auto &header  = jwt_->get_header();
+    auto &payload = jwt_->get_payload();
 
     header[jwt_hdr_claim_alg] = alg_value_es256;
-    if (!raw) {
-        header[jwt_hdr_claim_x5u] = x5u_url;
-        header[jwt_hdr_claim_ppt] = type.get_name();
-        header[jwt_hdr_claim_typ] = typ_value_passport;
-    }
-    jwt_header = arg2json(header);
+    header[jwt_hdr_claim_x5u] = x5u_url;
+    header[jwt_hdr_claim_ppt] = type.get_name();
+    header[jwt_hdr_claim_typ] = typ_value_passport;
 
-    if (!raw) {
-        payload[jwt_payload_claim_attest] = std::string(1, (char)at);
-        payload[jwt_payload_claim_iat]    = (int)time(0);
+    payload[jwt_payload_claim_attest] = std::string(1, (char)at);
+    payload[jwt_payload_claim_iat]    = (int)time(0);
 
-        if (orig_id.empty())
-            orig_id = Botan::UUID(rng).to_string();
-        payload[jwt_payload_claim_origid] = orig_id;
+    auto &rng = Botan::system_rng();
+    if (orig_id.empty())
+        orig_id = Botan::UUID(rng).to_string();
+    payload[jwt_payload_claim_origid] = orig_id;
 
-        dest_data.serialize(payload[jwt_payload_claim_dest], true);
-        orig_data.serialize(payload[jwt_payload_claim_orig], false);
+    dest_data.serialize(payload[jwt_payload_claim_dest], true);
+    orig_data.serialize(payload[jwt_payload_claim_orig], false);
 
-        if (type.get() > PassportType::ES256_PASSPORT_SHAKEN) {
-            // ES256_PASSPORT_DIV and ES256_PASSPORT_DIV_OPT
-            div_data.serialize(payload[jwt_payload_claim_div], false);
-            if (type.get() == PassportType::ES256_PASSPORT_DIV_OPT)
-                payload[jwt_payload_claim_opt] = opt;
-        }
+    if (type.get() > PassportType::ES256_PASSPORT_SHAKEN) {
+        // ES256_PASSPORT_DIV and ES256_PASSPORT_DIV_OPT
+        div_data.serialize(payload[jwt_payload_claim_div], false);
+        if (type.get() == PassportType::ES256_PASSPORT_DIV_OPT)
+            payload[jwt_payload_claim_opt] = opt;
     }
 
-    jwt_payload = arg2json(payload);
+    std::string ret = jwt_->generate(key);
 
-    std::string base64_header  = base64_url_encode(jwt_header);
-    std::string base64_payload = base64_url_encode(jwt_payload);
-    signer.update((uint8_t *)base64_header.c_str(), base64_header.size());
-    signer.update((uint8_t *)".", 1);
-    signer.update((uint8_t *)base64_payload.c_str(), base64_payload.size());
-    signature.resize(signer.signature_length());
-    std::vector<uint8_t> sign_ = signer.signature(rng);
-    memcpy((char *)signature.c_str(), sign_.data(), sign_.size());
+    ret.append(";info=<");
+    ret.append(x5u_url);
+    ret.append(">;alg=ES256;ppt=");
+    ret.append(type.get_name());
 
-    std::string ret = base64_url_encode(signature);
-    ret.insert(0, ".");
-    ret.insert(0, base64_payload);
-    ret.insert(0, ".");
-    ret.insert(0, base64_header);
-    if (!raw) {
-        ret.append(";info=<");
-        ret.append(x5u_url);
-        ret.append(">;alg=ES256;ppt=");
-        ret.append(type.get_name());
-    }
     return ret;
-}
-
-std::string AmIdentity::generate_firebase_assertion(Botan::Private_Key *key, unsigned int expire, const string &kid,
-                                                    const string &iss)
-{
-    int now = (int)time(0);
-
-    header["typ"] = "JWT";
-    header["alg"] = "RS256";
-    header["kid"] = kid;
-
-    payload["iat"]   = now;
-    payload["exp"]   = now + expire;
-    payload["iss"]   = iss;
-    payload["aud"]   = "https://oauth2.googleapis.com/token";
-    payload["scope"] = "https://www.googleapis.com/auth/firebase.messaging";
-
-    jwt_header  = arg2json(header);
-    jwt_payload = arg2json(payload);
-
-    std::string base64_header  = base64_url_encode(jwt_header);
-    std::string base64_payload = base64_url_encode(jwt_payload);
-
-    auto            &rng = Botan::system_rng();
-    Botan::PK_Signer signer(*key, rng, "EMSA3(SHA-256)");
-
-    signer.update((uint8_t *)base64_header.c_str(), base64_header.size());
-    signer.update((uint8_t *)".", 1);
-    signer.update((uint8_t *)base64_payload.c_str(), base64_payload.size());
-
-    signature.resize(signer.signature_length());
-    std::vector<uint8_t> sign_ = signer.signature(rng);
-    memcpy((char *)signature.c_str(), sign_.data(), sign_.size());
-
-    std::string assertion = base64_header;
-
-    assertion.append(".");
-    assertion.append(base64_payload);
-    assertion.append(".");
-    assertion.append(base64_url_encode(signature));
-
-    return assertion;
 }
 
 bool AmIdentity::verify(const Botan::Public_Key *key, unsigned int expire)
 {
-    last_errcode = 0;
-    last_errstr.clear();
-
-    if (expire) {
-        time_t t = time(0);
-        if ((t - created) > expire) {
-            last_errcode = ERR_EXPIRE_TIMEOUT;
-            last_errstr  = "Expired Timeout";
-            return false;
-        }
+    if (!jwt_->verify(key, expire)) {
+        last_errcode = jwt_->get_last_error(last_errstr);
+        return false;
     }
-
-    Botan::PK_Verifier verifier(*key, "SHA-256");
-
-    std::string base64_header  = base64_url_encode(jwt_header);
-    std::string base64_payload = base64_url_encode(jwt_payload);
-
-    verifier.update((uint8_t *)base64_header.c_str(), base64_header.size());
-    verifier.update((uint8_t *)".", 1);
-    verifier.update((uint8_t *)base64_payload.c_str(), base64_payload.size());
-
-    bool ret = verifier.check_signature((uint8_t *)signature.c_str(), signature.size());
-    if (!ret) {
-        last_errstr  = "Signature verification Failed";
-        last_errcode = ERR_VERIFICATION;
-    }
-    return ret;
+    return true;
 }
 
 bool AmIdentity::verify(const std::string &secret, unsigned int expire)
 {
-    last_errcode = 0;
-    last_errstr.clear();
-
-    if (expire) {
-        time_t t = time(0);
-        if ((t - created) > expire) {
-            last_errcode = ERR_EXPIRE_TIMEOUT;
-            last_errstr  = "Expired Timeout";
-            return false;
-        }
-    }
-
-    std::string signing_input = base64_url_encode(jwt_header) + "." + base64_url_encode(jwt_payload);
-
-    auto mac = Botan::MessageAuthenticationCode::create("HMAC(SHA-256)");
-    if (!mac) {
-        last_errstr  = "Unsupported alg 'HS256'";
-        last_errcode = ERR_UNSUPPORTED;
+    if (!jwt_->verify(secret, expire)) {
+        last_errcode = jwt_->get_last_error(last_errstr);
         return false;
     }
-
-    mac->set_key(reinterpret_cast<const uint8_t *>(secret.data()), secret.size());
-    mac->update(reinterpret_cast<const uint8_t *>(signing_input.data()), signing_input.size());
-
-    bool ret = mac->verify_mac(reinterpret_cast<const uint8_t *>(signature.data()), signature.size());
-    if (!ret) {
-        last_errstr  = "Signature verification Failed";
-        last_errcode = ERR_VERIFICATION;
-    }
-    return ret;
+    return true;
 }
 
 bool AmIdentity::verify_attestation(Botan::Public_Key *key, unsigned int expire, const IdentData &, const IdentData &)
@@ -464,99 +343,34 @@ bool AmIdentity::verify_attestation(Botan::Public_Key *key, unsigned int expire,
     return true;
 }
 
-bool AmIdentity::parse(const std::string_view &value, bool raw)
+bool AmIdentity::parse(const std::string_view &value)
 {
-    std::string_view value_base64;
+    std::string_view jwt_token;
     std::string_view info;
     std::string      validation_error;
-    size_t           end = 0;
 
     last_errcode = 0;
     last_errstr.clear();
 
-    jwt_header.clear();
-    jwt_payload.clear();
-    signature.clear();
-
-    if (value[0] == '.' && value[1] == '.') {
-        last_errcode = ERR_COMPACT_FORM;
-        last_errstr  = "Compact form is not supported";
-        return false;
-    }
-
     size_t pos = value.find(';');
     if (pos == std::string::npos) {
-        value_base64 = value;
+        jwt_token = value;
     } else {
-        value_base64 = value.substr(0, pos);
-        info         = value.substr(pos + 1);
+        jwt_token = value.substr(0, pos);
+        info      = value.substr(pos + 1);
     }
 
-    // Header.Payload.Signature
-    std::string_view data_base64[3];
-    for (int i = 0; i < 2; i++) {
-        pos = value_base64.find('.', end);
-        if (pos == std::string::npos) {
-            last_errcode = ERR_HEADER_VALUE;
-            if (i < 1) {
-                last_errstr = "Missed header/payload separator";
-            } else {
-                last_errstr = "Missed payload/signature separator";
-            }
-            return false;
-        }
-        data_base64[i] = value_base64.substr(end, pos - end);
-        end            = pos + 1;
-    }
-
-    data_base64[2] = value_base64.substr(end);
-
-    if (data_base64[0].empty()) {
-        last_errcode = ERR_JWT_VALUE;
-        last_errstr  = "Empty base65url header";
-        return false;
-    }
-    if (data_base64[1].empty()) {
-        last_errcode = ERR_JWT_VALUE;
-        last_errstr  = "Empty base65url payload";
-        return false;
-    }
-    if (data_base64[2].empty()) {
-        last_errcode = ERR_JWT_VALUE;
-        last_errstr  = "Empty base65url signature";
+    // parse JWT structure
+    if (!jwt_->parse(jwt_token)) {
+        last_errcode = jwt_->get_last_error(last_errstr);
         return false;
     }
 
-    if (!base64_url_decode(data_base64[0], jwt_header) || jwt_header.empty()) {
-        last_errcode = ERR_JWT_VALUE;
-        last_errstr  = "Failed to decode header as base64url";
-        return false;
-    }
-    if (!base64_url_decode(data_base64[1], jwt_payload) || jwt_payload.empty()) {
-        last_errcode = ERR_JWT_VALUE;
-        last_errstr  = "Failed to decode payload as base64url";
-        return false;
-    }
-    if (!base64_url_decode(data_base64[2], signature) || signature.empty()) {
-        last_errcode = ERR_JWT_VALUE;
-        last_errstr  = "Failed to decode signature as base64url";
-    }
+    auto &header  = jwt_->get_header();
+    auto &payload = jwt_->get_payload();
 
-    if (!json2arg(jwt_header, header)) {
-        last_errcode = ERR_JWT_VALUE;
-        last_errstr  = "Failed to parse JWT header JSON";
-        return false;
-    }
-
-    if (!json2arg(jwt_payload, payload)) {
-        last_errcode = ERR_JWT_VALUE;
-        last_errstr  = "Failed to parse JWT payload JSON";
-        return false;
-    }
-
-    // process header
-    auto &header_validator = raw ? JwtHeaderValidator : IdentityHeaderValidator;
-    if (!header_validator.validate(header, validation_error)) {
+    // process identity header
+    if (!IdentityHeaderValidator.validate(header, validation_error)) {
         ERROR("%s", validation_error.data());
         last_errcode = ERR_JWT_VALUE;
         last_errstr  = "Unexpected JWT header layout";
@@ -564,43 +378,34 @@ bool AmIdentity::parse(const std::string_view &value, bool raw)
     }
 
     try {
-        AmArg &alg_arg = header[jwt_hdr_claim_alg], &x5u_arg = header[jwt_hdr_claim_x5u],
-              &ppt_arg = header[jwt_hdr_claim_ppt], &type_arg = header[jwt_hdr_claim_typ];
+        AmArg &alg_arg  = header[jwt_hdr_claim_alg];
+        AmArg &x5u_arg  = header[jwt_hdr_claim_x5u];
+        AmArg &ppt_arg  = header[jwt_hdr_claim_ppt];
+        AmArg &type_arg = header[jwt_hdr_claim_typ];
 
-        if (raw) {
-            if (strcmp(alg_arg.asCStr(), alg_value_es256) && strcmp(alg_arg.asCStr(), alg_value_hs256)) {
-                last_errcode = ERR_UNSUPPORTED;
-                last_errstr  = "Unsupported alg. Expected 'ES256' or 'HS256'";
-                return false;
-            }
-        } else {
-            if (strcmp(alg_arg.asCStr(), alg_value_es256)) {
-                last_errcode = ERR_UNSUPPORTED;
-                last_errstr  = "Unsupported alg. 'ES256' expected";
-                return false;
-            }
-
-            if (strcmp(type_arg.asCStr(), typ_value_passport)) {
-                last_errcode = ERR_UNSUPPORTED;
-                last_errstr  = "Unsupported typ. 'passport' expected";
-                return false;
-            }
-
-            if (!type.parse(ppt_arg.asCStr())) {
-                last_errcode = ERR_UNSUPPORTED;
-                last_errstr  = "Unsupported ppt. 'shaken','div','div-o' expected";
-                return false;
-            }
-            x5u_url = x5u_arg.asCStr();
+        if (!AmJwt::is_supported_alg(alg_arg.asCStr())) {
+            last_errcode = ERR_UNSUPPORTED;
+            last_errstr  = std::string("Unsupported JWT alg '") + alg_arg.asCStr() + "'";
+            return false;
         }
+
+        if (strcmp(type_arg.asCStr(), typ_value_passport)) {
+            last_errcode = ERR_UNSUPPORTED;
+            last_errstr  = "Unsupported typ. 'passport' expected";
+            return false;
+        }
+
+        if (!type.parse(ppt_arg.asCStr())) {
+            last_errcode = ERR_UNSUPPORTED;
+            last_errstr  = "Unsupported ppt. 'shaken','div','div-o' expected";
+            return false;
+        }
+        x5u_url = x5u_arg.asCStr();
     } catch (...) {
         last_errcode = ERR_HEADER_VALUE;
         last_errstr  = "Malformed JWT header layout";
         return false;
     }
-
-    if (raw)
-        return true;
 
     // process payload
     try {
@@ -648,8 +453,6 @@ bool AmIdentity::parse(const std::string_view &value, bool raw)
             break;
         }
 
-        created = payload[jwt_payload_claim_iat].asInt();
-
         orig_data.parse(payload[jwt_payload_claim_orig]);
         dest_data.parse(payload[jwt_payload_claim_dest], true);
 
@@ -659,9 +462,10 @@ bool AmIdentity::parse(const std::string_view &value, bool raw)
         return false;
     }
 
+    // process SIP Identity info parameters
+    size_t      end = 0;
     std::string x5u_info, alg_info, ppt_info;
     if (!info.empty()) {
-        end = 0;
         do {
             pos = info.find(';', end);
             std::string param;
@@ -695,9 +499,9 @@ bool AmIdentity::parse(const std::string_view &value, bool raw)
         } while (end);
     }
 
-    if (!alg_info.empty() && alg_info != alg_value_es256) {
+    if (!alg_info.empty() && !AmJwt::is_supported_alg(alg_info.c_str())) {
         last_errcode = ERR_UNSUPPORTED;
-        last_errstr  = "Unsupported identity header alg. 'ES256' expected";
+        last_errstr  = "Unsupported identity header alg '" + alg_info + "'";
         return false;
     }
 

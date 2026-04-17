@@ -1,5 +1,6 @@
 #include "log.h"
 #include "AmIdentity.h"
+#include "AmJwt.h"
 #include "sems.h"
 #include "cJSON.h"
 #include "jsonArg.h"
@@ -12,9 +13,6 @@
 #include <botan/pkix_types.h>
 #include <botan/system_rng.h>
 #include <botan/pkcs8.h>
-#include <botan/mac.h>
-
-#include "base64url.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -345,12 +343,13 @@ int encode(int argc, char *argv[])
         return 1;
     }
 
-    if (!secret.empty() && !raw) {
+    if (!raw && !secret.empty()) {
         p.print_hint("option '--secret' requires '--raw'");
         return 1;
     }
 
-    if (identity.get_passport_type() == AmIdentity::PassportType::ES256_PASSPORT_DIV_OPT && identity.get_opt().empty())
+    if (!raw && identity.get_passport_type() == AmIdentity::PassportType::ES256_PASSPORT_DIV_OPT &&
+        identity.get_opt().empty())
     {
         p.print_hint("missing mandatory option '--opt' for 'div-o' ppt");
         return 1;
@@ -358,31 +357,14 @@ int encode(int argc, char *argv[])
 
     try {
         if (!secret.empty()) {
-            AmArg &header  = identity.get_header();
-            AmArg &payload = identity.get_payload();
+            // HS256 raw JWT
+            identity.get_header()["typ"] = "JWT";
 
-            header["typ"] = "JWT";
-            header["alg"] = "HS256";
-
-            std::string jwt_header  = arg2json(header);
-            std::string jwt_payload = arg2json(payload);
-
-            std::string base64_header  = base64_url_encode(jwt_header);
-            std::string base64_payload = base64_url_encode(jwt_payload);
-
-            std::string signing_input = base64_header + "." + base64_payload;
-
-            auto mac = Botan::MessageAuthenticationCode::create("HMAC(SHA-256)");
-            mac->set_key(reinterpret_cast<const uint8_t *>(secret.data()), secret.size());
-            mac->update(reinterpret_cast<const uint8_t *>(signing_input.data()), signing_input.size());
-            auto sig = mac->final();
-
-            std::string sig_str(reinterpret_cast<const char *>(sig.data()), sig.size());
-            std::string result = signing_input + "." + base64_url_encode(sig_str);
+            std::string result = identity.jwt().generate(secret);
 
             if (verbose) {
-                printf("header:\n%s\n\n", getFormattedJSON(jwt_header));
-                printf("payload:\n%s\n\n", getFormattedJSON(jwt_payload));
+                printf("header:\n%s\n\n", getFormattedJSON(identity.get_jwt_header()));
+                printf("payload:\n%s\n\n", getFormattedJSON(identity.get_jwt_payload()));
                 printf("output:\n");
             }
 
@@ -401,19 +383,24 @@ int encode(int argc, char *argv[])
 
         key = Botan::PKCS8::load_key(datasource, std::string_view());
 
-        auto identity_header = identity.generate(key.get(), raw);
+        std::string result;
+        if (raw) {
+            // ES256 raw JWT
+            identity.get_header()["alg"] = "ES256";
+            result                       = identity.jwt().generate(key.get());
+        } else {
+            // SIP Identity header
+            result = identity.generate(key.get());
+        }
 
         if (verbose) {
             printf("public key fingerprint (SHA-256):\n%s\n\n", key->fingerprint_public().data());
-
             printf("header:\n%s\n\n", getFormattedJSON(identity.get_jwt_header()));
-
             printf("payload:\n%s\n\n", getFormattedJSON(identity.get_jwt_payload()));
-
             printf("output:\n");
         }
 
-        cout << identity_header << endl;
+        cout << result << endl;
 
         return 0;
     } catch (Botan::Exception &e) {
@@ -469,19 +456,29 @@ int decode(int argc, char *argv[])
 
     printf("input:\n%s\n\n", in.data());
 
-    AmIdentity identity;
-    int        ret = identity.parse(in, raw);
-    if (!ret) {
-        int         last_errcode;
-        std::string last_error;
-        last_errcode = identity.get_last_error(last_error);
-        printf("error: %d %s\n", last_errcode, last_error.data());
-        return 1;
+    if (raw) {
+        AmJwt jwt;
+        if (!jwt.parse(in)) {
+            std::string last_error;
+            int         last_errcode = jwt.get_last_error(last_error);
+            printf("error: %d %s\n", last_errcode, last_error.data());
+            return 1;
+        }
+
+        printf("header:\n%s\n\n", getFormattedJSON(jwt.get_jwt_header()));
+        printf("payload:\n%s\n\n", getFormattedJSON(jwt.get_jwt_payload()));
+    } else {
+        AmIdentity identity;
+        if (!identity.parse(in)) {
+            std::string last_error;
+            int         last_errcode = identity.get_last_error(last_error);
+            printf("error: %d %s\n", last_errcode, last_error.data());
+            return 1;
+        }
+
+        printf("header:\n%s\n\n", getFormattedJSON(identity.get_jwt_header()));
+        printf("payload:\n%s\n\n", getFormattedJSON(identity.get_jwt_payload()));
     }
-
-    printf("header:\n%s\n\n", getFormattedJSON(identity.get_jwt_header()));
-
-    printf("payload:\n%s\n\n", getFormattedJSON(identity.get_jwt_payload()));
 
     return 0;
 }
@@ -566,26 +563,26 @@ int verify(int argc, char *argv[])
         int         last_errcode;
         std::string last_error;
 
-        AmIdentity identity;
-
         if (!secret.empty()) {
+            // HS256 raw JWT verification
+            AmJwt jwt;
+
             printf("\nverify signature with secret...\n");
 
-            if (!identity.parse(in, raw)) {
-                last_errcode = identity.get_last_error(last_error);
+            if (!jwt.parse(in)) {
+                last_errcode = jwt.get_last_error(last_error);
                 printf("parse error: %d %s\n", last_errcode, last_error.data());
                 return 1;
             }
 
-            int ret = identity.verify(secret, time(0) - identity.get_created() + 2);
-            if (!ret) {
-                last_errcode = identity.get_last_error(last_error);
+            if (!jwt.verify(secret, time(0) - jwt.get_iat() + 2)) {
+                last_errcode = jwt.get_last_error(last_error);
                 printf("verify error: %d %s\n", last_errcode, last_error.data());
                 return 1;
             }
 
-            printf("header:\n%s\n\n", getFormattedJSON(identity.get_jwt_header()));
-            printf("payload:\n%s\n\n", getFormattedJSON(identity.get_jwt_payload()));
+            printf("header:\n%s\n\n", getFormattedJSON(jwt.get_jwt_header()));
+            printf("payload:\n%s\n\n", getFormattedJSON(jwt.get_jwt_payload()));
             printf("signature verified\n");
             return 0;
         }
@@ -670,19 +667,36 @@ int verify(int argc, char *argv[])
 
         printf("\nverify signature with key (%s)...\n", key->fingerprint_public().data());
 
-        int ret = identity.parse(in, raw);
-        if (!ret) {
-            last_errcode = identity.get_last_error(last_error);
-            printf("parse error: %d %s\n", last_errcode, last_error.data());
-            return 1;
-        }
+        if (raw) {
+            // ES256/RS256 raw JWT verification
+            AmJwt jwt;
 
-        ret = identity.verify(key.get(), time(0) - identity.get_created() + 2);
+            if (!jwt.parse(in)) {
+                last_errcode = jwt.get_last_error(last_error);
+                printf("parse error: %d %s\n", last_errcode, last_error.data());
+                return 1;
+            }
 
-        if (!ret) {
-            last_errcode = identity.get_last_error(last_error);
-            printf("verify error: %d %s\n", last_errcode, last_error.data());
-            return 1;
+            if (!jwt.verify(key.get(), time(0) - jwt.get_iat() + 2)) {
+                last_errcode = jwt.get_last_error(last_error);
+                printf("verify error: %d %s\n", last_errcode, last_error.data());
+                return 1;
+            }
+        } else {
+            // SIP Identity verification
+            AmIdentity identity;
+
+            if (!identity.parse(in)) {
+                last_errcode = identity.get_last_error(last_error);
+                printf("parse error: %d %s\n", last_errcode, last_error.data());
+                return 1;
+            }
+
+            if (!identity.verify(key.get(), time(0) - identity.get_created() + 2)) {
+                last_errcode = identity.get_last_error(last_error);
+                printf("verify error: %d %s\n", last_errcode, last_error.data());
+                return 1;
+            }
         }
 
         printf("signature verified\n");
