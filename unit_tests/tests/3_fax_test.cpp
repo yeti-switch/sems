@@ -438,7 +438,78 @@ TEST_F(FaxTest, ReinviteT38Test)
         sessionB.getSdpOffer(sessionB.local);
         GTEST_ASSERT_EQ(sessionB.local.media.size(), 1);
 
+        sessionA.RTPStream()->setReuseMediaPort(false);
+        sessionA.setMediaTransport(TP_UDPTL);
+        sessionA.RTPStream()->addAdditionTransport();
+        sessionA.setMediaType(MT_IMAGE);
+        sessionA.getSdpAnswer(sessionB.local, sessionA.local);
+        GTEST_ASSERT_EQ(sessionA.local.media.size(), 1);
+
+        sessionA.setRemoteSdp(sessionB.getLocalSdp());
+        sessionB.setRemoteSdp(sessionA.getLocalSdp());
+        GTEST_ASSERT_EQ(sessionA.init(), 0);
+        GTEST_ASSERT_EQ(sessionB.init(), 0);
+
+        sessionA.start();
+        sessionB.start();
+        sessionA.wait_started();
+        sessionB.wait_started();
+        while (AmSession::getSessionNum()) {
+            usleep(100);
+        }
+        sessionA.checkData();
+        sessionB.checkData();
+    } catch (const AmSession::Exception &except) {
+        error = except.reason;
+    } catch (const string &reason) {
+        error = reason.c_str();
+    }
+
+    if (!error.empty())
+        FAIL() << "Exception - " << error.c_str() << std::endl;
+}
+
+TEST_F(FaxTest, IceReinviteT38Test)
+{
+    string error;
+    try {
+        unsigned int idx = AmConfig.sip_if_names[test_config::instance()->signalling_interface];
+        string       ip;
+        if (AmConfig.sip_ifs[idx].proto_info.size())
+            ip = AmConfig.sip_ifs[idx].proto_info[0]->getIP();
+        ASSERT_FALSE(ip.empty());
+        ip.insert(0, "sip:");
+
+        FaxSession sessionA(ip, OFFER), sessionB(ip, ANSWER);
+        t38_option options;
+
+        sessionA.RTPStream()->setReuseMediaPort(false);
+        sessionA.useIceMediaStream();
+        sessionA.setMediaTransport(TP_RTPAVP);
+        sessionA.getSdpOffer(sessionA.local);
+        GTEST_ASSERT_EQ(sessionA.local.media.size(), 1);
+
         sessionB.RTPStream()->setReuseMediaPort(false);
+        sessionB.useIceMediaStream();
+        sessionB.setMediaTransport(TP_RTPAVP);
+        GTEST_ASSERT_NE(sessionA.local.media.size(), 0);
+        sessionB.getSdpAnswer(sessionA.local, sessionB.local);
+        GTEST_ASSERT_EQ(sessionB.local.media.size(), 1);
+
+        sessionA.setRemoteSdp(sessionB.getLocalSdp());
+        sessionB.setRemoteSdp(sessionA.getLocalSdp());
+        GTEST_ASSERT_EQ(sessionA.init(), 0);
+        GTEST_ASSERT_EQ(sessionB.init(), 0);
+
+        sessionB.RTPStream()->setReuseMediaPort(false);
+        sessionB.setMediaType(MT_IMAGE);
+        sessionB.setReuseMediaSlot(true);
+        sessionB.setMediaTransport(TP_UDPTL);
+        sessionB.RTPStream()->addAdditionTransport();
+        sessionB.getSdpOffer(sessionB.local);
+        GTEST_ASSERT_EQ(sessionB.local.media.size(), 1);
+
+        sessionA.RTPStream()->setReuseMediaPort(false);
         sessionA.setMediaTransport(TP_UDPTL);
         sessionA.RTPStream()->addAdditionTransport();
         sessionA.setMediaType(MT_IMAGE);
