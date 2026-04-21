@@ -11,14 +11,14 @@
 
 #include "AmSessionContainer.h"
 
-HttpMultiPartFormConnection::HttpMultiPartFormConnection(HttpDestination                  &destination,
-                                                         const HttpPostMultipartFormEvent &u,
-                                                         const string                     &connection_id)
-    : CurlConnection(destination, u, connection_id)
+HttpMultiPartFormConnection::HttpMultiPartFormConnection(const std::shared_ptr<HttpDestination> &dest,
+                                                         const HttpPostMultipartFormEvent       &u,
+                                                         const string                           &connection_id)
+    : CurlConnection(dest, u, connection_id)
     , form(0)
 {
     CDBG("HttpMultiPartFormConnection() %p", this);
-    u.attempt ? destination.resend_count_connection.inc() : destination.count_connection.inc();
+    u.attempt ? dest->resend_count_connection->inc() : dest->count_connection->inc();
 }
 
 HttpMultiPartFormConnection::~HttpMultiPartFormConnection()

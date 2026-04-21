@@ -13,12 +13,12 @@
 
 static size_t write_func_static(void *ptr, size_t size, size_t nmemb, HttpPostConnection *self);
 
-HttpPostConnection::HttpPostConnection(HttpDestination &destination, const HttpPostEvent &u,
+HttpPostConnection::HttpPostConnection(const std::shared_ptr<HttpDestination> &dest, const HttpPostEvent &u,
                                        const string &connection_id)
-    : CurlConnection(destination, u, connection_id)
+    : CurlConnection(dest, u, connection_id)
 {
     CDBG("HttpPostConnection() %p", this);
-    u.attempt ? destination.resend_count_connection.inc() : destination.count_connection.inc();
+    u.attempt ? dest->resend_count_connection->inc() : dest->count_connection->inc();
 }
 
 HttpPostConnection::~HttpPostConnection()

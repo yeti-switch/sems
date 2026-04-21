@@ -3,10 +3,13 @@
 #include "HttpDestination.h"
 #include "curl/curl.h"
 #include "stdint.h"
+#include <memory>
 #include <set>
 
 class CurlConnection {
     char curl_error[CURL_ERROR_SIZE];
+
+    std::shared_ptr<HttpDestination> destination_holder;
 
   protected:
     CURL              *curl;
@@ -44,7 +47,8 @@ class CurlConnection {
     virtual void  configure_headers();
 
   public:
-    CurlConnection(HttpDestination &destination, const HttpEvent &event, const string &connection_id);
+    CurlConnection(const std::shared_ptr<HttpDestination> &destination, const HttpEvent &event,
+                   const string &connection_id);
     virtual ~CurlConnection();
 
     int init_curl(struct curl_slist *hosts, CURLM *curl_multi = NULL);

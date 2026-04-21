@@ -100,7 +100,7 @@ class HttpClient : public AmThread,
     using RpcRequestsMap = std::unordered_map<string, JsonRpcRequestEvent>;
     RpcRequestsMap rpc_requests;
 
-    using HttpAuthsMap = std::map<string, HttpDestination *>;
+    using HttpAuthsMap = std::map<string, std::shared_ptr<HttpDestination>>;
 
     HttpAuthsMap        auths;
     HttpDestinationsMap destinations;
@@ -108,6 +108,10 @@ class HttpClient : public AmThread,
     int configure(const string &config);
     int init();
 
+  public:
+    int reconfigure(const string &config);
+
+  private:
     friend struct HttpAuth;
     friend struct HttpDestination;
     void on_upload_request(HttpUploadEvent *u);

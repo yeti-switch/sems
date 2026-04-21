@@ -13,13 +13,13 @@
 
 static size_t write_func_static(void *ptr, size_t size, size_t nmemb, HttpGetConnection *self);
 
-HttpGetConnection::HttpGetConnection(HttpDestination &destination, const HttpGetEvent &u, const string &connection_id,
-                                     int epoll_fd)
-    : CurlConnection(destination, u, connection_id)
+HttpGetConnection::HttpGetConnection(const std::shared_ptr<HttpDestination> &dest, const HttpGetEvent &u,
+                                     const string &connection_id, int epoll_fd)
+    : CurlConnection(dest, u, connection_id)
     , headers(nullptr)
 {
     CDBG("HttpGetConnection() %p", this);
-    u.attempt ? destination.resend_count_connection.inc() : destination.count_connection.inc();
+    u.attempt ? dest->resend_count_connection->inc() : dest->count_connection->inc();
 }
 
 HttpGetConnection::~HttpGetConnection()
@@ -84,7 +84,7 @@ size_t write_func_static(void *ptr, size_t size, size_t nmemb, HttpGetConnection
 
 size_t HttpGetConnection::write_func(void *ptr, size_t size, size_t nmemb, void *)
 {
-    int old_size = response.size();
+    size_t old_size = response.size();
     response.resize(old_size + size * nmemb);
     memcpy((char *)response.data() + old_size, (char *)ptr, size * nmemb);
     if (destination.max_reply_size && destination.max_reply_size < response.size())

@@ -35,6 +35,15 @@ static string                compute_hmac_sha1(const string &msg, const string &
 
 enum RpcMethodId { MethodShowDnsCache, MethodGetRequest, MethodPostRequest, MethodMultiRequest };
 
+struct ReloadEvent : public AmEvent {
+    string config;
+    ReloadEvent(const string &cfg)
+        : AmEvent(0)
+        , config(cfg)
+    {
+    }
+};
+
 int HttpClient::events_log_level = L_DBG;
 
 class HttpClientFactory : public AmDynInvokeFactory, public AmConfigFactory {
@@ -51,7 +60,7 @@ class HttpClientFactory : public AmDynInvokeFactory, public AmConfigFactory {
 
     int configure(const string &config) { return HttpClient::instance()->configure(config); }
 
-    int reconfigure(const std::string &config) { return configure(config); }
+    int reconfigure(const std::string &config) { return HttpClient::instance()->reconfigure(config); }
 
     AmDynInvoke *getInstance() { return HttpClient::instance(); }
     int          onLoad() { return HttpClient::instance()->onLoad(); }
@@ -244,12 +253,12 @@ int HttpClient::configure(const string &config)
     }
 
     for (auto &[name, dest] : destinations)
-        if (dest.is_auth_destination)
-            auths.emplace(name, &dest);
+        if (dest->is_auth_destination)
+            auths.emplace(name, dest);
 
     for (const auto &[name, dest] : destinations) {
-        if (!dest.auth_required.empty() && auths.find(dest.auth_required) == auths.end()) {
-            ERROR("Destination '%s' has unknown auth '%s'", name.c_str(), dest.auth_required.c_str());
+        if (!dest->auth_required.empty() && auths.find(dest->auth_required) == auths.end()) {
+            ERROR("Destination '%s' has unknown auth '%s'", name.c_str(), dest->auth_required.c_str());
             return -1;
         }
     }
@@ -334,11 +343,10 @@ void HttpClient::init_rpc_tree()
 bool HttpClient::postRequest(const string &connection_id, const AmArg &request_id, const AmArg &params)
 {
     params.assertArrayFmt("ss");
-    HttpDestinationsMap::iterator destination = destinations.find(params.get(0).asCStr());
+    auto destination = destinations.find(params.get(0).asCStr());
     if (destination == destinations.end())
         throw(AmDynInvoke::Exception(-1, "unknown destination"));
-    HttpDestination &d = destination->second;
-    if (d.mode != HttpDestination::Post)
+    if (destination->second->mode != HttpDestination::Post)
         throw(AmDynInvoke::Exception(-2, "wrong destination"));
 
     postEvent(new JsonRpcRequestEvent(connection_id, request_id, false, MethodPostRequest, params));
@@ -348,11 +356,10 @@ bool HttpClient::postRequest(const string &connection_id, const AmArg &request_i
 bool HttpClient::getRequest(const string &connection_id, const AmArg &request_id, const AmArg &params)
 {
     params.assertArrayFmt("ss");
-    HttpDestinationsMap::iterator destination = destinations.find(params.get(0).asCStr());
+    auto destination = destinations.find(params.get(0).asCStr());
     if (destination == destinations.end())
         throw(AmDynInvoke::Exception(-1, "unknown destination"));
-    HttpDestination &d = destination->second;
-    if (d.mode != HttpDestination::Get)
+    if (destination->second->mode != HttpDestination::Get)
         throw(AmDynInvoke::Exception(-2, "wrong destination"));
 
     postEvent(new JsonRpcRequestEvent(connection_id, request_id, false, MethodGetRequest, params));
@@ -369,7 +376,7 @@ bool HttpClient::multiRequest(const std::string &connection_id, const AmArg &req
     HttpMultiEvent *event = new HttpMultiEvent();
     event->sync_ctx_id    = AmSession::getNewId();
     for (cJSON *dst = data->child; dst; dst = dst->next) {
-        HttpDestinationsMap::iterator destination = destinations.find(dst->string);
+        auto destination = destinations.find(dst->string);
         if (destination == destinations.end()) {
             string err("unknown destination ");
             err += dst->string;
@@ -522,8 +529,21 @@ void HttpClient::on_stop()
     join();
 }
 
+int HttpClient::reconfigure(const string &config)
+{
+    postEvent(new ReloadEvent(config));
+    return 0;
+}
+
 void HttpClient::process(AmEvent *ev)
 {
+    if (auto *reload = dynamic_cast<ReloadEvent *>(ev)) {
+        if (configure(reload->config))
+            ERROR("reconfigure failed");
+        checkFinished();
+        return;
+    }
+
     switch (ev->event_id) {
     case JSONRPC_EVENT_ID:
         if (auto e = dynamic_cast<JsonRpcRequestEvent *>(ev))
@@ -795,7 +815,7 @@ void HttpClient::on_sync_context_timer()
 
 void HttpClient::on_upload_request(HttpUploadEvent *u)
 {
-    HttpDestinationsMap::iterator destination = destinations.find(u->destination_name);
+    auto destination = destinations.find(u->destination_name);
     if (destination == destinations.end()) {
         ERROR("event with unknown destination '%s' from session %s. ignore it", u->destination_name.c_str(),
               u->session_id.c_str());
@@ -803,8 +823,8 @@ void HttpClient::on_upload_request(HttpUploadEvent *u)
         return;
     }
 
-    HttpDestination &d = destination->second;
-    if (d.mode != HttpDestination::Put) {
+    auto &d = destination->second;
+    if (d->mode != HttpDestination::Put) {
         ERROR("wrong destination '%s' type for upload request from session %s. 'put' mode expected. ignore it",
               u->destination_name.c_str(), u->session_id.c_str());
         return;
@@ -813,11 +833,11 @@ void HttpClient::on_upload_request(HttpUploadEvent *u)
     if (HttpClient::events_log_level >= 0) {
         if (u->token.empty()) {
             _LOG(HttpClient::events_log_level, "[%s/%s] http upload request: %s => %s [%i/%i]", u->session_id.data(),
-                 u->sync_ctx_id.data(), u->file_path.c_str(), d.url[u->failover_idx].c_str(), u->failover_idx,
+                 u->sync_ctx_id.data(), u->file_path.c_str(), d->url[u->failover_idx].c_str(), u->failover_idx,
                  u->attempt);
         } else {
             _LOG(HttpClient::events_log_level, "[%s/%s] http upload request: %s => %s [%i/%i] token: %s",
-                 u->session_id.data(), u->sync_ctx_id.data(), u->file_path.c_str(), d.url[u->failover_idx].c_str(),
+                 u->session_id.data(), u->sync_ctx_id.data(), u->file_path.c_str(), d->url[u->failover_idx].c_str(),
                  u->failover_idx, u->attempt, u->token.c_str());
         }
     }
@@ -830,21 +850,21 @@ void HttpClient::on_upload_request(HttpUploadEvent *u)
         return;
     }
 
-    if (!u->attempt && d.count_connection.get() >= d.connection_limit) {
+    if (!u->attempt && d->count_connection->get() >= d->connection_limit) {
         if (HttpClient::events_log_level >= 0) {
             _LOG(HttpClient::events_log_level, "[%s/%s] http upload request marked as postponed", u->session_id.data(),
                  u->sync_ctx_id.data());
         }
-        d.addEvent(new HttpUploadEvent(*u));
+        d->addEvent(new HttpUploadEvent(*u));
         return;
     }
 
-    authorization(d, u);
+    authorization(*d, u);
 
     HttpUploadConnection *c = new HttpUploadConnection(d, *u, u->sync_ctx_id);
     if (c->init(hosts, curl_multi)) {
         ERROR("[%s/%s] http upload connection intialization error", u->session_id.data(), u->sync_ctx_id.data());
-        u->attempt ? d.resend_count_connection.dec() : d.count_connection.dec();
+        u->attempt ? d->resend_count_connection->dec() : d->count_connection->dec();
         on_init_connection_error(u->sync_ctx_id);
         delete c;
     }
@@ -912,7 +932,7 @@ void HttpClient::authorization(HttpDestination &d, HttpEvent *u)
 
 void HttpClient::on_post_request(HttpPostEvent *u)
 {
-    HttpDestinationsMap::iterator destination = destinations.find(u->destination_name);
+    auto destination = destinations.find(u->destination_name);
     if (destination == destinations.end()) {
         ERROR("event with unknown destination '%s' from session %s. ignore it", u->destination_name.c_str(),
               u->session_id.c_str());
@@ -920,22 +940,22 @@ void HttpClient::on_post_request(HttpPostEvent *u)
         return;
     }
 
-    HttpDestination &d = destination->second;
-    if (d.mode != HttpDestination::Post) {
+    auto &d = destination->second;
+    if (d->mode != HttpDestination::Post) {
         ERROR("wrong destination '%s' mode for upload request from session %s. 'post' mode expected. ignore it",
               u->destination_name.c_str(), u->session_id.c_str());
         return;
     }
 
-    authorization(d, u);
+    authorization(*d, u);
 
     if (HttpClient::events_log_level >= 0) {
         if (u->token.empty()) {
             _LOG(HttpClient::events_log_level, "[%s/%s] http post request url: %s [%i/%i]", u->session_id.data(),
-                 u->sync_ctx_id.data(), d.url[u->failover_idx].c_str(), u->failover_idx, u->attempt);
+                 u->sync_ctx_id.data(), d->url[u->failover_idx].c_str(), u->failover_idx, u->attempt);
         } else {
             _LOG(HttpClient::events_log_level, "[%s/%s] http post request url: %s [%i/%i], token: %s",
-                 u->session_id.data(), u->sync_ctx_id.data(), d.url[u->failover_idx].c_str(), u->failover_idx,
+                 u->session_id.data(), u->sync_ctx_id.data(), d->url[u->failover_idx].c_str(), u->failover_idx,
                  u->attempt, u->token.c_str());
         }
     }
@@ -948,19 +968,19 @@ void HttpClient::on_post_request(HttpPostEvent *u)
         return;
     }
 
-    if (!u->attempt && d.count_connection.get() == d.connection_limit) {
+    if (!u->attempt && d->count_connection->get() == d->connection_limit) {
         if (HttpClient::events_log_level >= 0) {
             _LOG(HttpClient::events_log_level, "[%s/%s] http post request marked as postponed", u->session_id.data(),
                  u->sync_ctx_id.data());
         }
-        d.addEvent(new HttpPostEvent(*u));
+        d->addEvent(new HttpPostEvent(*u));
         return;
     }
 
     HttpPostConnection *c = new HttpPostConnection(d, *u, u->sync_ctx_id);
     if (c->init(hosts, curl_multi)) {
         ERROR("[%s/%s] http post connection intialization error", u->session_id.data(), u->sync_ctx_id.data());
-        u->attempt ? d.resend_count_connection.dec() : d.count_connection.dec();
+        u->attempt ? d->resend_count_connection->dec() : d->count_connection->dec();
         on_init_connection_error(u->sync_ctx_id);
         delete c;
     }
@@ -968,7 +988,7 @@ void HttpClient::on_post_request(HttpPostEvent *u)
 
 void HttpClient::on_multpart_form_request(HttpPostMultipartFormEvent *u)
 {
-    HttpDestinationsMap::iterator destination = destinations.find(u->destination_name);
+    auto destination = destinations.find(u->destination_name);
     if (destination == destinations.end()) {
         ERROR("event with unknown destination '%s' from session %s. ignore it", u->destination_name.c_str(),
               u->session_id.c_str());
@@ -976,8 +996,8 @@ void HttpClient::on_multpart_form_request(HttpPostMultipartFormEvent *u)
         return;
     }
 
-    HttpDestination &d = destination->second;
-    if (d.mode != HttpDestination::Post) {
+    auto &d = destination->second;
+    if (d->mode != HttpDestination::Post) {
         ERROR("wrong destination '%s' mode for upload request from session %s. 'post' mode expected. ignore it",
               u->destination_name.c_str(), u->session_id.c_str());
         return;
@@ -986,11 +1006,11 @@ void HttpClient::on_multpart_form_request(HttpPostMultipartFormEvent *u)
     if (HttpClient::events_log_level >= 0) {
         if (u->token.empty()) {
             _LOG(HttpClient::events_log_level, "[%s/%s] http multipart form request url: %s [%i/%i]",
-                 u->session_id.data(), u->sync_ctx_id.data(), d.url[u->failover_idx].c_str(), u->failover_idx,
+                 u->session_id.data(), u->sync_ctx_id.data(), d->url[u->failover_idx].c_str(), u->failover_idx,
                  u->attempt);
         } else {
             _LOG(HttpClient::events_log_level, "[%s/%s] http multipart form request url: %s [%i/%i], token: %s",
-                 u->session_id.data(), u->sync_ctx_id.data(), d.url[u->failover_idx].c_str(), u->failover_idx,
+                 u->session_id.data(), u->sync_ctx_id.data(), d->url[u->failover_idx].c_str(), u->failover_idx,
                  u->attempt, u->token.c_str());
         }
     }
@@ -1003,22 +1023,22 @@ void HttpClient::on_multpart_form_request(HttpPostMultipartFormEvent *u)
         return;
     }
 
-    if (!u->attempt && d.count_connection.get() == d.connection_limit) {
+    if (!u->attempt && d->count_connection->get() == d->connection_limit) {
         if (HttpClient::events_log_level >= 0) {
             _LOG(HttpClient::events_log_level, "[%s/%s] http multipart form request marked as postponed",
                  u->session_id.data(), u->sync_ctx_id.data());
         }
-        d.addEvent(new HttpPostMultipartFormEvent(*u));
+        d->addEvent(new HttpPostMultipartFormEvent(*u));
         return;
     }
 
-    authorization(d, u);
+    authorization(*d, u);
 
     HttpMultiPartFormConnection *c = new HttpMultiPartFormConnection(d, *u, u->sync_ctx_id);
     if (c->init(hosts, curl_multi)) {
         ERROR("[%s/%s] http multipart form connection intialization error", u->session_id.data(),
               u->sync_ctx_id.data());
-        u->attempt ? d.resend_count_connection.dec() : d.count_connection.dec();
+        u->attempt ? d->resend_count_connection->dec() : d->count_connection->dec();
         on_init_connection_error(u->sync_ctx_id);
         delete c;
     }
@@ -1026,7 +1046,7 @@ void HttpClient::on_multpart_form_request(HttpPostMultipartFormEvent *u)
 
 void HttpClient::on_get_request(HttpGetEvent *e)
 {
-    HttpDestinationsMap::iterator destination = destinations.find(e->destination_name);
+    auto destination = destinations.find(e->destination_name);
     if (destination == destinations.end()) {
         ERROR("event with unknown destination '%s' from session %s. ignore it", e->destination_name.c_str(),
               e->session_id.c_str());
@@ -1034,8 +1054,8 @@ void HttpClient::on_get_request(HttpGetEvent *e)
         return;
     }
 
-    HttpDestination &d = destination->second;
-    if (d.mode != HttpDestination::Get) {
+    auto &d = destination->second;
+    if (d->mode != HttpDestination::Get) {
         ERROR("wrong destination '%s' mode for request from session %s. 'get' mode expected. ignore it",
               e->destination_name.c_str(), e->session_id.c_str());
         return;
@@ -1052,21 +1072,21 @@ void HttpClient::on_get_request(HttpGetEvent *e)
         }
     }
 
-    if (!e->attempt && d.count_connection.get() == d.connection_limit) {
+    if (!e->attempt && d->count_connection->get() == d->connection_limit) {
         if (HttpClient::events_log_level >= 0) {
             _LOG(HttpClient::events_log_level, "[%s/%s] http get request marked as postponed", e->session_id.data(),
                  e->sync_ctx_id.data());
         }
-        d.addEvent(new HttpGetEvent(*e));
+        d->addEvent(new HttpGetEvent(*e));
         return;
     }
 
-    authorization(d, e);
+    authorization(*d, e);
 
     HttpGetConnection *c = new HttpGetConnection(d, *e, e->sync_ctx_id, epoll_fd);
     if (c->init(hosts, curl_multi)) {
         ERROR("[%s/%s] http get connection intialization error", e->session_id.data(), e->sync_ctx_id.data());
-        e->attempt ? d.resend_count_connection.dec() : d.count_connection.dec();
+        e->attempt ? d->resend_count_connection->dec() : d->count_connection->dec();
         on_init_connection_error(e->sync_ctx_id);
         delete c;
     }
@@ -1123,8 +1143,8 @@ void HttpClient::on_resend_timer_event()
 {
     resend_timer.read();
 
-    for (auto &dest : destinations) {
-        dest.second.send_failed_events(this);
+    for (auto &[name, dest] : destinations) {
+        dest->send_failed_events(this);
     }
 }
 
@@ -1166,8 +1186,8 @@ void HttpClient::update_resolve_list()
         return;
     uint64_t next_time = 0;
 
-    for (auto &dst : destinations) {
-        for (auto &url : dst.second.url) {
+    for (auto &[name, dst] : destinations) {
+        for (auto &url : dst->url) {
             char            *host = 0;
             char            *port = 0;
             dns_handle       handle;
@@ -1242,8 +1262,8 @@ void HttpClient::on_connection_delete(CurlConnection *c)
         sendRpcResponse(it, ret);
     }
 
-    for (auto &dest : destinations) {
-        dest.second.send_postponed_events(this);
+    for (auto &[name, dest] : destinations) {
+        dest->send_postponed_events(this);
     }
     checkFinished();
 }
@@ -1252,10 +1272,10 @@ void HttpClient::showStats(const AmArg &, AmArg &ret)
 {
     ret["resend_interval"]    = resend_interval;
     ret["sync_context_count"] = sync_contexts.size();
-    for (auto &dest : destinations) {
+    for (auto &[name, dest] : destinations) {
         AmArg &dst_arr = ret["destinations"];
-        AmArg &dst     = dst_arr[dest.first.c_str()];
-        dest.second.showStats(dst);
+        AmArg &dst     = dst_arr[name.c_str()];
+        dest->showStats(dst);
     }
 }
 
@@ -1269,12 +1289,11 @@ uint64_t HttpClient::get_active_tasks_count()
     tasks += ev_queue.size();
     m_queue.unlock();
 
-    for (const auto &i : destinations) {
-        auto &dest = i.second;
-        tasks += dest.events.size();
-        tasks += dest.count_connection.get();
+    for (const auto &[name, dest] : destinations) {
+        tasks += dest->events.size();
+        tasks += dest->count_connection->get();
         // FIXME: should we ensure a graceful shutdown for retransmits ?
-        tasks += dest.resend_count_connection.get();
+        tasks += dest->resend_count_connection->get();
     }
 
     return tasks;

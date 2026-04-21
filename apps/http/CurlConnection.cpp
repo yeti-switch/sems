@@ -29,14 +29,18 @@ static int curl_debugfunction_callback([[maybe_unused]] CURL *handle, [[maybe_un
     return 0;
 }
 
-CurlConnection::CurlConnection(HttpDestination &destination, const HttpEvent &event, const string &connection_id)
-    : curl(nullptr)
+CurlConnection::CurlConnection(const std::shared_ptr<HttpDestination> &destination, const HttpEvent &event,
+                               const string &connection_id)
+    : destination_holder(destination)
+    , curl(nullptr)
     , resolve_hosts(0)
     , headers(nullptr)
-    , destination(destination)
+    , destination(*destination_holder)
     , event(event.http_clone())
     , connection_id(connection_id)
     , finished(false)
+    , failed(false)
+    , on_finish_requeue(false)
 {
 }
 
@@ -136,7 +140,7 @@ void CurlConnection::finish(CURLcode result)
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_response_code);
     }
 
-    event->attempt ? destination.resend_count_connection.dec() : destination.count_connection.dec();
+    event->attempt ? destination.resend_count_connection->dec() : destination.count_connection->dec();
     if (need_requeue())
         on_requeue();
     on_finished();
@@ -210,9 +214,9 @@ void CurlConnection::on_finished()
     destination.on_finish(failed, get_response());
 
     if (!on_finish_requeue) {
-        destination.requests_processed.inc();
+        destination.requests_processed->inc();
         if (failed)
-            destination.requests_failed.inc();
+            destination.requests_failed->inc();
         post_response_event();
     }
     finished = true;

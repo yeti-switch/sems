@@ -9,13 +9,13 @@
 #include "defs.h"
 #include "AmSessionContainer.h"
 
-HttpUploadConnection::HttpUploadConnection(HttpDestination &destination, const HttpUploadEvent &u,
+HttpUploadConnection::HttpUploadConnection(const std::shared_ptr<HttpDestination> &dest, const HttpUploadEvent &u,
                                            const string &connection_id)
-    : CurlConnection(destination, u, connection_id)
+    : CurlConnection(dest, u, connection_id)
     , fd(nullptr)
 {
     CDBG("HttpUploadConnection() %p", this);
-    u.attempt ? destination.resend_count_connection.inc() : destination.count_connection.inc();
+    u.attempt ? dest->resend_count_connection->inc() : dest->count_connection->inc();
 }
 
 HttpUploadConnection::~HttpUploadConnection()

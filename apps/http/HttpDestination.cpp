@@ -20,6 +20,50 @@ using std::vector;
 
 static map<string, vector<string>> http_dest_headers;
 
+struct DestinationCounters {
+    AtomicCounter *count_failed_events     = nullptr;
+    AtomicCounter *count_connection        = nullptr;
+    AtomicCounter *resend_count_connection = nullptr;
+    AtomicCounter *count_pending_events    = nullptr;
+    AtomicCounter *requests_processed      = nullptr;
+    AtomicCounter *requests_failed         = nullptr;
+    AtomicCounter *certificate_not_after   = nullptr;
+};
+
+static map<string, DestinationCounters> destination_counters_cache;
+
+static DestinationCounters &get_or_create_counters(const string &name)
+{
+    auto [it, inserted] = destination_counters_cache.try_emplace(name);
+    auto &c             = it->second;
+    if (inserted) {
+        c.count_failed_events =
+            &stat_group(Gauge, MOD_NAME, "failed_events").addAtomicCounter().addLabel("destination", name);
+        c.count_connection =
+            &stat_group(Gauge, MOD_NAME, "active_connections").addAtomicCounter().addLabel("destination", name);
+        c.resend_count_connection =
+            &stat_group(Gauge, MOD_NAME, "active_resend_connections").addAtomicCounter().addLabel("destination", name);
+        c.count_pending_events =
+            &stat_group(Gauge, MOD_NAME, "pending_events").addAtomicCounter().addLabel("destination", name);
+        c.requests_processed =
+            &stat_group(Counter, MOD_NAME, "requests_processed").addAtomicCounter().addLabel("destination", name);
+        c.requests_failed =
+            &stat_group(Counter, MOD_NAME, "requests_failed").addAtomicCounter().addLabel("destination", name);
+    }
+    return c;
+}
+
+static AtomicCounter &get_or_create_cert_counter(const string &name)
+{
+    auto &c = destination_counters_cache[name];
+    if (!c.certificate_not_after) {
+        c.certificate_not_after = &stat_group(Gauge, "http_client", "certificate_not_after_timestamp")
+                                       .addAtomicCounter()
+                                       .addLabel("destination", name);
+    }
+    return *c.certificate_not_after;
+}
+
 
 int DestinationAction::parse(const string &default_action, cfg_t *cfg)
 {
@@ -188,18 +232,16 @@ HttpDestination::HttpDestination(const string &name)
     , http2_tls(false)
     , min_file_size(0)
     , max_reply_size(0)
-    , count_failed_events(stat_group(Gauge, MOD_NAME, "failed_events").addAtomicCounter().addLabel("destination", name))
-    , count_connection(
-          stat_group(Gauge, MOD_NAME, "active_connections").addAtomicCounter().addLabel("destination", name))
-    , resend_count_connection(
-          stat_group(Gauge, MOD_NAME, "active_resend_connections").addAtomicCounter().addLabel("destination", name))
-    , count_pending_events(
-          stat_group(Gauge, MOD_NAME, "pending_events").addAtomicCounter().addLabel("destination", name))
-    , requests_processed(
-          stat_group(Counter, MOD_NAME, "requests_processed").addAtomicCounter().addLabel("destination", name))
-    , requests_failed(stat_group(Counter, MOD_NAME, "requests_failed").addAtomicCounter().addLabel("destination", name))
     , certificate_not_after_counter(0)
 {
+    auto &c                       = get_or_create_counters(name);
+    count_failed_events           = c.count_failed_events;
+    count_connection              = c.count_connection;
+    resend_count_connection       = c.resend_count_connection;
+    count_pending_events          = c.count_pending_events;
+    requests_processed            = c.requests_processed;
+    requests_failed               = c.requests_failed;
+    certificate_not_after_counter = c.certificate_not_after;
 }
 
 HttpDestination::~HttpDestination()
@@ -241,9 +283,7 @@ void HttpDestination::initNotAfterCounter(const string &name)
         }
     }
 
-    certificate_not_after_counter = &stat_group(Gauge, "http_client", "certificate_not_after_timestamp")
-                                         .addAtomicCounter()
-                                         .addLabel("destination", name);
+    certificate_not_after_counter = &get_or_create_cert_counter(name);
     if (certs.empty())
         certificate_not_after_counter->set(0);
     else
@@ -540,10 +580,10 @@ void HttpDestination::addEvent(HttpEvent *event)
 {
     if (event->attempt) {
         events.push_back(event);
-        count_failed_events.inc();
+        count_failed_events->inc();
     } else {
         events.push_front(event);
-        count_pending_events.inc();
+        count_pending_events->inc();
     }
 }
 
@@ -617,8 +657,8 @@ void HttpDestination::send_failed_events(HttpClient *client)
     if (events.empty())
         return;
 
-    unsigned int count_will_send = (resend_count_connection.get() < resend_connection_limit)
-                                       ? resend_connection_limit - resend_count_connection.get()
+    unsigned int count_will_send = (resend_count_connection->get() < resend_connection_limit)
+                                       ? resend_connection_limit - resend_count_connection->get()
                                        : 0;
     while (!events.empty() && count_will_send && (event = events.back()) && event->attempt) {
         events.pop_back();
@@ -636,7 +676,7 @@ void HttpDestination::send_failed_events(HttpClient *client)
         HttpGetEvent *get_event = dynamic_cast<HttpGetEvent *>(event);
         if (get_event)
             client->on_get_request(get_event);
-        count_failed_events.dec();
+        count_failed_events->dec();
         count_will_send--;
         delete event;
     }
@@ -645,13 +685,13 @@ void HttpDestination::send_failed_events(HttpClient *client)
 void HttpDestination::send_postponed_events(HttpClient *client)
 {
     HttpEvent   *event;
-    unsigned int count_will_send = connection_limit - count_connection.get();
+    unsigned int count_will_send = connection_limit - count_connection->get();
     while (!events.empty() && count_will_send && (event = events.front()) && !event->attempt) {
         events.pop_front();
 
         client->process_http_event(event);
 
-        count_pending_events.dec();
+        count_pending_events->dec();
         count_will_send--;
         delete event;
     }
@@ -659,17 +699,17 @@ void HttpDestination::send_postponed_events(HttpClient *client)
 
 bool HttpDestination::check_queue()
 {
-    return resend_queue_max && count_failed_events.get() >= resend_queue_max;
+    return resend_queue_max && count_failed_events->get() >= resend_queue_max;
 }
 
 void HttpDestination::showStats(AmArg &ret)
 {
-    ret["pending_events"]            = (int)count_pending_events.get();
-    ret["failed_events"]             = (int)count_failed_events.get();
-    ret["active_connections"]        = (int)count_connection.get();
-    ret["active_resend_connections"] = (int)resend_count_connection.get();
-    ret["requests_processed"]        = static_cast<unsigned long>(requests_processed.get());
-    ret["requests_failed"]           = static_cast<unsigned long>(requests_failed.get());
+    ret["pending_events"]            = (int)count_pending_events->get();
+    ret["failed_events"]             = (int)count_failed_events->get();
+    ret["active_connections"]        = (int)count_connection->get();
+    ret["active_resend_connections"] = (int)resend_count_connection->get();
+    ret["requests_processed"]        = static_cast<unsigned long>(requests_processed->get());
+    ret["requests_failed"]           = static_cast<unsigned long>(requests_failed->get());
 }
 
 bool HttpDestination::certReload()
@@ -698,13 +738,12 @@ bool HttpDestination::certReload()
 int HttpDestinationsMap::configure_destination(const string &name, cfg_t *cfg, const DefaultValues &values,
                                                bool is_auth = false)
 {
-    HttpDestination d(name);
-    if (d.parse(name, cfg, values, is_auth)) {
+    auto d = std::make_shared<HttpDestination>(name);
+    if (d->parse(name, cfg, values, is_auth)) {
         return -1;
     }
-    std::pair<HttpDestinationsMap::iterator, bool> ret;
-    ret = insert(std::pair<string, HttpDestination>(name, d));
-    if (ret.second == false) {
+    auto [it, inserted] = try_emplace(name, std::move(d));
+    if (!inserted) {
         ERROR("duplicate upload destination: %s", name.c_str());
         return -1;
     }
@@ -733,27 +772,27 @@ int HttpDestinationsMap::configure(cfg_t *cfg, DefaultValues &values)
 
 void HttpDestinationsMap::dump()
 {
-    for (HttpDestinationsMap::const_iterator i = begin(); i != end(); i++)
-        i->second.dump(i->first);
+    for (const auto &[name, dest] : *this)
+        dest->dump(name);
 }
 
 void HttpDestinationsMap::dump(AmArg &ret)
 {
     ret.assertStruct();
-    for (HttpDestinationsMap::const_iterator i = begin(); i != end(); i++)
-        i->second.dump(i->first, ret[i->first]);
+    for (const auto &[name, dest] : *this)
+        dest->dump(name, ret[name]);
 }
 
 void HttpDestinationsMap::certReload()
 {
-    for (HttpDestinationsMap::iterator i = begin(); i != end(); i++)
-        i->second.certReload();
+    for (auto &[name, dest] : *this)
+        dest->certReload();
 }
 
 bool HttpDestinationsMap::need_requeue()
 {
-    for (HttpDestinationsMap::const_iterator i = begin(); i != end(); i++) {
-        if (i->second.need_requeue())
+    for (const auto &[name, dest] : *this) {
+        if (dest->need_requeue())
             return true;
     }
     return false;

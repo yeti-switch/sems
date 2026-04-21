@@ -18,7 +18,8 @@ class HttpGetConnection : public CurlConnection {
     const string &get_response() override;
 
   public:
-    HttpGetConnection(HttpDestination &destination, const HttpGetEvent &u, const string &connection_id, int epoll_fd);
+    HttpGetConnection(const std::shared_ptr<HttpDestination> &destination, const HttpGetEvent &u,
+                      const string &connection_id, int epoll_fd);
     ~HttpGetConnection();
 
     int init(struct curl_slist *hosts, CURLM *curl_multi);

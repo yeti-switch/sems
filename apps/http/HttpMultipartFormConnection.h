@@ -21,8 +21,8 @@ class HttpMultiPartFormConnection : public CurlConnection {
     void  configure_headers() override;
 
   public:
-    HttpMultiPartFormConnection(HttpDestination &destination, const HttpPostMultipartFormEvent &u,
-                                const string &connection_id);
+    HttpMultiPartFormConnection(const std::shared_ptr<HttpDestination> &destination,
+                                const HttpPostMultipartFormEvent &u, const string &connection_id);
     ~HttpMultiPartFormConnection();
 
     int init(struct curl_slist *hosts, CURLM *curl_multi);

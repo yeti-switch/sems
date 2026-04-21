@@ -15,7 +15,8 @@ class HttpUploadConnection : public CurlConnection {
     void  post_response_event();
 
   public:
-    HttpUploadConnection(HttpDestination &destination, const HttpUploadEvent &u, const string &connection_id);
+    HttpUploadConnection(const std::shared_ptr<HttpDestination> &destination, const HttpUploadEvent &u,
+                         const string &connection_id);
     ~HttpUploadConnection();
 
     int init(struct curl_slist *hosts, CURLM *curl_multi);

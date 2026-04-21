@@ -4,10 +4,12 @@
 #include "ampi/HttpClientAPI.h"
 
 #include <map>
+#include <memory>
 #include <string>
 #include <list>
 #include <confuse.h>
 using std::list;
+using std::shared_ptr;
 using std::string;
 
 class HttpClient;
@@ -117,12 +119,12 @@ struct HttpDestination {
     unsigned int   max_reply_size;
 
     list<HttpEvent *> events;
-    AtomicCounter    &count_failed_events;
-    AtomicCounter    &count_connection;
-    AtomicCounter    &resend_count_connection;
-    AtomicCounter    &count_pending_events;
-    AtomicCounter    &requests_processed;
-    AtomicCounter    &requests_failed;
+    AtomicCounter    *count_failed_events;
+    AtomicCounter    *count_connection;
+    AtomicCounter    *resend_count_connection;
+    AtomicCounter    *count_pending_events;
+    AtomicCounter    *requests_processed;
+    AtomicCounter    *requests_failed;
     AtomicCounter    *certificate_not_after_counter;
 
     string succ_codes_str;
@@ -146,7 +148,7 @@ struct HttpDestination {
     bool certReload();
 };
 
-class HttpDestinationsMap : public std::map<string, HttpDestination> {
+class HttpDestinationsMap : public std::map<string, shared_ptr<HttpDestination>> {
     int configure_destination(const string &name, cfg_t *cfg, const DefaultValues &values, bool is_auth);
     int configure_destination_group(const string &name, cfg_t *cfg);
 

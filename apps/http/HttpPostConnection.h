@@ -17,7 +17,8 @@ class HttpPostConnection : public CurlConnection {
     const string &get_response() override;
 
   public:
-    HttpPostConnection(HttpDestination &destination, const HttpPostEvent &u, const string &connection_id);
+    HttpPostConnection(const std::shared_ptr<HttpDestination> &destination, const HttpPostEvent &u,
+                       const string &connection_id);
     ~HttpPostConnection();
 
     int init(struct curl_slist *hosts, CURLM *curl_multi);
