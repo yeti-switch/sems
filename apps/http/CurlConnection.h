@@ -13,6 +13,7 @@ class CurlConnection {
 
   protected:
     CURL              *curl;
+    CURLM             *attached_multi;
     struct curl_slist *resolve_hosts;
     struct curl_slist *headers;
 

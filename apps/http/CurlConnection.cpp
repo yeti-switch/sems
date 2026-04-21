@@ -33,6 +33,7 @@ CurlConnection::CurlConnection(const std::shared_ptr<HttpDestination> &destinati
                                const string &connection_id)
     : destination_holder(destination)
     , curl(nullptr)
+    , attached_multi(nullptr)
     , resolve_hosts(0)
     , headers(nullptr)
     , destination(*destination_holder)
@@ -46,8 +47,13 @@ CurlConnection::CurlConnection(const std::shared_ptr<HttpDestination> &destinati
 
 CurlConnection::~CurlConnection()
 {
-    if (curl)
+    if (curl) {
+        if (attached_multi) {
+            curl_multi_remove_handle(attached_multi, curl);
+            attached_multi = nullptr;
+        }
         curl_easy_cleanup(curl);
+    }
     if (resolve_hosts)
         curl_slist_free_all(resolve_hosts);
     if (headers)
@@ -114,6 +120,7 @@ int CurlConnection::init_curl(struct curl_slist *hosts, CURLM *curl_multi)
             ERROR("can't add handler to curl_multi");
             return -1;
         }
+        attached_multi = curl_multi;
     }
 
     return 0;
@@ -133,6 +140,11 @@ void CurlConnection::on_curl_error(CURLcode result)
 
 void CurlConnection::finish(CURLcode result)
 {
+    if (attached_multi) {
+        curl_multi_remove_handle(attached_multi, curl);
+        attached_multi = nullptr;
+    }
+
     if (result != CURLE_OK) {
         ERROR("curl connection %p finished with error: %d (%s)", this, result, curl_error);
         on_curl_error(result);

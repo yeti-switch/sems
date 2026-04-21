@@ -61,7 +61,6 @@ void CurlMultiHandler::check_multi_info()
             CDBG("check_multi_info() msg done. easy=%p result=%d", msg->easy_handle, msg->data.result);
             easy = msg->easy_handle;
             curl_easy_getinfo(easy, CURLINFO_PRIVATE, &c);
-            curl_multi_remove_handle(curl_multi, easy);
             c->finish(msg->data.result);
             on_connection_delete(c);
             delete c;

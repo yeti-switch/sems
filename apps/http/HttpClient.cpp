@@ -1162,6 +1162,7 @@ static bool add_to_resolve_slist(struct curl_slist **hosts, const char *r_host)
     struct curl_slist *tmp = curl_slist_append(*hosts, r_host);
     if (!tmp) {
         curl_slist_free_all(*hosts);
+        *hosts = nullptr;
         return false;
     }
 
