@@ -61,8 +61,8 @@ void RpcServerThread::run()
 void RpcServerThread::on_stop()
 {
     DBG3("stop server thread");
-    ev_pending.set(true);
     is_stop.set(true);
+    ev_pending.set(true);
     join();
 }
 
