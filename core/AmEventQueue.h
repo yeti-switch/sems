@@ -33,12 +33,13 @@
 #include "atomic_types.h"
 #include "EventStats.h"
 
-#include <queue>
+#include <deque>
 
 class AmEventQueueInterface {
   public:
     virtual ~AmEventQueueInterface() {}
     virtual void postEvent(AmEvent *) = 0;
+    virtual void postEventFront(AmEvent *e) { postEvent(e); }
 };
 
 class AmEventQueue;
@@ -63,7 +64,7 @@ class AmEventQueue : public AmEventQueueInterface, public atomic_ref_cnt {
     AmEventHandler          *handler;
     AmEventNotificationSink *wakeup_handler;
 
-    std::queue<AmEvent *> ev_queue;
+    std::deque<AmEvent *> ev_queue;
     AmMutex               m_queue;
     AmCondition<bool>     ev_pending;
 
@@ -74,6 +75,7 @@ class AmEventQueue : public AmEventQueueInterface, public atomic_ref_cnt {
     virtual ~AmEventQueue();
 
     void postEvent(AmEvent *);
+    void postEventFront(AmEvent *);
     void processEvents(EventStats *stats = nullptr);
     void waitForEvent();
     void processSingleEvent();

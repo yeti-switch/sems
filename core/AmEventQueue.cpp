@@ -43,7 +43,7 @@ AmEventQueue::~AmEventQueue()
     m_queue.lock();
     while (!ev_queue.empty()) {
         delete ev_queue.front();
-        ev_queue.pop();
+        ev_queue.pop_front();
     }
     m_queue.unlock();
 }
@@ -56,7 +56,7 @@ void AmEventQueue::postEvent(AmEvent *event)
     m_queue.lock();
 
     if (event)
-        ev_queue.push(event);
+        ev_queue.push_back(event);
 
     if (!ev_pending.get()) {
         ev_pending.set(true);
@@ -70,6 +70,22 @@ void AmEventQueue::postEvent(AmEvent *event)
         DBG("AmEventQueue: event posted");
 }
 
+void AmEventQueue::postEventFront(AmEvent *event)
+{
+    m_queue.lock();
+
+    if (event)
+        ev_queue.push_front(event);
+
+    if (!ev_pending.get()) {
+        ev_pending.set(true);
+        if (NULL != wakeup_handler)
+            wakeup_handler->notify(this);
+    }
+
+    m_queue.unlock();
+}
+
 void AmEventQueue::processEvents(EventStats *stats)
 {
     timeval start, end, consumed_time;
@@ -78,7 +94,7 @@ void AmEventQueue::processEvents(EventStats *stats)
 
     while (!ev_queue.empty()) {
         std::unique_ptr<AmEvent> event(ev_queue.front());
-        ev_queue.pop();
+        ev_queue.pop_front();
         m_queue.unlock();
 
         if (stats) {
@@ -124,7 +140,7 @@ void AmEventQueue::processSingleEvent()
     if (!ev_queue.empty()) {
 
         AmEvent *event = ev_queue.front();
-        ev_queue.pop();
+        ev_queue.pop_front();
         m_queue.unlock();
 
         if (AmConfig.log_events)
