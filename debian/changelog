@@ -1,3 +1,9 @@
+sems (1.186.1) stable; urgency=low
+  * http_client: fix UAF on HttpDestination via reconfigure
+  * http_client: curl_easy_cleanup on handle in multi — detach by finish
+  * jsonrpc: fixed freeze on sigterm
+ -- Michael Furmur <furmur@pm.me>  Wed, 29 Apr 2026 15:30:17 +0300
+
 sems (1.186.0) stable; urgency=low
   * refactor AmIdentity. split JWT and STIR/SHAKEN functionality. add AmJwt class
   * media: fixed crash on ice udptl
