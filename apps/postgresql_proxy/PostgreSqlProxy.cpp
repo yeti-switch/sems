@@ -673,7 +673,7 @@ std::optional<string> PostgreSqlProxy::handle_query(const string &query, const s
         }
 
         lua_gc(state, LUA_GCCOLLECT, 0);
-        lua_pop(state, lua_gettop(state));
+        lua_settop(state, 0);
 
     } else if (!response->upstream_queue.empty()) {
         return response->upstream_queue;
@@ -801,7 +801,7 @@ int PostgreSqlProxy::insert_resp_lua(const string &query, const string &path)
     response->timeout   = false;
 
     lua_gc(state, LUA_GCCOLLECT, 0);
-    lua_pop(state, lua_gettop(state));
+    lua_settop(state, 0);
 
     insert_response(query, vector<AmArg>() /*params*/, response);
 
