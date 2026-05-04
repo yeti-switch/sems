@@ -1,3 +1,7 @@
+sems (1.187.0) stable; urgency=low
+  * AmEventQueue: add postEventFront() method. std::queue -> std::deque
+ -- Michael Furmur <furmur@pm.me>  Mon, 04 May 2026 17:22:59 +0300
+
 sems (1.186.1) stable; urgency=low
   * http_client: fix UAF on HttpDestination via reconfigure
   * http_client: curl_easy_cleanup on handle in multi — detach by finish
