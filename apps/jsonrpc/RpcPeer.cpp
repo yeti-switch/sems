@@ -237,6 +237,10 @@ int JsonrpcNetstringsConnection::netstringsRead()
 #pragma GCC diagnostic pop
                     return REMOVE;
                 }
+                if (msg_size > MAX_RPC_MSG_SIZE - 2) {
+                    INFO("Protocol error on connection [%p/%d]: netstring size %u exceeds limit", this, fd, msg_size);
+                    return REMOVE;
+                }
                 in_msg    = true;
                 rcvd_size = 0;
                 continue;
