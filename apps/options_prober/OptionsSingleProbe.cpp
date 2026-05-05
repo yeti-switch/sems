@@ -308,7 +308,7 @@ void SipSingleProbe::onSipReply(const AmSipRequest &req, const AmSipReply &reply
     last_error_reason.clear();
 }
 
-void SipSingleProbe::getInfo(AmArg &a)
+void SipSingleProbe::getInfo(AmArg &a, const RequestShaper::timep &now)
 {
     a["id"]        = id;
     a["name"]      = name;
@@ -329,6 +329,13 @@ void SipSingleProbe::getInfo(AmArg &a)
     a["last_reply_contact"]  = last_reply_contact;
     a["last_reply_delay_ms"] = last_reply_delay.count();
     a["last_error_reason"]   = last_error_reason;
+
+    if (postponed) {
+        a["postpone_timeout_msec"] =
+            std::chrono::duration_cast<std::chrono::milliseconds>(postponed_next_attempt - now).count();
+    } else {
+        a["postpone_timeout_msec"] = 0;
+    }
 }
 
 void SipSingleProbe::serializeStats(map<string, string> &labels, unsigned long long *values) const

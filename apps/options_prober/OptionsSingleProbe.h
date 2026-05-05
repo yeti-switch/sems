@@ -1,6 +1,7 @@
 #pragma once
 
 #include "AmBasicSipDialog.h"
+#include "RequestShaper.h"
 #include "ampi/UACAuthAPI.h"
 
 #include <map>
@@ -89,7 +90,7 @@ class SipSingleProbe : public AmBasicSipEventHandler, public DialogControl, publ
     const string &getName() const { return name; }
     unsigned int  getId() const { return id; }
 
-    void getInfo(AmArg &a);
+    void getInfo(AmArg &a, const RequestShaper::timep &now);
 
     void serializeStats(map<string, string> &labels, unsigned long long *values) const;
 };
