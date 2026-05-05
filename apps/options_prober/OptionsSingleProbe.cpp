@@ -281,9 +281,10 @@ bool SipSingleProbe::process(timep &now)
     if (dlg.sendRequest(req.method, nullptr, options_hdrs, options_flags) < 0) {
         DBG("failed to send OPTIONS. ruri: %s", req.r_uri.data());
         last_error_reason = "failed to send request";
+    } else {
+        active_dialog = true;
     }
 
-    active_dialog  = true;
     last_send_time = now;
     recheck_time   = now + interval;
 
