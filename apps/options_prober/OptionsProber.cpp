@@ -329,7 +329,7 @@ void OptionsProber::checkPostponed()
 
 bool OptionsProber::processWithShaper(SipSingleProbe *p, SipSingleProbe::timep now)
 {
-    if (shaper.check_rate_limit(p->ruri_domain, p->postponed_next_attempt)) {
+    if (shaper.check_rate_limit(p->ruri_domain, now, p->postponed_next_attempt)) {
         DBG("%s(%u): rate limit reached for %s. postpone sending request", p->getTag().c_str(), p->getId(),
             p->ruri_domain.c_str());
         p->postponed = true;
