@@ -495,6 +495,7 @@ void tcp_base_trsp::on_read(short ev)
             _l.release();
             return;
         }
+        add_read_event();
     } // end of - locked section
 
     input->add_input_len(bytes);
