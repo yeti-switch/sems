@@ -1,3 +1,7 @@
+sems (1.188.1) stable; urgency=low
+  * disable symmetric rtp for UDPTLConnection
+ -- Michael Furmur <furmur@pm.me>  Thu, 07 May 2026 20:46:25 +0300
+
 sems (1.188.0) stable; urgency=low
   * utils: add escape_prometheus_label() helper
   * identity_validator: escape 'cn' prometheus label
