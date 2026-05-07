@@ -1827,3 +1827,20 @@ int strncmp2(const char *str1, size_t len1, const char *str2, size_t len2)
 {
     return len1 == len2 ? strncmp(str1, str2, len1) : len1 > len2;
 }
+
+std::string escape_prometheus_label(std::string_view value)
+{
+    std::string escaped;
+    // reserve extra space for potential escaping to minimize copying
+    escaped.reserve(value.size() + 4);
+
+    for (const char c : value) {
+        switch (c) {
+        case '"':  escaped.append("\\\"", 2); break;
+        case '\\': escaped.append("\\\\", 2); break;
+        case '\n': escaped.append("\\n", 2); break;
+        default:   escaped.push_back(c); break;
+        }
+    }
+    return escaped;
+}

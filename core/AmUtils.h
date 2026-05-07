@@ -386,6 +386,9 @@ bool fixup_utf8_inplace(std::string &s);
 /** augmented strncmp function which also compares string lengths */
 int strncmp2(const char *str1, size_t len1, const char *str2, size_t len2);
 
+/** escape backslash (\), double-quote ("), and line feed (\n) characters */
+std::string escape_prometheus_label(std::string_view value);
+
 #endif
 
 // Local Variables:
