@@ -3,6 +3,7 @@
 #include "format_helper.h"
 
 #include <AmEventDispatcher.h>
+#include <AmUtils.h>
 
 #include <botan/x509path.h>
 #include <botan/x509_ext.h>
@@ -54,7 +55,7 @@ struct IdentityValidatorMetricGroup : public StatCountersGroupsInterface {
         auto &labels   = trusted_certs.back().labels;
         labels["id"]   = id;
         labels["name"] = name;
-        labels["cn"]   = cn;
+        labels["cn"]   = escape_prometheus_label(cn);
 
         trusted_certs.back().value = value;
     }
