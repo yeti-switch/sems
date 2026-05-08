@@ -441,15 +441,21 @@ void IdentityValidator::process(AmEvent *event)
 
     switch (event->event_id) {
     case IdentityValidatorRequest::LoadTrustedCerts:
-        if (dynamic_cast<LoadTrustedCertsRequest *>(event) != nullptr) {
-            postDbQuery(trusted_certs_req, trusted_certs_key);
+        if (auto *e = dynamic_cast<LoadTrustedCertsRequest *>(event)) {
+            if (postDbQuery(trusted_certs_req, trusted_certs_key))
+                load_trusted_certs_req_sess_id = e->session_id;
+            else
+                session_container->postEvent(e->session_id, new TrustedCertsResponse(false));
             return;
         }
         break;
 
     case IdentityValidatorRequest::LoadTrustedRepos:
-        if (dynamic_cast<LoadTrustedReposRequest *>(event) != nullptr) {
-            postDbQuery(trusted_repos_req, trusted_repos_key);
+        if (auto *e = dynamic_cast<LoadTrustedReposRequest *>(event)) {
+            if (postDbQuery(trusted_repos_req, trusted_repos_key))
+                load_trusted_repos_req_sess_id = e->session_id;
+            else
+                session_container->postEvent(e->session_id, new TrustedReposResponse(false));
             return;
         }
         break;
@@ -474,8 +480,46 @@ void IdentityValidator::process(AmEvent *event)
     if (auto *e = dynamic_cast<PGResponse *>(event)) {
         if (e->token == trusted_certs_key) {
             reloadTrustedCertificates(e->result);
+            if (load_trusted_certs_req_sess_id.empty() == false) {
+                session_container->postEvent(load_trusted_certs_req_sess_id, new TrustedCertsResponse(true));
+                load_trusted_certs_req_sess_id.clear();
+            }
         } else if (e->token == trusted_repos_key) {
             reloadTrustedRepositories(e->result);
+            if (load_trusted_repos_req_sess_id.empty() == false) {
+                session_container->postEvent(load_trusted_repos_req_sess_id, new TrustedReposResponse(true));
+                load_trusted_repos_req_sess_id.clear();
+            }
+        }
+        return;
+    }
+
+    if (auto *e = dynamic_cast<PGResponseError *>(event)) {
+        if (e->token == trusted_certs_key) {
+            if (load_trusted_certs_req_sess_id.empty() == false) {
+                session_container->postEvent(load_trusted_certs_req_sess_id, new TrustedCertsResponse(false));
+                load_trusted_certs_req_sess_id.clear();
+            }
+        } else if (e->token == trusted_repos_key) {
+            if (load_trusted_repos_req_sess_id.empty() == false) {
+                session_container->postEvent(load_trusted_repos_req_sess_id, new TrustedReposResponse(false));
+                load_trusted_repos_req_sess_id.clear();
+            }
+        }
+        return;
+    }
+
+    if (auto *e = dynamic_cast<PGTimeout *>(event)) {
+        if (e->token == trusted_certs_key) {
+            if (load_trusted_certs_req_sess_id.empty() == false) {
+                session_container->postEvent(load_trusted_certs_req_sess_id, new TrustedCertsResponse(false));
+                load_trusted_certs_req_sess_id.clear();
+            }
+        } else if (e->token == trusted_repos_key) {
+            if (load_trusted_repos_req_sess_id.empty() == false) {
+                session_container->postEvent(load_trusted_repos_req_sess_id, new TrustedReposResponse(false));
+                load_trusted_repos_req_sess_id.clear();
+            }
         }
         return;
     }
@@ -1048,14 +1092,17 @@ PublicKey IdentityValidator::getPubKey(const string &cert_url, bool &cert_is_val
     return it->second.cert_chain[0].subject_public_key();
 }
 
-void IdentityValidator::postDbQuery(const string &query, const string &token)
+bool IdentityValidator::postDbQuery(const string &query, const string &token)
 {
     if (!session_container->postEvent(POSTGRESQL_QUEUE, new PGExecute(PGQueryData(pg_worker, query, true, /* single */
                                                                                   IDENTITY_VALIDATOR_APP_QUEUE, token),
                                                                       PGTransactionData())))
     {
         ERROR("failed to post PGExecute for %s", token.c_str());
+        return false;
     }
+
+    return true;
 }
 
 void IdentityValidator::postResult(IdentityValidatorEntry &cert_entry, const string &url)

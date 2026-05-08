@@ -194,6 +194,8 @@ class IdentityValidator : public AmThread,
     string               schema;
     string               trusted_certs_req;
     string               trusted_repos_req;
+    string               load_trusted_certs_req_sess_id;
+    string               load_trusted_repos_req_sess_id;
 
     struct PGPoolCfg {
         string host;
@@ -310,7 +312,7 @@ class IdentityValidator : public AmThread,
     void             renewCertEntry(CertHash::value_type &entry);
     PublicKey        getPubKey(const string &cert_url, bool &cert_is_valid,
                                IdentityValidatorEntry::cert_state &cert_state) const;
-    void             postDbQuery(const string &query, const string &token);
+    bool             postDbQuery(const string &query, const string &token);
     void             makeIdentityData(SessionCtx *ctx, AmArg &identity_data);
     void             postResult(IdentityValidatorEntry &cert_entry, const string &url);
     void             postResult(SessionCtx *ctx);
