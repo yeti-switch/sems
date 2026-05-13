@@ -1,3 +1,7 @@
+sems (1.189.0) stable; urgency=low
+  * IdentityValidator: add TrustedCertsResponse and TrustedReposResponse events
+ -- Michael Furmur <furmur@pm.me>  Wed, 13 May 2026 11:09:41 +0300
+
 sems (1.188.1) stable; urgency=low
   * disable symmetric rtp for UDPTLConnection
  -- Michael Furmur <furmur@pm.me>  Thu, 07 May 2026 20:46:25 +0300
