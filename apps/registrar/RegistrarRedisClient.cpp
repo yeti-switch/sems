@@ -103,8 +103,8 @@ int RegistrarRedisClient::configure(cfg_t *cfg)
         { LOAD_CONTACTS_SCRIPT, get_script_path(LOAD_CONTACTS_SCRIPT) }
     };
     write_conn->info.scripts = {
-        {           REGISTER_SCRIPT,           get_script_path(REGISTER_SCRIPT) },
-        { RPC_TRANSPORT_DOWN_SCRIPT, get_script_path(RPC_TRANSPORT_DOWN_SCRIPT) }
+        {       REGISTER_SCRIPT,       get_script_path(REGISTER_SCRIPT) },
+        { TRANSPORT_DOWN_SCRIPT, get_script_path(TRANSPORT_DOWN_SCRIPT) }
     };
 
     // check dependencies

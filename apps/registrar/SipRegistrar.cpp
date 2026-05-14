@@ -24,7 +24,9 @@ static vector<string> fl_protos{ "none", "udp", "tcp", "tls", "sctp", "ws", "wss
 
 std::string registration_event_channel_name("reg2");
 
-enum UserTypeId { Register = 0, ResolveAors, BlockingReqCtx, ContactSubscribe, ContactData, Unbind };
+enum UserTypeId { Register = 0, ResolveAors, BlockingReqCtx, ContactSubscribe, ContactData, Unbind, TransportDown };
+
+/* Helpers */
 
 static void repack_headers(const string &headers, AmArg &ret)
 {
@@ -36,8 +38,6 @@ static void repack_headers(const string &headers, AmArg &ret)
     }
 }
 
-/* Helpers */
-
 static int normalize_header_name(int c)
 {
     if (c == '-')
@@ -45,11 +45,24 @@ static int normalize_header_name(int c)
     return ::tolower(c);
 }
 
-bool post_request(const string &conn_id, const vector<AmArg> &args, AmObject *user_data = nullptr, int user_type_id = 0,
-                  bool persistent_ctx = false)
+static bool post_request(const string &conn_id, const vector<AmArg> &args, AmObject *user_data = nullptr,
+                         int user_type_id = 0, std::function<void()> on_error = nullptr, bool persistent_ctx = false)
 {
-    return session_container->postEvent(
+    bool ret = session_container->postEvent(
         REDIS_APP_QUEUE, new RedisRequest(SIP_REGISTRAR_QUEUE, conn_id, args, user_data, user_type_id, persistent_ctx));
+    if (!ret && on_error)
+        on_error();
+    return ret;
+}
+
+static bool require_script(const RedisScript *script, string &hash, std::function<void()> on_error)
+{
+    if (!script || !script->is_loaded()) {
+        on_error();
+        return false;
+    }
+    hash = script->hash;
+    return true;
 }
 
 std::optional<string> parseRegId(const string &str)
@@ -110,9 +123,8 @@ class SipRegistrarFactory : public AmConfigFactory, public AmSessionFactory, pub
 
     void onOoDRequest(const AmSipRequest &req)
     {
-        session_container->postEvent(
-            SIP_REGISTRAR_QUEUE,
-            new SipRegistrarRegisterRequestEvent(req, string(), "17")); // !!! 17 // FIXME: need to remove 17
+        // SIP requests such as REGISTER and MESSAGE may be routed here,
+        // but we do not use this mechanism. Please use the module API instead.
     }
 };
 
@@ -515,23 +527,26 @@ static void parse_path(const AmArg &path_arg, AmArg &pd)
 }
 
 /* RPC */
-void SipRegistrar::rpc_show_aors(const AmArg &arg, AmArg &ret)
+
+static std::unique_ptr<RedisBlockingRequestCtx> exec_blocking_rpc(std::function<void(AmObject *, UserTypeId)> fn)
 {
-    size_t i, j;
-
-    std::unique_ptr<RedisBlockingRequestCtx> ctx(new RedisBlockingRequestCtx());
-
+    auto ctx = std::make_unique<RedisBlockingRequestCtx>();
     try {
-        rpc_resolve_aors(ctx.get(), UserTypeId::BlockingReqCtx, arg);
+        fn(ctx.get(), UserTypeId::BlockingReqCtx);
     } catch (...) {
         ctx.release();
         throw;
     }
-
     ctx->cond.wait_for();
-
     if (RedisReply::SuccessReply != ctx->result)
         throw AmSession::Exception(500, AmArg::print(ctx->data));
+    return ctx;
+}
+
+void SipRegistrar::rpc_show_aors(const AmArg &arg, AmArg &ret)
+{
+    auto ctx = exec_blocking_rpc(
+        [this, &arg](AmObject *user_data, UserTypeId user_type_id) { rpc_resolve_aors(user_data, user_type_id, arg); });
 
     if (!isArgArray(ctx->data) || ctx->data.size() % 2 != 0)
         throw AmSession::Exception(500, "unexpected redis reply");
@@ -539,7 +554,7 @@ void SipRegistrar::rpc_show_aors(const AmArg &arg, AmArg &ret)
     DBG("%s", AmArg::print(ctx->data).c_str());
     ret.assertArray();
 
-    for (i = 0; i < ctx->data.size(); i += 2) {
+    for (size_t i = 0; i < ctx->data.size(); i += 2) {
         AmArg &id_arg = ctx->data[i];
         if (!isArgCStr(id_arg)) {
             ERROR("unexpected auth_id type. skip entry");
@@ -552,7 +567,7 @@ void SipRegistrar::rpc_show_aors(const AmArg &arg, AmArg &ret)
             continue;
         }
 
-        for (j = 0; j < aor_data_arg.size(); j++) {
+        for (size_t j = 0; j < aor_data_arg.size(); j++) {
             AmArg &aor_entry_arg = aor_data_arg[j];
             if (!isArgArray(aor_entry_arg) || aor_entry_arg.size() != 11) {
                 ERROR("unexpected aor_entry_arg layout. skip entry");
@@ -590,19 +605,8 @@ void SipRegistrar::rpc_show_keepalive_contexts(const AmArg &, AmArg &ret)
 
 void SipRegistrar::rpc_bind(const AmArg &arg, AmArg &ret)
 {
-    std::unique_ptr<RedisBlockingRequestCtx> ctx(new RedisBlockingRequestCtx());
-
-    try {
-        rpc_bind_(ctx.get(), UserTypeId::BlockingReqCtx, arg);
-    } catch (...) {
-        ctx.release();
-        throw;
-    }
-
-    ctx->cond.wait_for();
-
-    if (RedisReply::SuccessReply != ctx->result)
-        throw AmSession::Exception(500, AmArg::print(ctx->data));
+    auto ctx = exec_blocking_rpc(
+        [this, &arg](AmObject *user_data, UserTypeId user_type_id) { rpc_bind_(user_data, user_type_id, arg); });
 
     if (!isArgArray(ctx->data))
         throw AmSession::Exception(500, "unexpected redis reply");
@@ -615,7 +619,6 @@ void SipRegistrar::rpc_bind(const AmArg &arg, AmArg &ret)
 
     DBG("%s", AmArg::print(ctx->data).c_str());
 
-    // parse data and fill ret
     int n = static_cast<int>(ctx->data.size());
     for (int i = 0; i < n; ++i) {
         AmArg &d = ctx->data[i];
@@ -636,19 +639,13 @@ void SipRegistrar::rpc_bind(const AmArg &arg, AmArg &ret)
 
 void SipRegistrar::rpc_unbind(const AmArg &arg, AmArg &ret)
 {
-    std::unique_ptr<RedisBlockingRequestCtx> ctx(new RedisBlockingRequestCtx());
-
-    try {
-        rpc_unbind_(ctx.get(), UserTypeId::BlockingReqCtx, arg);
-    } catch (...) {
-        ctx.release();
-        throw;
-    }
-
-    ctx->cond.wait_for();
-
-    if (RedisReply::SuccessReply != ctx->result)
-        throw AmSession::Exception(500, AmArg::print(ctx->data));
+    auto ctx = exec_blocking_rpc([&](AmObject *user_data, UserTypeId user_type_id) {
+        unbind(user_data, user_type_id, arg2str(arg[0]), arg.size() > 1 ? arg2str(arg[1]) : "",
+               [user_data](const string &reason) {
+                   delete user_data;
+                   throw AmSession::Exception(500, reason);
+               });
+    });
 
     DBG("%s", AmArg::print(ctx->data).c_str());
 
@@ -667,7 +664,6 @@ void SipRegistrar::rpc_unbind(const AmArg &arg, AmArg &ret)
         return;
     }
 
-    // parse data and fill ret
     int n = static_cast<int>(ctx->data.size());
     for (int i = 0; i < n; ++i) {
         AmArg &d = ctx->data[i];
@@ -691,26 +687,17 @@ void SipRegistrar::rpc_unbind(const AmArg &arg, AmArg &ret)
     }
 }
 
-
 void SipRegistrar::rpc_transport_down(const AmArg &arg, AmArg &ret)
 {
-    std::unique_ptr<RedisBlockingRequestCtx> ctx(new RedisBlockingRequestCtx());
-
-    try {
-        rpc_transport_down_(ctx.get(), UserTypeId::BlockingReqCtx, arg);
-    } catch (...) {
-        ctx.release();
-        throw;
-    }
-
-    ctx->cond.wait_for();
-
-    if (RedisReply::SuccessReply != ctx->result)
-        throw AmSession::Exception(500, AmArg::print(ctx->data));
-
+    auto ctx = exec_blocking_rpc([&](AmObject *user_data, UserTypeId user_type_id) {
+        transport_down(user_data, user_type_id, arg2str(arg[0]), arg.size() > 1 ? arg2int(arg[1]) : 0,
+                       [user_data](const string &reason) {
+                           delete user_data;
+                           throw AmSession::Exception(500, reason);
+                       });
+    });
     DBG("%s", AmArg::print(ctx->data).c_str());
 }
-
 
 /* AmEventHandler */
 
@@ -771,6 +758,11 @@ void SipRegistrar::process(AmEvent *event)
     case SipRegistrarEvent::ResolveAorsUnsubscribe:
         if (auto e = dynamic_cast<SipRegistrarResolveAorsUnsubscribeEvent *>(event)) {
             process_resolve_unsubscribe_event(*e);
+            return;
+        }
+    case SipRegistrarEvent::TransportDown:
+        if (auto e = dynamic_cast<SipRegistrarTransportDownEvent *>(event)) {
+            process_transport_down_event(*e);
             return;
         }
         break;
@@ -928,11 +920,11 @@ void SipRegistrar::process_register_request_event(SipRegistrarRegisterRequestEve
 
         // unbind all
         auto *user_data = new RedisRequestUserData(event.session_id, *req);
-        if (!unbind_all(user_data, UserTypeId::Register, event.registration_id)) {
-            delete user_data;
-            user_data = nullptr;
-            post_register_response(event.session_id, req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR);
-        }
+        unbind_all(user_data, UserTypeId::Register, event.registration_id,
+                   [this, session_id = event.session_id, req, user_data](const string &) {
+                       delete user_data;
+                       post_register_response(session_id, req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR);
+                   });
         return;
     }
 
@@ -1027,6 +1019,12 @@ void SipRegistrar::process_resolve_unsubscribe_event(SipRegistrarResolveAorsUnsu
     }
 }
 
+void SipRegistrar::process_transport_down_event(SipRegistrarTransportDownEvent &event)
+{
+    transport_down(nullptr, UserTypeId::TransportDown, event.registration_id, event.conn_id,
+                   [](const string &reason) { ERROR("transport_down failed: %s", reason.c_str()); });
+}
+
 void SipRegistrar::process_redis_conn_state_event(RedisConnectionState &event)
 {
     if (event.state == RedisConnectionState::Connected)
@@ -1037,7 +1035,7 @@ void SipRegistrar::process_redis_conn_state_event(RedisConnectionState &event)
 
 void SipRegistrar::process_redis_reply_event(RedisReply &redis_reply)
 {
-    // DBG("redis reply user_type_id %d status %d", redis_reply->result, redis_reply->user_type_id);
+    // DBG("redis reply user_type_id %d status %d", redis_reply.result, redis_reply.user_type_id);
     switch (redis_reply.user_type_id) {
     case UserTypeId::Register:         process_redis_reply_register_event(redis_reply); break;
     case UserTypeId::ResolveAors:      process_redis_reply_resolve_aors_event(redis_reply); break;
@@ -1045,6 +1043,7 @@ void SipRegistrar::process_redis_reply_event(RedisReply &redis_reply)
     case UserTypeId::ContactSubscribe: process_redis_reply_contact_subscribe_event(redis_reply); break;
     case UserTypeId::ContactData:      process_redis_reply_contact_data_event(redis_reply); break;
     case UserTypeId::Unbind:           process_redis_reply_unbind_event(redis_reply); break;
+    case UserTypeId::TransportDown:    break;
     default:                           ERROR("unexpected reply event with type: %d", redis_reply.user_type_id); break;
     }
 }
@@ -1471,42 +1470,49 @@ void SipRegistrar::post_resolve_response(const string &session_id, const Aors &a
 
 bool SipRegistrar::fetch_all(AmObject *user_data, int user_type_id, const string &registration_id)
 {
-    auto script = write_conn->script(REGISTER_SCRIPT);
-    if (!script || !script->is_loaded()) {
-        ERROR("%s script is not loaded", REGISTER_SCRIPT);
+    string hash;
+    if (!require_script(write_conn->script(REGISTER_SCRIPT), hash,
+                        [] { ERROR("%s script is not loaded", REGISTER_SCRIPT); }))
         return false;
-    }
 
-    vector<AmArg> args = { "EVALSHA", script->hash.c_str(), 1, registration_id.c_str() };
+    vector<AmArg> args = { "EVALSHA", hash.c_str(), 1, registration_id.c_str() };
 
     return post_request(write_conn->id, args, user_data, user_type_id);
 }
 
-bool SipRegistrar::unbind_all(AmObject *user_data, int user_type_id, const string &registration_id)
+bool SipRegistrar::unbind_all(AmObject *user_data, int user_type_id, const string &registration_id,
+                              std::function<void(const string &)> on_error)
 {
-    auto script = write_conn->script(REGISTER_SCRIPT);
-    if (!script || !script->is_loaded()) {
-        ERROR("%s script is not loaded", REGISTER_SCRIPT);
+    return unbind(user_data, user_type_id, registration_id, "", on_error);
+}
+
+bool SipRegistrar::unbind(AmObject *user_data, int user_type_id, const string &registration_id, const string &contact,
+                          std::function<void(const string &)> on_error)
+{
+    string hash;
+    if (!require_script(write_conn->script(REGISTER_SCRIPT), hash,
+                        [&] { on_error(std::string(REGISTER_SCRIPT) + " script is not loaded"); }))
         return false;
-    }
 
-    vector<AmArg> args = { "EVALSHA", script->hash.c_str(), 1, registration_id.c_str(), 0 };
+    vector<AmArg> args = { "EVALSHA", hash.c_str(), 1, registration_id.c_str(), 0 };
+    if (!contact.empty())
+        args.emplace_back(contact.c_str());
 
-    return post_request(write_conn->id, args, user_data, user_type_id);
+    return post_request(write_conn->id, args, user_data, user_type_id,
+                        [&] { on_error("failed to post unbind request"); });
 }
 
 bool SipRegistrar::bind(AmObject *user_data, int user_type_id, const string &registration_id, const string &contact,
                         const string &instance, long reg_id, int expires, const string &user_agent, const string &path,
                         const string &interface_name, const string &headers)
 {
-    auto script = write_conn->script(REGISTER_SCRIPT);
-    if (!script || !script->is_loaded()) {
-        ERROR("%s script is not loaded", REGISTER_SCRIPT);
+    string hash;
+    if (!require_script(write_conn->script(REGISTER_SCRIPT), hash,
+                        [] { ERROR("%s script is not loaded", REGISTER_SCRIPT); }))
         return false;
-    }
 
     vector<AmArg> args = { "EVALSHA",
-                           script->hash.c_str(),
+                           hash.c_str(),
                            1,
                            registration_id.c_str(),
                            expires,
@@ -1528,13 +1534,12 @@ bool SipRegistrar::resolve_aors(AmObject *user_data, int user_type_id, std::set<
 {
     DBG("got %ld AoR ids to resolve", aor_ids.size());
 
-    auto script = read_conn->script(AOR_LOOKUP_SCRIPT);
-    if (!script || !script->is_loaded()) {
-        ERROR("%s script is not loaded", AOR_LOOKUP_SCRIPT);
+    string hash;
+    if (!require_script(read_conn->script(AOR_LOOKUP_SCRIPT), hash,
+                        [] { ERROR("%s script is not loaded", AOR_LOOKUP_SCRIPT); }))
         return false;
-    }
 
-    vector<AmArg> args = { "EVALSHA", script->hash.c_str(), (int)aor_ids.size() };
+    vector<AmArg> args = { "EVALSHA", hash.c_str(), (int)aor_ids.size() };
 
     for (const auto &id : aor_ids)
         args.emplace_back(id.c_str());
@@ -1544,15 +1549,28 @@ bool SipRegistrar::resolve_aors(AmObject *user_data, int user_type_id, std::set<
 
 bool SipRegistrar::load_contacts(AmObject *user_data, int user_type_id)
 {
-    auto script = subscr_read_conn->script(LOAD_CONTACTS_SCRIPT);
-    if (!script || !script->is_loaded()) {
-        ERROR("%s script is not loaded", LOAD_CONTACTS_SCRIPT);
+    string hash;
+    if (!require_script(subscr_read_conn->script(LOAD_CONTACTS_SCRIPT), hash,
+                        [] { ERROR("%s script is not loaded", LOAD_CONTACTS_SCRIPT); }))
         return false;
-    }
 
-    vector<AmArg> args = { "EVALSHA", script->hash.c_str(), 0 };
+    vector<AmArg> args = { "EVALSHA", hash.c_str(), 0 };
 
     return post_request(subscr_read_conn->id, args, user_data, user_type_id);
+}
+
+bool SipRegistrar::transport_down(AmObject *user_data, int user_type_id, const string &reg_id, long conn_id,
+                                  std::function<void(const string &)> on_error)
+{
+    string hash;
+    if (!require_script(write_conn->script(TRANSPORT_DOWN_SCRIPT), hash,
+                        [&] { on_error(string(TRANSPORT_DOWN_SCRIPT) + " script is not loaded"); }))
+        return false;
+
+    vector<AmArg> args = { "EVALSHA", hash.c_str(), 0, reg_id.c_str(), conn_id };
+
+    return post_request(write_conn->id, args, user_data, user_type_id,
+                        [&] { on_error("failed to post transport_down request"); });
 }
 
 bool SipRegistrar::subscribe(int user_type_id)
@@ -1565,7 +1583,7 @@ bool SipRegistrar::subscribe(int user_type_id)
     if (process_subscriptions || keepalive_interval.count()) {
         channels.push_back(registration_event_channel_name);
     }
-    return post_request(subscr_read_conn->id, channels, nullptr, user_type_id, true);
+    return post_request(subscr_read_conn->id, channels, nullptr, user_type_id, nullptr, true);
 }
 
 void SipRegistrar::rpc_bind_(AmObject *user_data, int user_type_id, const AmArg &arg)
@@ -1578,14 +1596,14 @@ void SipRegistrar::rpc_bind_(AmObject *user_data, int user_type_id, const AmArg 
     string       interface_name  = arg.size() > 5 ? arg2str(arg[5]) : 0;
     const string headers         = arg.size() > 6 ? arg2str(arg[6]) : "";
 
-    auto script = write_conn->script(REGISTER_SCRIPT);
-    if (!script || !script->is_loaded()) {
+    string hash;
+    require_script(write_conn->script(REGISTER_SCRIPT), hash, [user_data] {
         delete user_data;
         throw AmSession::Exception(500, "registrar is not enabled");
-    }
+    });
 
     vector<AmArg> args = { "EVALSHA",
-                           script->hash.c_str(),
+                           hash.c_str(),
                            1,
                            registration_id.c_str(),
                            expires,
@@ -1599,61 +1617,26 @@ void SipRegistrar::rpc_bind_(AmObject *user_data, int user_type_id, const AmArg 
                            headers,
                            bindings_max };
 
-    if (post_request(write_conn->id, args, user_data, user_type_id) == false)
-        throw AmSession::Exception(500, "failed to post bind request");
+    post_request(write_conn->id, args, user_data, user_type_id,
+                 [] { throw AmSession::Exception(500, "failed to post bind request"); });
 }
 
-void SipRegistrar::rpc_unbind_(AmObject *user_data, int user_type_id, const AmArg &arg)
-{
-    const string registration_id = arg2str(arg[0]);
-
-    auto script = write_conn->script(REGISTER_SCRIPT);
-    if (!script || !script->is_loaded()) {
-        delete user_data;
-        throw AmSession::Exception(500, "registrar is not enabled");
-    }
-
-    vector<AmArg> args = { "EVALSHA", script->hash.c_str(), 1, registration_id.c_str(), 0 }; // expires 0
-
-    if (arg.size() > 1)
-        args.emplace_back(arg2str(arg[1])); // contact
-
-    if (post_request(write_conn->id, args, user_data, user_type_id) == false)
-        throw AmSession::Exception(500, "failed to post unbind request");
-}
-
-void SipRegistrar::rpc_transport_down_(AmObject *user_data, int user_type_id, const AmArg &arg)
-{
-    const string registration_id = arg2str(arg[0]);
-    long         conn_id         = arg.size() > 1 ? arg2int(arg[1]) : 0;
-
-    auto script = write_conn->script(RPC_TRANSPORT_DOWN_SCRIPT);
-    if (!script || !script->is_loaded()) {
-        delete user_data;
-        throw AmSession::Exception(500, "registrar is not enabled");
-    }
-
-    vector<AmArg> args = { "EVALSHA", script->hash.c_str(), 0, registration_id.c_str(), conn_id }; // expires 0
-
-    if (post_request(write_conn->id, args, user_data, user_type_id) == false)
-        throw AmSession::Exception(500, "failed to post transport_down request");
-}
 
 void SipRegistrar::rpc_resolve_aors(AmObject *user_data, int user_type_id, const AmArg &arg)
 {
-    auto script = read_conn->script(RPC_AOR_LOOKUP_SCRIPT);
-    if (!script || !script->is_loaded()) {
+    string hash;
+    require_script(read_conn->script(RPC_AOR_LOOKUP_SCRIPT), hash, [user_data] {
         delete user_data;
         throw AmSession::Exception(500, "registrar is not enabled");
-    }
+    });
 
-    vector<AmArg> args = { "EVALSHA", script->hash.c_str(), (int)arg.size() };
+    vector<AmArg> args = { "EVALSHA", hash.c_str(), (int)arg.size() };
 
     for (auto i = 0U; i < arg.size(); ++i)
-        args.emplace_back(arg2str(arg[i])); // contact
+        args.emplace_back(arg2str(arg[i]));
 
-    if (post_request(read_conn->id, args, user_data, user_type_id) == false)
-        throw AmSession::Exception(500, "failed to post resolve_aors request");
+    post_request(read_conn->id, args, user_data, user_type_id,
+                 [] { throw AmSession::Exception(500, "failed to post resolve_aors request"); });
 }
 
 void SipRegistrar::on_timer()

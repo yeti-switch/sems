@@ -16,11 +16,11 @@ using std::vector;
 #define REG_SUBSCR_READ_CONN_ID "subscription_read"
 #define REG_WRITE_CONN_ID       "registrar_write"
 
-#define REGISTER_SCRIPT           "register"
-#define LOAD_CONTACTS_SCRIPT      "load_contacts"
-#define AOR_LOOKUP_SCRIPT         "aor_lookup"
-#define RPC_AOR_LOOKUP_SCRIPT     "rpc_aor_lookup"
-#define RPC_TRANSPORT_DOWN_SCRIPT "rpc_transport_down"
+#define REGISTER_SCRIPT       "register"
+#define LOAD_CONTACTS_SCRIPT  "load_contacts"
+#define AOR_LOOKUP_SCRIPT     "aor_lookup"
+#define TRANSPORT_DOWN_SCRIPT "transport_down"
+#define RPC_AOR_LOOKUP_SCRIPT "rpc_aor_lookup"
 
 class RegistrarTest;
 class RegistrarTestFactory;

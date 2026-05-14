@@ -90,6 +90,25 @@ struct SipRegistrarResolveAorsUnsubscribeEvent : public SipRegistrarEvent {
     }
 };
 
+struct SipRegistrarTransportDownEvent : public SipRegistrarEvent {
+    RegistrationIdType registration_id;
+    long               conn_id;
+
+    SipRegistrarTransportDownEvent(const std::string &session_id, RegistrationIdType reg_id)
+        : SipRegistrarEvent(TransportDown, session_id)
+        , registration_id(reg_id)
+        , conn_id(0)
+    {
+    }
+
+    SipRegistrarTransportDownEvent(const std::string &session_id, RegistrationIdType reg_id, long conn_id)
+        : SipRegistrarEvent(TransportDown, session_id)
+        , registration_id(reg_id)
+        , conn_id(conn_id)
+    {
+    }
+};
+
 struct SipRegistrarResolveResponseEvent : public AmEvent {
     using RegistrationIdType = SipRegistrarEvent::RegistrationIdType;
 

@@ -130,16 +130,19 @@ class SipRegistrar : public AmThread,
     rpc_handler rpc_transport_down;
 
     bool fetch_all(AmObject *user_data, int user_type_id, const string &registration_id);
-    bool unbind_all(AmObject *user_data, int user_type_id, const string &registration_id);
+    bool unbind_all(AmObject *user_data, int user_type_id, const string &registration_id,
+                    std::function<void(const string &)> on_error);
+    bool unbind(AmObject *user_data, int user_type_id, const string &registration_id, const string &contact,
+                std::function<void(const string &)> on_error);
     bool bind(AmObject *user_data, int user_type_id, const string &registration_id, const string &contact,
               const string &instance, long reg_id, int expires, const string &user_agent, const string &path,
               const string &interface_name, const string &headers);
     bool resolve_aors(AmObject *user_data, int user_type_id, std::set<string> aor_ids);
     bool load_contacts(AmObject *user_data, int user_type_id);
+    bool transport_down(AmObject *user_data, int user_type_id, const string &reg_id, long conn_id,
+                        std::function<void(const string &)> on_error = nullptr);
     bool subscribe(int user_type_id);
     void rpc_bind_(AmObject *user_data, int user_type_id, const AmArg &arg);
-    void rpc_unbind_(AmObject *user_data, int user_type_id, const AmArg &arg);
-    void rpc_transport_down_(AmObject *user_data, int user_type_id, const AmArg &arg);
     void rpc_resolve_aors(AmObject *user_data, int user_type_id, const AmArg &arg);
 
     void on_timer();
@@ -173,6 +176,7 @@ class SipRegistrar : public AmThread,
     void process_resolve_request_event(SipRegistrarResolveRequestEvent &event);
     void process_resolve_subscribe_event(SipRegistrarResolveAorsSubscribeEvent &event);
     void process_resolve_unsubscribe_event(SipRegistrarResolveAorsUnsubscribeEvent &event);
+    void process_transport_down_event(SipRegistrarTransportDownEvent &event);
     void process_redis_conn_state_event(RedisConnectionState &event);
     void process_redis_reply_event(RedisReply &event);
     void process_redis_reply_register_event(RedisReply &event);
