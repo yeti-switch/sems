@@ -165,6 +165,9 @@ int sip_msg::send(unsigned int flags)
 }
 
 
+const char *MESSAGEm = "MESSAGE";
+#define MESSAGE_len 7
+
 const char *INVITEm = "INVITE";
 #define INVITE_len 6
 
@@ -227,10 +230,18 @@ int parse_method(int *method, const char *beg, int len)
                 *method = sip_request::GET;
             break;
         }
+
     case OPTIONS_len:
-        if (!memcmp(c + 1, OPTIONSm + 1, OPTIONS_len - 1))
-            *method = sip_request::OPTIONS;
-        break;
+        switch (*c) {
+        case 'O':
+            if (!memcmp(c + 1, OPTIONSm + 1, OPTIONS_len - 1))
+                *method = sip_request::OPTIONS;
+            break;
+        case 'M':
+            if (!memcmp(c, MESSAGEm, MESSAGE_len))
+                *method = sip_request::MESSAGE;
+            break;
+        }
 
     case REGISTER_len:
         if (!memcmp(c + 1, REGISTERm + 1, REGISTER_len - 1))

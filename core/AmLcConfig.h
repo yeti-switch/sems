@@ -40,21 +40,36 @@ struct ConfigContainer {
     std::map<std::string, unsigned short> local_sip_ip2if;
     std::vector<SysIntf>                  sys_ifs;
 
-    enum ApplicationSelector { App_RURIUSER, App_RURIPARAM, App_APPHDR, App_MAPPING, App_SPECIFIED };
+    enum ApplicationSelector { App_RURIUSER, App_RURIPARAM, App_APPHDR, App_MAPPING, App_METHOD, App_SPECIFIED };
 
     enum SymmetricRtpMode { SM_RTP_PACKETS, SM_RTP_DELAY };
 
-    std::string register_application;
-    std::string options_application;
-    struct app_selector {
-        std::string application;
-        /** this is regex->application mapping is used if  App_MAPPING */
-        RegexMappingVector app_mapping;
-        /** type of application selection (parsed from Application) */
+    struct app_selector_base {
+        virtual ~app_selector_base() = default;
+        app_selector_base(const string &app_str, ConfigContainer::ApplicationSelector app_select)
+            : application(app_str)
+            , app_select(app_select)
+        {
+        }
+        std::string         application;
         ApplicationSelector app_select;
     };
-
-    std::vector<app_selector> applications;
+    struct app_selector_mapping : public app_selector_base {
+        app_selector_mapping(const string &app_str, ConfigContainer::ApplicationSelector app_select)
+            : app_selector_base(app_str, app_select)
+        {
+        }
+        RegexMappingVector app_mapping;
+    };
+    struct app_selector_method : public app_selector_base {
+        app_selector_method(const string &app_str, ConfigContainer::ApplicationSelector app_select)
+            : app_selector_base(app_str, app_select)
+        {
+        }
+        map<string, string> app_methods;
+    };
+    typedef unique_ptr<app_selector_base> app_selector;
+    std::list<app_selector>               applications;
 
     std::vector<std::string>           modules;
     std::map<std::string, std::string> module_config;

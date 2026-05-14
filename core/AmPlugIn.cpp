@@ -822,25 +822,31 @@ AmSessionFactory *AmPlugIn::findSessionFactory(const AmSipRequest &req, string &
 {
     string m_app_name;
 
-    if (AmConfig.register_application.length() && SIP_METH_REGISTER == req.method)
-        m_app_name = AmConfig.register_application;
-    else if (AmConfig.options_application.length() && SIP_METH_OPTIONS == req.method)
-        m_app_name = AmConfig.options_application;
-    else {
-        for (const auto &app_selector : AmConfig.applications) {
-            switch (app_selector.app_select) {
-            case ConfigContainer::App_RURIUSER:  m_app_name = req.user; break;
-            case ConfigContainer::App_APPHDR:    m_app_name = getHeader(req.hdrs, APPNAME_HDR, true); break;
-            case ConfigContainer::App_RURIPARAM: m_app_name = get_header_param(req.r_uri, "app"); break;
-            case ConfigContainer::App_MAPPING:
-                m_app_name = ""; // no match if not found
-                run_regex_mapping(app_selector.app_mapping, req.r_uri.c_str(), m_app_name);
-                break;
-            case ConfigContainer::App_SPECIFIED: m_app_name = app_selector.application; break;
-            }
-            if (!m_app_name.empty())
-                break;
+    for (const auto &app_selector : AmConfig.applications) {
+        switch (app_selector->app_select) {
+        case ConfigContainer::App_RURIUSER:  m_app_name = req.user; break;
+        case ConfigContainer::App_APPHDR:    m_app_name = getHeader(req.hdrs, APPNAME_HDR, true); break;
+        case ConfigContainer::App_RURIPARAM: m_app_name = get_header_param(req.r_uri, "app"); break;
+        case ConfigContainer::App_METHOD:
+        {
+            m_app_name = "";
+            ConfigContainer::app_selector_method &app_method =
+                dynamic_cast<ConfigContainer::app_selector_method &>(*app_selector);
+            m_app_name = app_method.app_methods[req.method];
+            break;
         }
+        case ConfigContainer::App_MAPPING:
+        {
+            m_app_name = ""; // no match if not found
+            ConfigContainer::app_selector_mapping &app_mapping =
+                dynamic_cast<ConfigContainer::app_selector_mapping &>(*app_selector);
+            run_regex_mapping(app_mapping.app_mapping, req.r_uri.c_str(), m_app_name);
+            break;
+        }
+        case ConfigContainer::App_SPECIFIED: m_app_name = app_selector->application; break;
+        }
+        if (!m_app_name.empty())
+            break;
     }
 
     if (m_app_name.empty()) {

@@ -160,6 +160,7 @@
 #define PARAM_SIP_TIMER_BL_NAME            PARAM_SIP_TIMER_NAME "bl"
 #define PARAM_APP_REG_NAME                 "register_application"
 #define PARAM_APP_OPT_NAME                 "options_application"
+#define PARAM_APP_MSG_NAME                 "message_application"
 #define PARAM_APP_NAME                     "application"
 #define PARAM_PROTOCOLS_NAME               "protocols"
 #define PARAM_CERTIFICATE_NAME             "certificate"
@@ -575,9 +576,9 @@ static cfg_opt_t general[] = { CFG_FUNC("include", &cfg_include),
 /**********************************************************************************************/
 /*                                        routing section                                     */
 /**********************************************************************************************/
-static cfg_opt_t routing[] = { CFG_FUNC("include", &cfg_include), CFG_STR(PARAM_APP_REG_NAME, "", CFGF_NONE),
-                               CFG_STR(PARAM_APP_OPT_NAME, "", CFGF_NONE), CFG_STR(PARAM_APP_NAME, "", CFGF_NONE),
-                               CFG_END() };
+static cfg_opt_t routing[] = { CFG_FUNC("include", &cfg_include),          CFG_STR(PARAM_APP_REG_NAME, "", CFGF_NONE),
+                               CFG_STR(PARAM_APP_MSG_NAME, "", CFGF_NONE), CFG_STR(PARAM_APP_OPT_NAME, "", CFGF_NONE),
+                               CFG_STR(PARAM_APP_NAME, "", CFGF_NONE),     CFG_END() };
 
 /**********************************************************************************************/
 /*                                         global section                                     */
@@ -1196,35 +1197,74 @@ int AmLcConfig::readRoutings(cfg_t *cfg, ConfigContainer *config)
     }
     cfg_t *routing = cfg_getsec(cfg, SECTION_ROUTING_NAME);
 
-    config->register_application = cfg_getstr(routing, PARAM_APP_REG_NAME);
-    config->options_application  = cfg_getstr(routing, PARAM_APP_OPT_NAME);
+    string register_application = cfg_getstr(routing, PARAM_APP_REG_NAME);
+    string options_application  = cfg_getstr(routing, PARAM_APP_OPT_NAME);
+    string message_application  = cfg_getstr(routing, PARAM_APP_MSG_NAME);
 
-    string apps_str = cfg_getstr(routing, PARAM_APP_NAME);
-    auto   apps     = explode(apps_str, "|");
-    config->applications.resize(apps.size());
-    int app_selector_id = 0;
-    for (const auto &app_str : apps) {
-        ConfigContainer::app_selector &app = config->applications[static_cast<size_t>(app_selector_id)];
-        app.application                    = app_str;
-        if (app_str == "$(ruri.user)") {
-            app.app_select = ConfigContainer::App_RURIUSER;
-        } else if (app_str == "$(ruri.param)") {
-            app.app_select = ConfigContainer::App_RURIPARAM;
-        } else if (app_str == "$(apphdr)") {
-            app.app_select = ConfigContainer::App_APPHDR;
-        } else if (app_str == "$(mapping)") {
-            app.app_select      = ConfigContainer::App_MAPPING;
-            string appcfg_fname = AmConfig.configs_path + "app_mapping.conf";
-            DBG("Loading application mapping...");
-            if (!read_regex_mapping(appcfg_fname, "=>", "application mapping", app.app_mapping)) {
-                ERROR("reading application mapping");
-                return -1;
-            }
-        } else {
-            app.app_select = ConfigContainer::App_SPECIFIED;
+    auto sbase_creator = [](const string                        &app_str,
+                            ConfigContainer::ApplicationSelector app_select) -> ConfigContainer::app_selector {
+        return std::make_unique<ConfigContainer::app_selector_base>(app_str, app_select);
+    };
+    auto smapping_creator = [&](const string                        &app_str,
+                                ConfigContainer::ApplicationSelector app_select) -> ConfigContainer::app_selector {
+        auto   app_mapping  = std::make_unique<ConfigContainer::app_selector_mapping>(app_str, app_select);
+        string appcfg_fname = AmConfig.configs_path + "app_mapping.conf";
+        DBG("Loading application mapping...");
+        if (!read_regex_mapping(appcfg_fname, "=>", "application mapping", app_mapping->app_mapping)) {
+            ERROR("reading application mapping");
+            return nullptr;
         }
-        app_selector_id++;
+        return app_mapping;
+    };
+    auto smethod_creator = [&](const string                        &app_str,
+                               ConfigContainer::ApplicationSelector app_select) -> ConfigContainer::app_selector {
+        auto app_method = std::make_unique<ConfigContainer::app_selector_method>(app_str, app_select);
+        if (!register_application.empty())
+            app_method->app_methods.emplace(SIP_METH_REGISTER, register_application);
+        if (!options_application.empty())
+            app_method->app_methods.emplace(SIP_METH_OPTIONS, options_application);
+        if (!message_application.empty())
+            app_method->app_methods.emplace(SIP_METH_MESSAGE, message_application);
+        return app_method;
+    };
+    auto creator = std::map<ConfigContainer::ApplicationSelector,
+                            std::function<ConfigContainer::app_selector(
+                                const string &app_str, ConfigContainer::ApplicationSelector app_select)>>{
+        {  ConfigContainer::App_RURIUSER,    sbase_creator },
+        { ConfigContainer::App_RURIPARAM,    sbase_creator },
+        {    ConfigContainer::App_APPHDR,    sbase_creator },
+        { ConfigContainer::App_SPECIFIED,    sbase_creator },
+        {   ConfigContainer::App_MAPPING, smapping_creator },
+        {    ConfigContainer::App_METHOD,  smethod_creator }
+    };
+
+    bool   app_method_present = false;
+    string apps_str           = cfg_getstr(routing, PARAM_APP_NAME);
+    auto   apps               = explode(apps_str, "|");
+    for (const auto &app_str : apps) {
+        ConfigContainer::ApplicationSelector app_select = ConfigContainer::App_SPECIFIED;
+        if (app_str == "$(ruri.user)") {
+            app_select = ConfigContainer::App_RURIUSER;
+        } else if (app_str == "$(ruri.param)") {
+            app_select = ConfigContainer::App_RURIPARAM;
+        } else if (app_str == "$(apphdr)") {
+            app_select = ConfigContainer::App_APPHDR;
+        } else if (app_str == "$(method)") {
+            app_select         = ConfigContainer::App_METHOD;
+            app_method_present = true;
+        } else if (app_str == "$(mapping)") {
+            app_select = ConfigContainer::App_MAPPING;
+        }
+
+        ConfigContainer::app_selector app = creator[app_select](app_str, app_select);
+        if (!app)
+            return -1;
+
+        config->applications.emplace_back(std::move(app));
     }
+
+    if (!app_method_present)
+        config->applications.emplace_front(smethod_creator("$(method)", ConfigContainer::App_METHOD));
     return 0;
 }
 
