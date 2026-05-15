@@ -59,8 +59,8 @@ struct sip_request {
         OPTIONS,
         BYE,
         CANCEL,
-        REGISTER,
         MESSAGE,
+        REGISTER,
         // http method
         GET
     };

@@ -238,7 +238,7 @@ int parse_method(int *method, const char *beg, int len)
                 *method = sip_request::OPTIONS;
             break;
         case 'M':
-            if (!memcmp(c, MESSAGEm, MESSAGE_len))
+            if (!memcmp(c + 1, MESSAGEm + 1, MESSAGE_len - 1))
                 *method = sip_request::MESSAGE;
             break;
         }
