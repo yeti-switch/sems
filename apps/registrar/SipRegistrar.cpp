@@ -121,7 +121,7 @@ class SipRegistrarFactory : public AmConfigFactory, public AmSessionFactory, pub
         return NULL;
     }
 
-    void onOoDRequest(const AmSipRequest &req)
+    void onOoDRequest(const AmSipRequest &req, const string &app_name)
     {
         // SIP requests such as REGISTER and MESSAGE may be routed here,
         // but we do not use this mechanism. Please use the module API instead.

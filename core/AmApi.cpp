@@ -84,7 +84,7 @@ void AmSessionFactory::configureSession(AmSession *sess)
     // SessionTimer::sess->configureSessionTimer(mod_conf);
 }
 
-void AmSessionFactory::onOoDRequest(const AmSipRequest &req)
+void AmSessionFactory::onOoDRequest(const AmSipRequest &req, const string &)
 {
 
     if (req.method == SIP_METH_OPTIONS) {

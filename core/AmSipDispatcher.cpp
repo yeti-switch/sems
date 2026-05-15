@@ -119,7 +119,7 @@ void AmSipDispatcher::handleSipMsg(AmSipRequest &req)
         AmSessionFactory *sess_fact = AmPlugIn::instance()->findSessionFactory(req, app_name);
         if (sess_fact) {
             try {
-                sess_fact->onOoDRequest(req);
+                sess_fact->onOoDRequest(req, app_name);
                 return;
             } catch (AmSession::Exception &e) {
                 AmSipDialog::reply_error(req, e.code, e.reason, e.hdrs);

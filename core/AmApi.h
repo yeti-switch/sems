@@ -231,7 +231,7 @@ class AmSessionFactory : public AmPluginFactory {
      *   processing as it would block the thread
      *   posting the event!
      */
-    virtual void onOoDRequest(const AmSipRequest &req);
+    virtual void onOoDRequest(const AmSipRequest &req, const string &app_name);
 };
 
 /** \brief Interface for plugins that implement a
