@@ -33,6 +33,7 @@
 #define SECTION_OPT_NAME             "options-acl"
 #define SECTION_ORIGACL_NAME         "origination-acl"
 #define SECTION_REG_ACL_NAME         "register-acl"
+#define SECTION_MSG_ACL_NAME         "message-acl"
 #define SECTION_MODULES_NAME         "modules"
 #define SECTION_MODULE_NAME          "module"
 #define SECTION_MODULE_GLOBAL_NAME   "module-global"
@@ -318,6 +319,7 @@ static cfg_opt_t sip_tcp[] = { CFG_STR(PARAM_ADDRESS_NAME, "", CFGF_NODEFAULT),
                                CFG_SEC(SECTION_OPT_NAME, acl, CFGF_NODEFAULT),
                                CFG_SEC(SECTION_ORIGACL_NAME, acl, CFGF_NODEFAULT),
                                CFG_SEC(SECTION_REG_ACL_NAME, acl, CFGF_NODEFAULT),
+                               CFG_SEC(SECTION_MSG_ACL_NAME, acl, CFGF_NODEFAULT),
                                CFG_END() };
 
 static cfg_opt_t sip_udp[] = { CFG_STR(PARAM_ADDRESS_NAME, "", CFGF_NODEFAULT),
@@ -1844,6 +1846,14 @@ IP_info *AmLcConfig::readInterface(cfg_t *cfg, const std::string &if_name, Addre
             cfg_t *reg_acl = cfg_getsec(cfg, SECTION_REG_ACL_NAME);
             if (readAcl(reg_acl, sinfo->acls.reg, if_name)) {
                 ERROR("error parsing register acl for interface: %s", if_name.c_str());
+                return nullptr;
+            }
+        }
+
+        if (cfg_size(cfg, SECTION_MSG_ACL_NAME)) {
+            cfg_t *msg_acl = cfg_getsec(cfg, SECTION_MSG_ACL_NAME);
+            if (readAcl(msg_acl, sinfo->acls.msg, if_name)) {
+                ERROR("error parsing message acl for interface: %s", if_name.c_str());
                 return nullptr;
             }
         }

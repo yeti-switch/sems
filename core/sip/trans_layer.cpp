@@ -1805,6 +1805,7 @@ void _trans_layer::process_rcvd_msg(sip_msg *msg, const trsp_acls &acls)
                     case sip_request::INVITE:   acl_action = acls.inv.check(msg->remote_ip); break;
                     case sip_request::OPTIONS:  acl_action = acls.opt.check(msg->remote_ip); break;
                     case sip_request::REGISTER: acl_action = acls.reg.check(msg->remote_ip); break;
+                    case sip_request::MESSAGE:  acl_action = acls.msg.check(msg->remote_ip); break;
                     default:                    acl_action = trsp_acl::Allow;
                     }
                 } else {

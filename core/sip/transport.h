@@ -282,6 +282,7 @@ struct trsp_acls {
     trsp_acl inv; // INVITE ACLs
     trsp_acl opt; // OPTIONS ACLs
     trsp_acl reg; // REGISTER ACLs
+    trsp_acl msg; // MESSAGE ACLs
 };
 
 #endif
