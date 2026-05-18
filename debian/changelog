@@ -1,3 +1,9 @@
+sems (1.190.0) stable; urgency=low
+  * registrar: support TransportDown event
+  * core: add MESSAGE method parsing, app selector, acls
+  * AmSessionFactory::onOoDRequest: add app_name
+ -- Michael Furmur <furmur@pm.me>  Mon, 18 May 2026 15:37:08 +0300
+
 sems (1.189.0) stable; urgency=low
   * IdentityValidator: add TrustedCertsResponse and TrustedReposResponse events
  -- Michael Furmur <furmur@pm.me>  Wed, 13 May 2026 11:09:41 +0300
