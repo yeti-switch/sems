@@ -296,6 +296,9 @@ class AmRtpStream : public AmObject
     bool               last_recv_relayed;
     unsigned long long last_recv_ts;
 
+    /** VAD signal: CN observed since last receive().*/
+    bool recent_cn_observed;
+
     /**
      * Local interface used for this stream
      * (index into @AmLcConfig::Ifs)
@@ -646,6 +649,7 @@ class AmRtpStream : public AmObject
         return last_payload;
     }
     string getPayloadName(int payload_type);
+    bool   isPayloadCN(int payload_type) const;
 
     void replaceAudioMediaParameters(SdpMedia & m, unsigned int idx, AddressType addr_type);
 

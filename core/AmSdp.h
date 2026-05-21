@@ -39,8 +39,9 @@
 using std::string;
 
 
-#define COMFORT_NOISE_PAYLOAD_TYPE 13 // RFC 3389
-#define DYNAMIC_PAYLOAD_TYPE_START 96 // range: 96->127, see RFC 1890
+#define COMFORT_NOISE_PAYLOAD_TYPE  13   // RFC 3389
+#define COMFORT_NOISE_ENCODING_NAME "CN" // RFC 3389
+#define DYNAMIC_PAYLOAD_TYPE_START  96   // range: 96->127, see RFC 1890
 /**
  * @file AmSdp.h
  * Definitions for the SDP parser.

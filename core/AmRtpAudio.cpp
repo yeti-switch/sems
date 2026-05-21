@@ -212,7 +212,7 @@ int AmRtpAudio::receive(unsigned long long system_ts)
             break;
         } // if(size <= 0)
 
-        if (COMFORT_NOISE_PAYLOAD_TYPE == last_recv_payload) {
+        if (isPayloadCN(last_recv_payload)) {
             playout_buffer->clearLastTs();
             continue;
         } else {

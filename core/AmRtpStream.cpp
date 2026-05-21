@@ -135,6 +135,7 @@ AmRtpStream::AmRtpStream(AmSession *_s, int _if)
     , last_recv_payload(-1)
     , last_recv_relayed(false)
     , last_recv_ts(0)
+    , recent_cn_observed(false)
     , l_if(_if)
     , r_ssrc_i(false)
     , transport(TP_RTPAVP)
@@ -1426,8 +1427,9 @@ int AmRtpStream::receive(unsigned char *buffer, unsigned int size)
 
     if (!last_recv_relayed) {
         /* do we have a new talk spurt? */
-        begin_talk   = ((last_payload == 13) || rp->marker);
-        last_payload = last_recv_payload;
+        begin_talk         = recent_cn_observed || rp->marker;
+        recent_cn_observed = false;
+        last_payload       = last_recv_payload;
 
         add_if_no_exist(incoming_payloads[r_ssrc], rp->payload);
     }
@@ -1473,7 +1475,14 @@ void AmRtpStream::bufferPacket(AmRtpPacket *p)
         return;
     }
 
+    if (isPayloadCN(p->payload))
+        recent_cn_observed = true;
+
     if (relay_enabled) {
+        // CN is interleaved with audio; bypass the last_payload consistency check
+        bool can_relay_cn =
+            force_relay_cn && relay_stream != nullptr && relay_payloads.get(p->payload) && isPayloadCN(p->payload);
+
         if (relay_raw ||
             /*(p->payload == getLocalTelephoneEventPT()
              && (force_relay_dtmf || !active)) ||*/
@@ -1481,8 +1490,7 @@ void AmRtpStream::bufferPacket(AmRtpPacket *p)
             (relay_payloads.get(p->payload) && nullptr != relay_stream &&
              // check if actual remote payload mapping to local payload are equal
              p->payload == relay_map.get(static_cast<unsigned char>(relay_stream->getLastPayload()))) ||
-            // force CN relay
-            (force_relay_cn && p->payload == COMFORT_NOISE_PAYLOAD_TYPE))
+            can_relay_cn)
         {
             if (active) {
                 CLASS_DBG("switching to relay-mode\t(ts=%u;stream=%p)", p->timestamp, this);
@@ -2105,7 +2113,23 @@ string AmRtpStream::getPayloadName(int payload_type)
         if (it->pt == payload_type)
             return it->name;
     }
+
+    // fall back to global registry
+    if (payload_provider) {
+        amci_payload_t *pl = payload_provider->payload(payload_type);
+        if (pl && pl->name)
+            return string(pl->name);
+    }
     return string("");
+}
+
+bool AmRtpStream::isPayloadCN(int payload_type) const
+{
+    for (const auto &pl : payloads) {
+        if (pl.pt == payload_type)
+            return pl.codec_id == CODEC_CN;
+    }
+    return false;
 }
 
 ///
@@ -2210,10 +2234,7 @@ void AmRtpStream::payloads_id2str(const vector<int> i, vector<string> &s)
         std::string pname;
         pname = getPayloadName(*it);
         if (pname.empty()) {
-            if (*it == COMFORT_NOISE_PAYLOAD_TYPE)
-                pname = "CN";
-            else
-                pname = int2str(*it);
+            pname = int2str(*it);
         } else {
             transform(pname.begin(), pname.end(), pname.begin(), ::tolower);
         }

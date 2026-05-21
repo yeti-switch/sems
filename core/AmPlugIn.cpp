@@ -90,7 +90,8 @@ amci_codec_t _codec_tevent = { CODEC_TELEPHONE_EVENT, NULL,   NULL, NULL, NULL, 
 amci_codec_t _codec_cn = { CODEC_CN, NULL, NULL, NULL, NULL, NULL, cn_bytes2samples, cn_samples2bytes, nullptr };
 
 #define tevent_payload_initializer(RATE) { -1, "telephone-event", RATE, RATE, -1, CODEC_TELEPHONE_EVENT, -1 }
-#define cn_payload_initializer(PT, RATE) { PT, "CN", RATE, RATE, 1, CODEC_CN, AMCI_PT_AUDIO_OPT_IN }
+#define cn_payload_initializer(PT, RATE)                                                                               \
+    { PT, COMFORT_NOISE_ENCODING_NAME, RATE, RATE, 1, CODEC_CN, AMCI_PT_AUDIO_OPT_IN }
 
 static amci_payload_t _payload_tevent_8  = tevent_payload_initializer(8000);
 static amci_payload_t _payload_tevent_16 = tevent_payload_initializer(16000);
