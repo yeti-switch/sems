@@ -44,6 +44,7 @@
 #define CODEC_MP3  5
 
 #define CODEC_TELEPHONE_EVENT 6
+#define CODEC_CN              7
 
 #define CODEC_G726_16 8
 #define CODEC_G726_24 9

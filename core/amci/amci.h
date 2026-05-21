@@ -353,9 +353,11 @@ struct amci_inoutfmt_t {
 #define AMCI_PT_AUDIO_LINEAR 0
 /** Payload type for frame based audio */
 #define AMCI_PT_AUDIO_FRAME 1
+/** Payload type omitted from the default SDP offer*/
+#define AMCI_PT_AUDIO_OPT_IN 2
 
 /**
- * \brief ayload declaration
+ * \brief payload declaration
  */
 struct amci_payload_t {
 

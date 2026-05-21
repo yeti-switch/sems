@@ -71,19 +71,38 @@ static unsigned int tevent_samples2bytes([[maybe_unused]] long h_codec, unsigned
     return num_samples;
 }
 
+static unsigned int cn_bytes2samples([[maybe_unused]] long h_codec, unsigned int num_bytes)
+{
+    return num_bytes;
+}
+
+static unsigned int cn_samples2bytes([[maybe_unused]] long h_codec, unsigned int num_samples)
+{
+    return num_samples;
+}
+
 amci_codec_t _codec_pcm16 = { CODEC_PCM16,         NULL,   NULL, NULL, NULL, NULL, pcm16_bytes2samples,
                               pcm16_samples2bytes, nullptr };
 
 amci_codec_t _codec_tevent = { CODEC_TELEPHONE_EVENT, NULL,   NULL, NULL, NULL, NULL, tevent_bytes2samples,
                                tevent_samples2bytes,  nullptr };
 
-#define tevent_payload_initializer(RATE) { -1, "telephone-event", 800, RATE, -1, CODEC_TELEPHONE_EVENT, -1 }
+amci_codec_t _codec_cn = { CODEC_CN, NULL, NULL, NULL, NULL, NULL, cn_bytes2samples, cn_samples2bytes, nullptr };
+
+#define tevent_payload_initializer(RATE) { -1, "telephone-event", RATE, RATE, -1, CODEC_TELEPHONE_EVENT, -1 }
+#define cn_payload_initializer(PT, RATE) { PT, "CN", RATE, RATE, 1, CODEC_CN, AMCI_PT_AUDIO_OPT_IN }
 
 static amci_payload_t _payload_tevent_8  = tevent_payload_initializer(8000);
 static amci_payload_t _payload_tevent_16 = tevent_payload_initializer(16000);
 static amci_payload_t _payload_tevent_24 = tevent_payload_initializer(24000);
 static amci_payload_t _payload_tevent_32 = tevent_payload_initializer(32000);
 static amci_payload_t _payload_tevent_48 = tevent_payload_initializer(48000);
+
+static amci_payload_t _payload_cn_8  = cn_payload_initializer(COMFORT_NOISE_PAYLOAD_TYPE, 8000);
+static amci_payload_t _payload_cn_16 = cn_payload_initializer(-1, 16000);
+static amci_payload_t _payload_cn_24 = cn_payload_initializer(-1, 24000);
+static amci_payload_t _payload_cn_32 = cn_payload_initializer(-1, 32000);
+static amci_payload_t _payload_cn_48 = cn_payload_initializer(-1, 48000);
 
 AmPlugIn *AmPlugIn::_instance = nullptr;
 
@@ -140,11 +159,17 @@ void AmPlugIn::init()
 
     addCodec(&_codec_pcm16);
     addCodec(&_codec_tevent);
+    addCodec(&_codec_cn);
     addPayload(&_payload_tevent_8);
     addPayload(&_payload_tevent_16);
     addPayload(&_payload_tevent_24);
     addPayload(&_payload_tevent_32);
     addPayload(&_payload_tevent_48);
+    addPayload(&_payload_cn_8);
+    addPayload(&_payload_cn_16);
+    addPayload(&_payload_cn_24);
+    addPayload(&_payload_cn_32);
+    addPayload(&_payload_cn_48);
 }
 
 static void shutdown_plugin_factory(std::pair<std::tuple<int, string>, AmPluginFactory *> pf)
@@ -403,6 +428,8 @@ void AmPlugIn::getPayloads(vector<SdpPayload> &pl_vec) const
     for (std::map<int, int>::const_iterator it = payload_order.begin(); it != payload_order.end(); ++it) {
         std::map<int, amci_payload_t *>::const_iterator pl_it = payloads.find(it->second);
         if (pl_it != payloads.end()) {
+            if (pl_it->second->type == AMCI_PT_AUDIO_OPT_IN)
+                continue;
             // if channels==2 use that value; otherwise don't add channels param
             pl_vec.push_back(SdpPayload(pl_it->first, pl_it->second->name, pl_it->second->advertised_sample_rate,
                                         pl_it->second->channels == 2 ? 2 : 0));
