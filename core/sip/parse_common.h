@@ -62,6 +62,8 @@ using std::list;
 #define SLASH     ('/')
 #define BACKSLASH ('\\')
 #define HYPHEN    ('-')
+#define LAQUOT    ('<')
+#define RAQUOT    ('>')
 
 #define IS_ALPHA(c)    (IS_IN(c, 0x41, 0x5a) || IS_IN(c, 0x61, 0x7a))
 #define IS_DIGIT(c)    IS_IN(c, 0x30, 0x39)
