@@ -1077,6 +1077,172 @@ TEST(Parser, parse_nameaddr_uri_tel_2)
     ASSERT_EQ(c2stlstr((*i)->value), "uri_hdr_v_2");
 }
 
+TEST(Parser, parse_first_nameaddr)
+{
+    sip_nameaddr na;
+    string       contact = "First <sip:username1@test.host.com:5060>, Next <sip:username2@test.host.com:5060>";
+
+    ASSERT_EQ(parse_first_nameaddr(&na, contact.c_str(), contact.size()), 0);
+    ASSERT_EQ(c2stlstr(na.name), "First");
+    ASSERT_EQ(c2stlstr(na.addr), "sip:username1@test.host.com:5060");
+}
+
+TEST(Parser, parse_first_nameaddr_comma_in_user)
+{
+    sip_nameaddr na;
+    string       contact = "<sip:user,name@test.host.com:5060>";
+
+    ASSERT_EQ(parse_first_nameaddr(&na, contact.c_str(), contact.size()), 0);
+    ASSERT_EQ(c2stlstr(na.addr), "sip:user,name@test.host.com:5060");
+}
+
+TEST(Parser, parse_first_nameaddr_laquot_in_display_name)
+{
+    sip_nameaddr na;
+    string       contact = "\"<Name\" <sip:username@test.host.com:5060>";
+
+    ASSERT_EQ(parse_first_nameaddr(&na, contact.c_str(), contact.size()), 0);
+    ASSERT_EQ(c2stlstr(na.name), "\"<Name\"");
+    ASSERT_EQ(c2stlstr(na.addr), "sip:username@test.host.com:5060");
+}
+
+TEST(Parser, parse_first_nameaddr_raquot_in_display_name)
+{
+    sip_nameaddr na;
+    string       contact = "\">Name\" <sip:username@test.host.com:5060>";
+
+    ASSERT_EQ(parse_first_nameaddr(&na, contact.c_str(), contact.size()), 0);
+    ASSERT_EQ(c2stlstr(na.name), "\">Name\"");
+    ASSERT_EQ(c2stlstr(na.addr), "sip:username@test.host.com:5060");
+}
+
+// ABNF: user-unreserved = "&" / "=" / "+" / "$" / "," / ";" / "?" / "/"
+TEST(Parser, parse_nameaddr_user_unreserved_chars)
+{
+    sip_nameaddr na;
+    string       contact = "<sip:&=+$,;?/@test.host.com:5060>";
+    const char  *s       = contact.c_str();
+
+    ASSERT_EQ(parse_nameaddr(&na, &s, contact.size()), 0);
+    ASSERT_EQ(c2stlstr(na.addr), "sip:&=+$,;?/@test.host.com:5060");
+}
+
+// ABNF: mark = "-" / "_" / "." / "!" / "~" / "*" / "'" / "(" / ")"
+TEST(Parser, parse_nameaddr_user_mark_chars)
+{
+    sip_nameaddr na;
+    string       contact = "<sip:-_.!~*'()@test.host.com:5060>";
+    const char  *s       = contact.c_str();
+
+    ASSERT_EQ(parse_nameaddr(&na, &s, contact.size()), 0);
+    ASSERT_EQ(c2stlstr(na.addr), "sip:-_.!~*'()@test.host.com:5060");
+}
+
+// ABNF: escaped = "%" HEXDIG HEXDIG
+TEST(Parser, parse_nameaddr_user_escaped)
+{
+    sip_nameaddr na;
+    string       contact = "<sip:user%20name%40test@test.host.com:5060>";
+    const char  *s       = contact.c_str();
+
+    ASSERT_EQ(parse_nameaddr(&na, &s, contact.size()), 0);
+    ASSERT_EQ(c2stlstr(na.addr), "sip:user%20name%40test@test.host.com:5060");
+}
+
+// ABNF: alphanum = ALPHA / DIGIT
+TEST(Parser, parse_nameaddr_user_alphanum)
+{
+    sip_nameaddr na;
+    string       contact = "<sip:Alice0123XYZ@test.host.com:5060>";
+    const char  *s       = contact.c_str();
+
+    ASSERT_EQ(parse_nameaddr(&na, &s, contact.size()), 0);
+    ASSERT_EQ(c2stlstr(na.addr), "sip:Alice0123XYZ@test.host.com:5060");
+}
+
+// ABNF: userinfo = ( user / telephone-subscriber ) [ ":" password ] "@"
+// example: sip:alice:secretword@atlanta.com;transport=tcp
+TEST(Parser, parse_nameaddr_user_with_password)
+{
+    sip_nameaddr na;
+    string       contact = "<sip:alice:secretword@atlanta.com;transport=tcp>";
+    const char  *s       = contact.c_str();
+
+    ASSERT_EQ(parse_nameaddr(&na, &s, contact.size()), 0);
+    ASSERT_EQ(c2stlstr(na.addr), "sip:alice:secretword@atlanta.com;transport=tcp");
+}
+
+// ABNF: userinfo = ( user / telephone-subscriber ) [ ":" password ] "@"
+// example: sip:+1-212-555-1212:1234@gateway.com;user=phone
+TEST(Parser, parse_nameaddr_telephone_subscriber)
+{
+    sip_nameaddr na;
+    string       contact = "<sip:+1-212-555-1212:1234@gateway.com;user=phone>";
+    const char  *s       = contact.c_str();
+
+    ASSERT_EQ(parse_nameaddr(&na, &s, contact.size()), 0);
+    ASSERT_EQ(c2stlstr(na.addr), "sip:+1-212-555-1212:1234@gateway.com;user=phone");
+}
+
+// ABNF: SIPS-URI = "sips:" [ userinfo ] hostport uri-parameters [ headers ]
+TEST(Parser, parse_nameaddr_sips_scheme)
+{
+    sip_nameaddr na;
+    string       contact = "<sips:alice@atlanta.com>";
+    const char  *s       = contact.c_str();
+
+    ASSERT_EQ(parse_nameaddr(&na, &s, contact.size()), 0);
+    ASSERT_EQ(c2stlstr(na.addr), "sips:alice@atlanta.com");
+}
+
+// ABNF: name-addr = [ display-name ]  LAQUOT  addr-spec  RAQUOT
+// example: Bob <sip:bob@biloxi.example.com>
+TEST(Parser, parse_nameaddr_with_display_name)
+{
+    sip_nameaddr na;
+    string       contact = "Bob <sip:bob@biloxi.example.com>";
+    const char  *s       = contact.c_str();
+
+    ASSERT_EQ(parse_nameaddr(&na, &s, contact.size()), 0);
+    ASSERT_EQ(c2stlstr(na.name), "Bob");
+    ASSERT_EQ(c2stlstr(na.addr), "sip:bob@biloxi.example.com");
+}
+
+// addr-spec without enclosing LAQUOT/RAQUOT
+// example: sip:alice@atlanta.com
+TEST(Parser, parse_nameaddr_no_brackets)
+{
+    sip_nameaddr na;
+    string       contact = "sip:alice@atlanta.com";
+    const char  *s       = contact.c_str();
+
+    ASSERT_EQ(parse_nameaddr(&na, &s, contact.size()), 0);
+    ASSERT_EQ(c2stlstr(na.addr), "sip:alice@atlanta.com");
+}
+
+// SIP-URI without userinfo (no user / no '@'); just hostport
+TEST(Parser, parse_nameaddr_no_userinfo)
+{
+    sip_nameaddr na;
+    string       contact = "<sip:atlanta.com>";
+    const char  *s       = contact.c_str();
+
+    ASSERT_EQ(parse_nameaddr(&na, &s, contact.size()), 0);
+    ASSERT_EQ(c2stlstr(na.addr), "sip:atlanta.com");
+}
+
+// ABNF: SIP-URI = "sip:" [ userinfo ] hostport uri-parameters [ headers ]
+// uri-parameters and headers inside LAQUOT/RAQUOT
+TEST(Parser, parse_nameaddr_uri_params_and_headers)
+{
+    sip_nameaddr na;
+    string       contact = "<sip:alice@atlanta.com;transport=tcp;lr?subject=project&priority=urgent>";
+    const char  *s       = contact.c_str();
+
+    ASSERT_EQ(parse_nameaddr(&na, &s, contact.size()), 0);
+    ASSERT_EQ(c2stlstr(na.addr), "sip:alice@atlanta.com;transport=tcp;lr?subject=project&priority=urgent");
+}
+
 TEST(Parser, AmUriParser)
 {
     AmUriParser p;
