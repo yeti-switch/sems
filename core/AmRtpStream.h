@@ -34,6 +34,7 @@
 #include "rtcp/RtcpStat.h"
 #include "AmEvent.h"
 #include "AmDtmfSender.h"
+#include "AmComfortNoiseSender.h"
 #include "sip/msg_sensor.h"
 #include "sip/ssl_settings.h"
 #include "media/AmMediaTransport.h"
@@ -356,6 +357,10 @@ class AmRtpStream : public AmObject
     /** DTMF sender */
     AmDtmfSender dtmf_sender;
 
+    /** Comfort Noise (RFC 3389) */
+    unique_ptr<const SdpPayload> remote_comfort_noise_pt;
+    AmComfortNoiseSender         cn_sender;
+
     /**
      * Receive buffer, queue and mutex
      */
@@ -526,6 +531,8 @@ class AmRtpStream : public AmObject
     }
 
     bool process_dtmf_queue(unsigned int ts);
+
+    void enableComfortNoise(unsigned int level, unsigned int interval_ms);
 
     unsigned int get_adjusted_ts(unsigned int user_ts);
 

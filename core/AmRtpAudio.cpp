@@ -375,6 +375,9 @@ void AmRtpAudio::put_on_idle(unsigned long long system_ts)
     update_user_ts(system_ts);
 
     process_dtmf_queue(tx_user_ts);
+
+    if (remote_comfort_noise_pt.get())
+        cn_sender.send(tx_user_ts, remote_comfort_noise_pt->payload_type, this);
 }
 
 void AmRtpAudio::update_user_ts(unsigned long long system_ts)

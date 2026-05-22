@@ -799,6 +799,23 @@ int AmRtpStream::init(const AmSdp &local, const AmSdp &remote, bool sdp_offer_ow
             CLASS_DBG("remote party doesn't support telephone events");
         }
 
+        // find comfort-noise (RFC 3389) intersection
+        remote_comfort_noise_pt.reset(nullptr);
+        for (auto const &remote_payload : remote_media.payloads) {
+            if (strcasecmp(remote_payload.encoding_name.c_str(), "CN"))
+                continue;
+            for (auto const &local_payload : local_media.payloads) {
+                if (!strcasecmp(local_payload.encoding_name.c_str(), "CN") &&
+                    remote_payload.clock_rate == local_payload.clock_rate)
+                {
+                    remote_comfort_noise_pt.reset(new SdpPayload(remote_payload));
+                    break;
+                }
+            }
+            if (remote_comfort_noise_pt.get())
+                break;
+        }
+
         payload = getDefaultPT();
         if (payload < 0) {
             CLASS_DBG("could not set a default payload");
@@ -1657,6 +1674,12 @@ bool AmRtpStream::process_dtmf_queue(unsigned int ts)
         return true;
     }
     return false;
+}
+
+void AmRtpStream::enableComfortNoise(unsigned int level, unsigned int interval_ms)
+{
+    unsigned int rate = remote_comfort_noise_pt.get() ? remote_comfort_noise_pt->clock_rate : 8000;
+    cn_sender.enable(level, interval_ms * rate / 1000);
 }
 
 unsigned int AmRtpStream::get_adjusted_ts(unsigned int ts)
