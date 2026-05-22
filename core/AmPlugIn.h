@@ -169,6 +169,13 @@ class AmPlugIn : public AmPayloadProvider {
      */
     int getDynPayload(const string &name, int rate, int encoding_param) const;
 
+    /**
+     * Payload lookup function by name.
+     * @param name codec name
+     * @return list of internal payload ids (empty if nothing matched).
+     */
+    vector<int> getNamedPayloads(const string &name, int encoding_param = 0) const;
+
     /** return 0, or -1 in case of error. */
     void getPayloads(vector<SdpPayload> &pl_vec) const;
 

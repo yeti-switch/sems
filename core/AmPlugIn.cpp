@@ -29,6 +29,7 @@
 #include "AmPlugIn.h"
 #include "AmApi.h"
 #include "AmSdp.h"
+#include "RTPParameters.h"
 #include "AmUtils.h"
 #include "AmLcConfig.h"
 #include "sip/defs.h"
@@ -419,8 +420,22 @@ int AmPlugIn::getDynPayload(const string &name, int rate, int encoding_param) co
             return pl_it->first;
         }
     }
-    // not found
     return -1;
+}
+
+vector<int> AmPlugIn::getNamedPayloads(const string &name, int encoding_param) const
+{
+    // collect all registered payloads matching the name (any clock rate)
+    vector<int> ret;
+    for (const auto &pl : payloads) {
+        const amci_payload_t *p = pl.second;
+        if (strcasecmp(name.c_str(), p->name))
+            continue;
+        if ((encoding_param > 0) && (p->channels > 0) && (static_cast<unsigned>(encoding_param) != p->channels))
+            continue;
+        ret.push_back(pl.first);
+    }
+    return ret;
 }
 
 /** return 0, or -1 in case of error. */
