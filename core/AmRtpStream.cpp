@@ -1902,8 +1902,8 @@ void AmRtpStream::clearRTPTimeout()
 int AmRtpStream::getDefaultPT()
 {
     for (PayloadCollection::iterator it = payloads.begin(); it != payloads.end(); ++it) {
-        // skip telephone-events payload
-        if (it->codec_id == CODEC_TELEPHONE_EVENT)
+        // skip signaling payloads (telephone-event / comfort-noise)
+        if (it->codec_id == CODEC_TELEPHONE_EVENT || it->codec_id == CODEC_CN)
             continue;
 
         // skip incompatible payloads
