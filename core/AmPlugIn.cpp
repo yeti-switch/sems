@@ -829,16 +829,19 @@ AmSessionFactory *AmPlugIn::findSessionFactory(const AmSipRequest &req, string &
         case ConfigContainer::App_RURIPARAM: m_app_name = get_header_param(req.r_uri, "app"); break;
         case ConfigContainer::App_METHOD:
         {
-            m_app_name = "";
-            ConfigContainer::app_selector_method &app_method =
+            const ConfigContainer::app_selector_method &app_method =
                 dynamic_cast<ConfigContainer::app_selector_method &>(*app_selector);
-            m_app_name = app_method.app_methods[req.method];
+            if (const auto it = app_method.app_methods.find(req.method); it != app_method.app_methods.end()) {
+                m_app_name = it->second;
+            } else {
+                m_app_name.clear();
+            }
             break;
         }
         case ConfigContainer::App_MAPPING:
         {
-            m_app_name = ""; // no match if not found
-            ConfigContainer::app_selector_mapping &app_mapping =
+            m_app_name.clear(); // no match if not found
+            const ConfigContainer::app_selector_mapping &app_mapping =
                 dynamic_cast<ConfigContainer::app_selector_mapping &>(*app_selector);
             run_regex_mapping(app_mapping.app_mapping, req.r_uri.c_str(), m_app_name);
             break;
