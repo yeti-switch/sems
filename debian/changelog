@@ -1,3 +1,7 @@
+sems (1.190.2) stable; urgency=low
+  * AmPlugIn::findSessionFactory: enforce read-only app_methods lookup
+ -- Michael Furmur <furmur@pm.me>  Tue, 26 May 2026 02:30:24 +0300
+
 sems (1.190.1) stable; urgency=low
   * cfg: add missed 'message-acl' section for udp/tls/wss/ws
  -- Michael Furmur <furmur@pm.me>  Mon, 18 May 2026 23:32:22 +0300
