@@ -353,7 +353,8 @@ void AmRtpStream::calcRtpPorts(AmMediaTransport *tr_rtp, AmMediaTransport *tr_rt
         if (!AmConfig.getMediaProtoInfo(tr_rtp->getLocalIf(), tr_rtp->getLocalProtoId()).getNextRtpAddress(l_rtp_addr))
         {
             // no free ports in PortMap. give up
-            throw string("no free RTP ports");
+            CLASS_ERROR("no free RTP ports");
+            throw AmSession::NoFreeRtpPortsException();
         }
 
         if (tr_rtp != tr_rtcp && tr_rtcp) {

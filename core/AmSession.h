@@ -252,6 +252,16 @@ class AmSession : public virtual AmObject,
     };
 
     /**
+     * \brief Thrown when RTP port allocation fails (PortMap exhausted).
+     */
+    struct NoFreeRtpPortsException : public Exception {
+        NoFreeRtpPortsException()
+            : Exception(500, SIP_REPLY_SERVER_INTERNAL_ERROR)
+        {
+        }
+    };
+
+    /**
      * Session constructor.
      */
     AmSession(AmSipDialog *dlg = NULL);
