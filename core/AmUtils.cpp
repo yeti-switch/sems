@@ -1844,3 +1844,24 @@ std::string escape_prometheus_label(std::string_view value)
     }
     return escaped;
 }
+
+std::string escape_dquoted(std::string_view value)
+{
+    std::string escaped;
+    // reserve extra space for potential escaping to minimize copying
+    escaped.reserve(value.size() + 4);
+
+    for (const char c : value) {
+        switch (c) {
+        case '"':
+        case '\\':
+            escaped.push_back('\\');
+            escaped.push_back(c);
+            break;
+        case '\r':
+        case '\n': escaped.push_back(' '); break;
+        default:   escaped.push_back(c); break;
+        }
+    }
+    return escaped;
+}

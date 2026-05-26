@@ -388,6 +388,8 @@ int strncmp2(const char *str1, size_t len1, const char *str2, size_t len2);
 
 /** escape backslash (\), double-quote ("), and line feed (\n) characters */
 std::string escape_prometheus_label(std::string_view value);
+/** escape '"' and '\' for a SIP quoted-string (e.g. display-name); CR/LF become a space (RFC 3261 25.1) */
+std::string escape_dquoted(std::string_view value);
 
 #endif
 
