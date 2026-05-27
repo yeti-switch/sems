@@ -1,3 +1,11 @@
+sems (1.191.0) stable; urgency=low
+  * support CN payloads in SDP
+  * add escape_dquoted() helper
+  * add AmComfortNoiseSender
+  * AmSession: add NoFreeRtpPortsException exception
+  * fix skip_2_next_nameaddr: skip commas within <>
+ -- Michael Furmur <furmur@pm.me>  Wed, 27 May 2026 17:22:46 +0300
+
 sems (1.190.2) stable; urgency=low
   * AmPlugIn::findSessionFactory: enforce read-only app_methods lookup
  -- Michael Furmur <furmur@pm.me>  Tue, 26 May 2026 02:30:24 +0300
