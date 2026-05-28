@@ -68,8 +68,8 @@ void AmMediaRtpState::updateConnections(const AmMediaStateArgs &args)
                                       [&](auto conn, bool &stop) { conn->setRAddr(*args.address, *args.port); });
     }
 
-    if (transport->getCurRawConn()) {
-        transport->getCurRawConn()->setRAddr(*args.address, *args.port);
+    if (auto c = transport->getCurRawConn()) {
+        c->setRAddr(*args.address, *args.port);
     }
 }
 

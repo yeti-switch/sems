@@ -8,6 +8,7 @@ class AmMediaConnectionsHolder : public AmObject,
                                  protected AmConcurrentVector<AmStreamConnection, ReferenceInserter<AmStreamConnection>,
                                                               ReferenceDeleter<AmStreamConnection>> {
   private:
+    AmMutex             cur_conns_mutex;
     AmStreamConnection *cur_rtp_conn;
     AmStreamConnection *cur_rtcp_conn;
     AmStreamConnection *cur_udptl_conn;
@@ -27,10 +28,10 @@ class AmMediaConnectionsHolder : public AmObject,
     void setCurUdptlConn(AmStreamConnection *conn);
     void setCurRawConn(AmStreamConnection *conn);
 
-    AmStreamConnection *getCurRtpConn() { return cur_rtp_conn; }
-    AmStreamConnection *getCurRtcpConn() { return cur_rtcp_conn; }
-    AmStreamConnection *getCurUdptlConn() { return cur_udptl_conn; }
-    AmStreamConnection *getCurRawConn() { return cur_raw_conn; }
+    ReferenceGuard<AmStreamConnection> getCurRtpConn();
+    ReferenceGuard<AmStreamConnection> getCurRtcpConn();
+    ReferenceGuard<AmStreamConnection> getCurUdptlConn();
+    ReferenceGuard<AmStreamConnection> getCurRawConn();
 
     void addConnection(AmStreamConnection *conn, Completed completed = nullptr);
     void addConnections(const vector<AmStreamConnection *> &conns, Completed completed = nullptr);

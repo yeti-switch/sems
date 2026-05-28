@@ -183,7 +183,7 @@ void AmMediaIceState::resetCurRtpConnection()
             [&](auto conn) { setCurrentConnection(conn); });
     }
 
-    AmStreamConnection *conn = transport->getCurRtpConn();
+    auto conn = transport->getCurRtpConn();
     if (transport->getTransportType() == RTCP_TRANSPORT)
         conn = transport->getCurRtcpConn();
     transport->setRAddr(am_inet_ntop(target_addr), am_get_port(target_addr));

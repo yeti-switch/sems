@@ -216,12 +216,40 @@ template <class Reference> class ReferenceGuard {
     Reference *ref;
 
   public:
-    ReferenceGuard(Reference *ref)
+    ReferenceGuard(Reference *ref = nullptr)
         : ref(ref)
     {
-        inc_ref(ref);
+        if (ref)
+            inc_ref(ref);
     }
-    ~ReferenceGuard() { dec_ref(ref); }
+    ~ReferenceGuard()
+    {
+        if (ref)
+            dec_ref(ref);
+    }
+
+    ReferenceGuard(ReferenceGuard &&o) noexcept
+        : ref(o.ref)
+    {
+        o.ref = nullptr;
+    }
+    ReferenceGuard &operator=(ReferenceGuard &&o) noexcept
+    {
+        if (this != &o) {
+            if (ref)
+                dec_ref(ref);
+            ref   = o.ref;
+            o.ref = nullptr;
+        }
+        return *this;
+    }
+    ReferenceGuard(const ReferenceGuard &)            = delete;
+    ReferenceGuard &operator=(const ReferenceGuard &) = delete;
+
+    Reference *get() const { return ref; }
+    Reference *operator->() const { return ref; }
+    Reference &operator*() const { return *ref; }
+    explicit   operator bool() const { return ref != nullptr; }
 };
 
 using atomic_ref_guard = ReferenceGuard<atomic_ref_cnt>;

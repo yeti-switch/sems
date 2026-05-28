@@ -1038,7 +1038,7 @@ int AmRtpStream::init(const AmSdp &local, const AmSdp &remote, bool sdp_offer_ow
                 args.port    = rtcp_port;
                 CLASS_DBG("init rtcp (%s, %d) stream:%p, state:%s, type:%s, cur_rtp_conn:%p", address.data(), port,
                           to_void(this), cur_rtcp_trans->state2str(), cur_rtcp_trans->type2str(),
-                          cur_rtcp_trans->getCurRtpConn());
+                          to_void(cur_rtcp_trans->getCurRtpConn().get()));
                 cur_rtcp_trans->updateState<AmMediaZrtpState>(args);
             }
 
@@ -1050,7 +1050,7 @@ int AmRtpStream::init(const AmSdp &local, const AmSdp &remote, bool sdp_offer_ow
 
             CLASS_DBG("init rtp (%s, %d) stream:%p, state:%s, type:%s, cur_rtp_conn:%p", address.data(), port,
                       to_void(this), cur_rtp_trans->state2str(), cur_rtp_trans->type2str(),
-                      cur_rtp_trans->getCurRtpConn());
+                      to_void(cur_rtp_trans->getCurRtpConn().get()));
             cur_rtp_trans->updateState<AmMediaRtpState>(args);
 
             if (cur_rtcp_trans != cur_rtp_trans) {
@@ -1058,7 +1058,7 @@ int AmRtpStream::init(const AmSdp &local, const AmSdp &remote, bool sdp_offer_ow
                 args.port    = rtcp_port;
                 CLASS_DBG("init rtcp (%s, %d) stream:%p, state:%s, type:%s, cur_rtp_conn:%p", rtcp_address.data(),
                           rtcp_port, to_void(this), cur_rtcp_trans->state2str(), cur_rtcp_trans->type2str(),
-                          cur_rtcp_trans->getCurRtpConn());
+                          to_void(cur_rtcp_trans->getCurRtpConn().get()));
                 cur_rtcp_trans->updateState<AmMediaRtpState>(args);
             }
 

@@ -197,7 +197,8 @@ class AmMediaTransport : public AmMediaConnectionsHolder,
     void setPassiveMode(bool p);
     bool getPassiveMode()
     {
-        return getCurRtpConn() ? getCurRtpConn()->getPassiveMode() : false;
+        auto c = getCurRtpConn();
+        return c ? c->getPassiveMode() : false;
     }
 
     /** returns the socket descriptor for local socket (initialized or not) */
@@ -262,9 +263,9 @@ class AmMediaTransport : public AmMediaConnectionsHolder,
     Setup setup_mode;
 
     /** Stream owning this transport */
-    AmRtpStream        *stream;
-    AmStreamConnection *getSuitableConnection(bool rtcp);
-    IceContext         *getIceContext();
+    AmRtpStream                       *stream;
+    ReferenceGuard<AmStreamConnection> getSuitableConnection(bool rtcp);
+    IceContext                        *getIceContext();
 
   private:
     msg_logger *logger;

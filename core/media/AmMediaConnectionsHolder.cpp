@@ -34,6 +34,7 @@ AmMediaConnectionsHolder::~AmMediaConnectionsHolder()
 
 void AmMediaConnectionsHolder::setCurRtpConn(AmStreamConnection *conn)
 {
+    AmLock l(cur_conns_mutex);
     if (conn)
         inc_ref(conn);
     if (cur_rtp_conn)
@@ -42,6 +43,7 @@ void AmMediaConnectionsHolder::setCurRtpConn(AmStreamConnection *conn)
 }
 void AmMediaConnectionsHolder::setCurRtcpConn(AmStreamConnection *conn)
 {
+    AmLock l(cur_conns_mutex);
     if (conn)
         inc_ref(conn);
     if (cur_rtcp_conn)
@@ -50,6 +52,7 @@ void AmMediaConnectionsHolder::setCurRtcpConn(AmStreamConnection *conn)
 }
 void AmMediaConnectionsHolder::setCurUdptlConn(AmStreamConnection *conn)
 {
+    AmLock l(cur_conns_mutex);
     if (conn)
         inc_ref(conn);
     if (cur_udptl_conn)
@@ -58,11 +61,33 @@ void AmMediaConnectionsHolder::setCurUdptlConn(AmStreamConnection *conn)
 }
 void AmMediaConnectionsHolder::setCurRawConn(AmStreamConnection *conn)
 {
+    AmLock l(cur_conns_mutex);
     if (conn)
         inc_ref(conn);
     if (cur_raw_conn)
         dec_ref(cur_raw_conn);
     cur_raw_conn = conn;
+}
+
+ReferenceGuard<AmStreamConnection> AmMediaConnectionsHolder::getCurRtpConn()
+{
+    AmLock l(cur_conns_mutex);
+    return ReferenceGuard<AmStreamConnection>(cur_rtp_conn);
+}
+ReferenceGuard<AmStreamConnection> AmMediaConnectionsHolder::getCurRtcpConn()
+{
+    AmLock l(cur_conns_mutex);
+    return ReferenceGuard<AmStreamConnection>(cur_rtcp_conn);
+}
+ReferenceGuard<AmStreamConnection> AmMediaConnectionsHolder::getCurUdptlConn()
+{
+    AmLock l(cur_conns_mutex);
+    return ReferenceGuard<AmStreamConnection>(cur_udptl_conn);
+}
+ReferenceGuard<AmStreamConnection> AmMediaConnectionsHolder::getCurRawConn()
+{
+    AmLock l(cur_conns_mutex);
+    return ReferenceGuard<AmStreamConnection>(cur_raw_conn);
 }
 
 void AmMediaConnectionsHolder::addConnection(AmStreamConnection *conn, Completed completed)
@@ -92,26 +117,26 @@ void AmMediaConnectionsHolder::findConnection(AmStreamConnection::ConnectionType
 
 void AmMediaConnectionsHolder::findCurRtpConn(Result result)
 {
-    if (cur_rtp_conn)
-        findConnection(cur_rtp_conn, result);
+    if (auto c = getCurRtpConn())
+        findConnection(c.get(), result);
 }
 
 void AmMediaConnectionsHolder::findCurRtcpConn(Result result)
 {
-    if (cur_rtcp_conn)
-        findConnection(cur_rtcp_conn, result);
+    if (auto c = getCurRtcpConn())
+        findConnection(c.get(), result);
 }
 
 void AmMediaConnectionsHolder::findCurUdptlConn(Result result)
 {
-    if (cur_udptl_conn)
-        findConnection(cur_udptl_conn, result);
+    if (auto c = getCurUdptlConn())
+        findConnection(c.get(), result);
 }
 
 void AmMediaConnectionsHolder::findCurRawConn(Result result)
 {
-    if (cur_raw_conn)
-        findConnection(cur_raw_conn, result);
+    if (auto c = getCurRawConn())
+        findConnection(c.get(), result);
 }
 
 AmStreamConnection *AmMediaConnectionsHolder::getConnection(Predicate predicate)

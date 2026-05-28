@@ -227,17 +227,17 @@ void AmMediaTransport::setLocalAddr(struct sockaddr_storage *addr)
     l_port = am_get_port(addr);
 }
 
-AmStreamConnection *AmMediaTransport::getSuitableConnection(bool rtcp)
+ReferenceGuard<AmStreamConnection> AmMediaTransport::getSuitableConnection(bool rtcp)
 {
     if (mode == TRANSPORT_MODE_DEFAULT) {
         if (!rtcp) {
-            if (getCurRtpConn())
-                return getCurRtpConn();
-        } else if (getCurRtcpConn())
-            return getCurRtcpConn();
+            if (auto c = getCurRtpConn())
+                return c;
+        } else if (auto c = getCurRtcpConn())
+            return c;
     } else if (mode == TRANSPORT_MODE_FAX || mode == TRANSPORT_MODE_DTLS_FAX) {
-        if (getCurUdptlConn())
-            return getCurUdptlConn();
+        if (auto c = getCurUdptlConn())
+            return c;
     }
     return getCurRawConn();
 }
@@ -272,8 +272,8 @@ void AmMediaTransport::getRAddr(bool rtcp, sockaddr_storage *addr)
 
 void AmMediaTransport::getRAddr(sockaddr_storage *addr)
 {
-    if (getCurRawConn())
-        getCurRawConn()->getRAddr(addr);
+    if (auto c = getCurRawConn())
+        c->getRAddr(addr);
 }
 
 int AmMediaTransport::hasLocalSocket()
@@ -672,20 +672,18 @@ void AmMediaTransport::log_sent_packet(const char *buffer, int len, struct socka
 ssize_t AmMediaTransport::send(AmRtpPacket *packet, AmStreamConnection::ConnectionType type)
 {
     // CLASS_DBG("send(%p,%d)", packet, type);
-    AmStreamConnection *cur_stream = nullptr;
-    if (type == AmStreamConnection::RTP_CONN) {
+    ReferenceGuard<AmStreamConnection> cur_stream;
+    if (type == AmStreamConnection::RTP_CONN)
         cur_stream = getCurRtpConn();
-    } else if (type == AmStreamConnection::RTCP_CONN) {
+    else if (type == AmStreamConnection::RTCP_CONN)
         cur_stream = getCurRtcpConn();
-    } else if (type == AmStreamConnection::RAW_CONN) {
+    else if (type == AmStreamConnection::RAW_CONN)
         cur_stream = getCurRawConn();
-    } else if (type == AmStreamConnection::UDPTL_CONN) {
+    else if (type == AmStreamConnection::UDPTL_CONN)
         cur_stream = getCurUdptlConn();
-    }
 
     ssize_t ret = 0;
     if (cur_stream) {
-        ReferenceGuard<AmStreamConnection> rg(cur_stream);
         if (!cur_stream->isMute())
             ret = cur_stream->send(packet);
     } else {
