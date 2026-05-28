@@ -1,3 +1,7 @@
+sems (1.192.0) stable; urgency=low
+  * fix racing STRP connection destroy
+ -- Michael Furmur <furmur@pm.me>  Thu, 28 May 2026 15:50:33 +0300
+
 sems (1.191.0) stable; urgency=low
   * support CN payloads in SDP
   * add escape_dquoted() helper
