@@ -96,6 +96,10 @@ class StreamData {
 
     bool sdp_offer_owner;
 
+    /** Roll back partial state after a failed initialize(): detach the stream
+     * from the session and free all stream data. */
+    void cleanupFailedInit(AmB2BSession *session);
+
   public:
     StreamData()                    = delete;
     StreamData(StreamData const &)  = delete;

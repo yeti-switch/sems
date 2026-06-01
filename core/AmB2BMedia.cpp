@@ -173,6 +173,21 @@ void B2BMediaStatistics::getReport(const AmArg &, AmArg &ret)
 }
 
 //////////////////////////////////////////////////////////////////////////////////
+void StreamData::cleanupFailedInit(AmB2BSession *session)
+{
+    if (owner_session)
+        owner_session = NULL;
+
+    if (stream) {
+        if (stream->hasSession())
+            stream->changeSession(NULL);
+
+        if (session->getReferencingRtpStr() == stream)
+            session->setReferencingRtpStr(NULL);
+    }
+    clear();
+}
+
 StreamData::StreamData(AmB2BSession *session, bool audio)
     : stream(nullptr)
     , shared_stream(false)
@@ -186,7 +201,7 @@ StreamData::StreamData(AmB2BSession *session, bool audio)
     try {
         initialize(session, audio);
     } catch (...) {
-        clear();
+        cleanupFailedInit(session);
         throw;
     }
 }
@@ -377,8 +392,14 @@ void StreamData::changeSession(AmB2BSession *session)
     if (!stream) {
         // the stream was not created yet
         TRACE("delayed stream initialization for session %p", static_cast<void *>(session));
-        if (session)
-            initialize(session, true);
+        if (session) {
+            try {
+                initialize(session, true);
+            } catch (...) {
+                cleanupFailedInit(session);
+                throw;
+            }
+        }
     } else {
         // the stream is already created
         if (session) {
