@@ -22,6 +22,30 @@ static B2BMediaStatistics b2b_stats;
 
 static const string zero_ip("0.0.0.0");
 
+namespace {
+/* RAII guard that serializes reconfiguration of a *shared* RTP stream's codec
+ * against the owner AmSession's media-processing thread.
+ */
+class ScopedSharedStreamLock {
+    const AmSession *sess;
+
+  public:
+    explicit ScopedSharedStreamLock(const AmSession *s)
+        : sess(s)
+    {
+        if (sess)
+            sess->lockAudio();
+    }
+    ~ScopedSharedStreamLock()
+    {
+        if (sess)
+            sess->unlockAudio();
+    }
+    ScopedSharedStreamLock(const ScopedSharedStreamLock &)            = delete;
+    ScopedSharedStreamLock &operator=(const ScopedSharedStreamLock &) = delete;
+};
+} // namespace
+
 static void replaceRtcpAttr(SdpMedia &m, const string &relay_address, int rtcp_port)
 {
     for (auto &a : m.attributes) {
@@ -299,7 +323,17 @@ bool StreamData::initStream(PlayoutType playout_type, AmSdp &local_sdp, AmSdp &r
     // TODO: try to init only in case there are some payloads which can't be relayed
     stream->forceSdpMediaIndex(media_idx);
 
-    if (stream->init(local_sdp, remote_sdp, sdp_offer_owner, force_symmetric_rtp) == 0) {
+    // For a shared stream the owner AmSession may be concurrently encoding/decoding
+    // it on a media-processor thread under its audio_mut; stream->init() below frees
+    // and recreates the codec, so it must not run while the media thread is inside
+    // encode()/decode().
+    int res;
+    {
+        ScopedSharedStreamLock audio_guard(shared_stream ? stream->getSession() : nullptr);
+        res = stream->init(local_sdp, remote_sdp, sdp_offer_owner, force_symmetric_rtp);
+    }
+
+    if (res == 0) {
         stream->updateStereoRecorders();
         stream->setPlayoutType(playout_type);
         initialized = true;
