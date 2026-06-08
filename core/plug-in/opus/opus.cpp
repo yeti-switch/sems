@@ -182,6 +182,7 @@ long opus_create(const char *format_parameters, amci_codec_fmt_info_t *format_de
     codec_inst->opus_enc = opus_encoder_create(_OPUS_RATE, 1, _OPUS_APPLICATION_, &error);
     if (error) {
         DBG("OPUS: error %d while creating encoder state.", error);
+        free(codec_inst);
         return -1;
     }
 
@@ -196,6 +197,7 @@ long opus_create(const char *format_parameters, amci_codec_fmt_info_t *format_de
     if (error) {
         DBG("OPUS: error %d while creating decoder state.", error);
         opus_encoder_destroy(codec_inst->opus_enc);
+        free(codec_inst);
         return -1;
     }
 
