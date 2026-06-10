@@ -120,6 +120,17 @@ struct DtlsContext;
 class AmDtlsConnection;
 class AmRtpStream;
 
+struct DtlsHandshakeStat {
+    int            transport_type;
+    bool           is_client;
+    bool           completed;
+    struct timeval t_start;
+    struct timeval t_done;
+    uint16_t       srtp_profile;
+
+    DtlsHandshakeStat();
+};
+
 class DtlsTimer : public timer, public atomic_ref_cnt {
     DtlsContext *context;
     AmMutex      v_mut;
@@ -154,6 +165,7 @@ struct DtlsContext {
                                                   vector<uint8_t> &remote_key)                                     = 0;
     virtual bool              isInited()                                                                           = 0;
     virtual bool              isActivated()                                                                        = 0;
+    virtual void              getDtlsStat(DtlsHandshakeStat &out) {}
 };
 
 class RtpSecureContext : public Botan::TLS::Callbacks, public DtlsContext {
@@ -173,6 +185,9 @@ class RtpSecureContext : public Botan::TLS::Callbacks, public DtlsContext {
     AmRtpStream      *rtp_stream;
     AmDtlsConnection *cur_conn;
 
+    struct timeval handshake_start;
+    struct timeval handshake_done;
+
   public:
     RtpSecureContext(AmRtpStream *stream, const srtp_fingerprint_p &_fingerprint, bool client);
     ~RtpSecureContext() noexcept;
@@ -187,6 +202,7 @@ class RtpSecureContext : public Botan::TLS::Callbacks, public DtlsContext {
                              vector<uint8_t> &remote_key) override;
     bool isInited() override;
     bool isActivated() override;
+    void getDtlsStat(DtlsHandshakeStat &out) override;
 
     // TODO: move methods to the separate class and remove AmDtlsConnectionTLSCallbacksProxy
     void tls_emit_data(std::span<const uint8_t> data) override;

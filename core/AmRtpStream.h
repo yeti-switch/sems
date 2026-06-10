@@ -701,6 +701,9 @@ class AmRtpStream : public AmObject
 
         vector<struct rx_stat> rx;
 
+        vector<IceContextStat>    ice;
+        vector<DtlsHandshakeStat> dtls;
+
         MediaStats();
     };
     void getMediaStats(struct MediaStats & s);

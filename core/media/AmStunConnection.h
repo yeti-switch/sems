@@ -8,12 +8,40 @@
 #include <stun/stunreader.h>
 #include <string>
 #include <optional>
+#include <vector>
+#include <sys/time.h>
 
 using std::multimap;
 using std::string;
+using std::vector;
 
 class AmRtpConnection;
 class AmRtpStream;
+
+struct IcePairStat {
+    struct sockaddr_storage laddr;
+    struct sockaddr_storage raddr;
+    unsigned int            priority;
+    int                     final_state;
+    struct timeval          t_result;
+    unsigned int            retransmits;
+    bool                    nominated;
+
+    IcePairStat();
+};
+
+struct IceContextStat {
+    int            transport_type;
+    bool           controlled;
+    struct timeval t_check_start;
+    struct timeval t_nomination;
+    struct timeval t_connected;
+    unsigned int   restarts;
+
+    vector<IcePairStat> pairs;
+
+    IceContextStat();
+};
 
 #define STUN_INTERVALS_COUNT   7
 #define STUN_TA_TIMEOUT        50
@@ -31,7 +59,7 @@ class ReferenceUniquePtr : public std::unique_ptr<AmStunConnection, void (*)(AmS
 
 class IceContext {
   public:
-    enum State { ICE_INITIAL = 0, ICE_CONNECTIVITY_CHECK, ICE_NOMINATIONS, ICE_KEEP_ALIVE };
+    enum State { ICE_INITIAL = 0, ICE_CONNECTIVITY_CHECK, ICE_NOMINATIONS, ICE_KEEP_ALIVE, ICE_STATE_MAX };
 
   private:
     AmRtpStream                               *stream;
@@ -43,11 +71,16 @@ class IceContext {
     map<int, sockaddr_storage> current_family_addr;
     ReferenceUniquePtr         current_candidate;
 
+    struct timeval      phase_ts[ICE_STATE_MAX]; // first-entry timestamp per State
+    unsigned int        restart_count;
+    vector<IcePairStat> archived_pairs; // stats of pairs dropped on ICE restart
+
   public:
     void              setCurrentCandidate(AmStunConnection *conn);
     AmStunConnection *getNominatedPair();
     void              allowStunPair();
     void              setState(State initial);
+    void              fillStat(IceContextStat &out);
 
   public:
     IceContext(AmRtpStream *stream, int type);
@@ -98,9 +131,14 @@ class AmStunConnection : public AmStreamConnection {
 
     IceContext *context;
 
+    struct timeval stat_result;
+    bool           stat_nominated;
+    int            stat_outcome; // last terminal PairState (SUCCEEDED/FAILED), -1 if none
+
     void check_request(CStunMessageReader *reader, sockaddr_storage *addr);
     void check_response(CStunMessageReader *reader, sockaddr_storage *addr);
     void allow_candidate(bool use_candidate);
+    void recordResult(PairState outcome);
 
   public:
     AmStunConnection(AmMediaTransport *_transport, const string &remote_addr, int remote_port, unsigned int lpriority,
@@ -121,6 +159,9 @@ class AmStunConnection : public AmStreamConnection {
     void      checkState();
     PairState getState() { return state; }
     void      setState(PairState st) { state = st; }
+
+    void fillPairStat(IcePairStat &out);
+    void markNominated() { stat_nominated = true; }
 
     void send_request(StunTransactionId trans_id);
     void retransmit();

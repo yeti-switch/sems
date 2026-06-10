@@ -261,6 +261,8 @@ RtpSecureContext::RtpSecureContext(AmRtpStream *stream, const srtp_fingerprint_p
     , pending_handshake_timer(nullptr)
     , rtp_stream(stream)
     , cur_conn(0)
+    , handshake_start{ 0, 0 }
+    , handshake_done{ 0, 0 }
 {
 }
 
@@ -324,6 +326,8 @@ bool RtpSecureContext::onRecvData(AmDtlsConnection *conn, uint8_t *data, unsigne
         return true;
     }
     cur_conn = conn;
+    if (!timerisset(&handshake_start))
+        gettimeofday(&handshake_start, nullptr);
     return dtls_channel->received_data(data, size) == 0;
 }
 
@@ -366,6 +370,26 @@ bool RtpSecureContext::isActivated()
     return activated;
 }
 
+DtlsHandshakeStat::DtlsHandshakeStat()
+    : transport_type(0)
+    , is_client(false)
+    , completed(false)
+    , t_start{ 0, 0 }
+    , t_done{ 0, 0 }
+    , srtp_profile(0)
+{
+}
+
+void RtpSecureContext::getDtlsStat(DtlsHandshakeStat &out)
+{
+    AmLock lock(channelMutex);
+    out.is_client    = is_client;
+    out.completed    = activated;
+    out.t_start      = handshake_start;
+    out.t_done       = handshake_done;
+    out.srtp_profile = (uint16_t)srtp_profile;
+}
+
 void RtpSecureContext::tls_alert(Botan::TLS::Alert alert)
 {
     assert(cur_conn);
@@ -375,6 +399,8 @@ void RtpSecureContext::tls_alert(Botan::TLS::Alert alert)
 void RtpSecureContext::tls_emit_data(std::span<const uint8_t> data)
 {
     assert(cur_conn);
+    if (!timerisset(&handshake_start))
+        gettimeofday(&handshake_start, nullptr);
     cur_conn->send((unsigned char *)data.data(), data.size());
 }
 
@@ -386,7 +412,9 @@ void RtpSecureContext::tls_record_received(uint64_t seq_no, std::span<const uint
 
 void RtpSecureContext::tls_session_activated()
 {
-    activated                           = true;
+    activated = true;
+    gettimeofday(&handshake_done, nullptr);
+
     unsigned int        key_len         = srtp::profile_get_master_key_length(srtp_profile);
     unsigned int        salt_size       = srtp::profile_get_master_salt_length(srtp_profile);
     unsigned int        export_key_size = key_len * 2 + salt_size * 2;

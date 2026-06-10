@@ -39,15 +39,39 @@ ReferenceUniquePtr::operator AmStunConnection *()
     return get();
 }
 
+IcePairStat::IcePairStat()
+    : priority(0)
+    , final_state(0)
+    , t_result{ 0, 0 }
+    , retransmits(0)
+    , nominated(false)
+{
+    memset(&laddr, 0, sizeof(laddr));
+    memset(&raddr, 0, sizeof(raddr));
+}
+
+IceContextStat::IceContextStat()
+    : transport_type(0)
+    , controlled(false)
+    , t_check_start{ 0, 0 }
+    , t_nomination{ 0, 0 }
+    , t_connected{ 0, 0 }
+    , restarts(0)
+{
+}
+
 IceContext::IceContext(AmRtpStream *stream, int type)
     : stream(stream)
     , state(ICE_INITIAL)
     , type(type)
     , current_candidate(nullptr)
+    , phase_ts{}
+    , restart_count(0)
 {
     CLASS_DBG("IceContext(): transport type %d", type);
     stun_processor::instance()->add_ice_context(this);
 }
+
 IceContext::~IceContext() {}
 
 void IceContext::addConnection(AmStunConnection *conn)
@@ -57,7 +81,7 @@ void IceContext::addConnection(AmStunConnection *conn)
     AmLock lock(pairs_mut);
     pairs.emplace(conn->getPriority(), conn);
     if (state == ICE_KEEP_ALIVE || state == ICE_NOMINATIONS)
-        state = ICE_CONNECTIVITY_CHECK;
+        setState(ICE_CONNECTIVITY_CHECK);
 }
 
 void IceContext::updateConnection(AmStunConnection *conn)
@@ -104,7 +128,7 @@ void IceContext::initContext()
         }
 
         setCurrentCandidate(nullptr);
-        state = ICE_CONNECTIVITY_CHECK;
+        setState(ICE_CONNECTIVITY_CHECK);
     }
 }
 
@@ -165,7 +189,12 @@ void IceContext::reset()
     std::vector<AmStunConnection *> to_remove;
     {
         AmLock lock(pairs_mut);
+        if (!pairs.empty())
+            restart_count++;
         for (auto &pair : pairs) {
+            IcePairStat ps;
+            pair.second->fillPairStat(ps);
+            archived_pairs.push_back(ps);
             inc_ref(pair.second.get());
             to_remove.push_back(pair.second.get());
         }
@@ -197,7 +226,7 @@ void IceContext::failedCandidate(AmStunConnection *)
     case ICE_NOMINATIONS:
     case ICE_KEEP_ALIVE:
     {
-        state = ICE_NOMINATIONS;
+        setState(ICE_NOMINATIONS);
         setCurrentCandidate(nullptr);
     }
     default: break;
@@ -207,7 +236,7 @@ void IceContext::failedCandidate(AmStunConnection *)
 void IceContext::allowCandidate(AmStunConnection *conn)
 {
     if (conn->getState() == AmStunConnection::PAIR_WAITING && state == ICE_KEEP_ALIVE) {
-        state = ICE_NOMINATIONS;
+        setState(ICE_NOMINATIONS);
         setCurrentCandidate(nullptr);
     }
 
@@ -232,12 +261,34 @@ void IceContext::allowStunPair()
 void IceContext::setState(IceContext::State initial)
 {
     state = initial;
+    if (initial < ICE_STATE_MAX && !timerisset(&phase_ts[initial]))
+        gettimeofday(&phase_ts[initial], nullptr);
 }
 
 void IceContext::setCurrentCandidate(AmStunConnection *conn)
 {
     AmLock lock(pairs_mut);
     current_candidate.reset(conn);
+    if (conn)
+        conn->markNominated();
+}
+
+void IceContext::fillStat(IceContextStat &out)
+{
+    out.transport_type = type;
+    out.controlled     = stream->isIceControlled();
+    out.restarts       = restart_count;
+    out.t_check_start  = phase_ts[ICE_CONNECTIVITY_CHECK];
+    out.t_nomination   = phase_ts[ICE_NOMINATIONS];
+    out.t_connected    = phase_ts[ICE_KEEP_ALIVE];
+
+    AmLock lock(pairs_mut);
+    out.pairs = archived_pairs;
+    for (auto &pair : pairs) {
+        IcePairStat ps;
+        pair.second->fillPairStat(ps);
+        out.pairs.push_back(ps);
+    }
 }
 
 void IceContext::updateStunTimers(std::unordered_map<AmStunConnection *, unsigned long long> &connections)
@@ -272,7 +323,7 @@ void IceContext::updateStunTimers(std::unordered_map<AmStunConnection *, unsigne
         }
         if (finish) {
             DBG("ice: finished connectivity check phase(type %d)", type);
-            state = ICE_NOMINATIONS;
+            setState(ICE_NOMINATIONS);
         } else {
             if (wait_conn) {
                 wait_conn->checkState();
@@ -293,7 +344,7 @@ void IceContext::updateStunTimers(std::unordered_map<AmStunConnection *, unsigne
         if (conn) {
             if (conn->getState() == AmStunConnection::PAIR_SUCCEEDED) {
                 DBG("ice: finished nomination phase(type %d)", type);
-                state = ICE_KEEP_ALIVE;
+                setState(ICE_KEEP_ALIVE);
             } else
                 return;
         } else {
@@ -302,7 +353,7 @@ void IceContext::updateStunTimers(std::unordered_map<AmStunConnection *, unsigne
                 setCurrentCandidate(conn.get());
                 if (stream->isIceControlled()) {
                     DBG("ice: finished nomination phase(type %d)", type);
-                    state = ICE_KEEP_ALIVE;
+                    setState(ICE_KEEP_ALIVE);
                 } else {
                     conn->setState(AmStunConnection::PAIR_WAITING);
                     connections[conn.get()] = STUN_TA_TIMEOUT;
@@ -335,6 +386,9 @@ AmStunConnection::AmStunConnection(AmMediaTransport *_transport, const string &r
     , retransmit_intervals{ 500, 1500, 3500, 7500, 15500, 31500, 39500 }
     , // rfc5389 7.2.1.Sending over UDP
     context(transport->getRtpStream()->getIceContext(transport->getTransportType()))
+    , stat_result{ 0, 0 }
+    , stat_nominated(false)
+    , stat_outcome(-1)
 {
     CLASS_DBG("AmStunConnection() r_host: %s, r_port: %d, transport: %hhu", r_host.data(), r_port,
               SA_transport(&r_addr));
@@ -363,6 +417,24 @@ unsigned int AmStunConnection::getPriority()
     unsigned long long pair_priority = ((unsigned long long)1 << 32) * (priority <= lpriority ? priority : lpriority) +
                                        2 * (priority <= lpriority ? lpriority : priority);
     return pair_priority;
+}
+
+void AmStunConnection::recordResult(PairState outcome)
+{
+    stat_outcome = outcome;
+    if (!timerisset(&stat_result))
+        gettimeofday(&stat_result, nullptr);
+}
+
+void AmStunConnection::fillPairStat(IcePairStat &out)
+{
+    transport->getLocalAddr(&out.laddr);
+    getRAddr(&out.raddr);
+    out.priority    = getPriority();
+    out.final_state = stat_outcome >= 0 ? stat_outcome : state;
+    out.t_result    = stat_result;
+    out.retransmits = count;
+    out.nominated   = stat_nominated;
 }
 
 void AmStunConnection::handleConnection(uint8_t *data, unsigned int size, struct sockaddr_storage *recv_addr,
@@ -546,10 +618,13 @@ void AmStunConnection::allow_candidate(bool use_candidate)
     switch (state) {
     case PAIR_WAITING:
     case PAIR_IN_PROGRESS:
-    case PAIR_RETRANSMIT:  state = PAIR_SUCCEEDED; break;
-    case PAIR_FAILED:      state = PAIR_WAITING; break;
+    case PAIR_RETRANSMIT:
+        state = PAIR_SUCCEEDED;
+        recordResult(PAIR_SUCCEEDED);
+        break;
+    case PAIR_FAILED:    state = PAIR_WAITING; break;
     case PAIR_FROZEN:
-    case PAIR_SUCCEEDED:   return;
+    case PAIR_SUCCEEDED: return;
     }
     CLASS_DBG("stun pair %s:%d", getRHost().c_str(), getRPort());
     context->allowCandidate(this);
@@ -611,6 +686,7 @@ void AmStunConnection::check_response(CStunMessageReader *reader, sockaddr_stora
         }
         if (state == PAIR_IN_PROGRESS) {
             state = PAIR_FAILED;
+            recordResult(PAIR_FAILED);
             context->failedCandidate(this);
             stun_processor::instance()->remove_timer(this);
         }
@@ -677,6 +753,7 @@ void AmStunConnection::checkState()
     } else if (state == PAIR_RETRANSMIT) {
         if (count == STUN_INTERVALS_COUNT) {
             state = PAIR_FAILED;
+            recordResult(PAIR_FAILED);
             context->failedCandidate(this);
         }
     } else

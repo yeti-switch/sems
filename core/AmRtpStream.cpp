@@ -2356,6 +2356,26 @@ void AmRtpStream::getMediaStats(MediaStats &s)
 
     // TX specific
     tx.jitter = rtp_stats.rtcp_remote_jitter;
+
+    // ICE phase/pair timings (one entry per existing transport context)
+    for (int t = 0; t < MAX_TRANSPORT_TYPE; t++) {
+        if (!ice_context[t])
+            continue;
+        s.ice.emplace_back();
+        ice_context[t]->fillStat(s.ice.back());
+    }
+
+    // DTLS handshake timings
+    for (int t = 0; t < MAX_TRANSPORT_TYPE; t++) {
+        if (!dtls_context[t])
+            continue;
+        DtlsHandshakeStat ds;
+        dtls_context[t]->getDtlsStat(ds);
+        if (!timerisset(&ds.t_start))
+            continue;
+        ds.transport_type = t;
+        s.dtls.push_back(ds);
+    }
 }
 
 void AmRtpStream::getMediaAcl(trsp_acl &acl)
