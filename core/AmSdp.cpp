@@ -218,6 +218,74 @@ bool SdpAttribute::operator<(const SdpAttribute &other) const
     return attribute < other.attribute;
 }
 
+bool SdpGroup::str2semantics(const string &s, Semantics &out)
+{
+    if (s == "BUNDLE") {
+        out = BUNDLE;
+        return true;
+    }
+    return false;
+}
+
+string SdpGroup::print() const
+{
+    string res = "a=group:" + semantics;
+    for (std::vector<string>::const_iterator it = tags.begin(); it != tags.end(); ++it) {
+        res += " " + *it;
+    }
+    res += CRLF;
+    return res;
+}
+
+bool SdpGroup::operator==(const SdpGroup &other) const
+{
+    return semantics_type == other.semantics_type && semantics == other.semantics && tags == other.tags;
+}
+
+bool SdpExtMap::str2direction(const string &s, Direction &out)
+{
+    if (s == "sendrecv")
+        out = SendRecv;
+    else if (s == "sendonly")
+        out = SendOnly;
+    else if (s == "recvonly")
+        out = RecvOnly;
+    else if (s == "inactive")
+        out = Inactive;
+    else
+        return false;
+    return true;
+}
+
+string SdpExtMap::direction2str(Direction d)
+{
+    switch (d) {
+    case SendRecv:     return "sendrecv";
+    case SendOnly:     return "sendonly";
+    case RecvOnly:     return "recvonly";
+    case Inactive:     return "inactive";
+    case DirUndefined: break;
+    }
+    return string();
+}
+
+string SdpExtMap::print() const
+{
+    string res = "a=extmap:" + int2str(id);
+    if (direction != DirUndefined)
+        res += "/" + direction2str(direction);
+    res += " " + uri;
+    if (!ext_attrs.empty())
+        res += " " + ext_attrs;
+    res += CRLF;
+    return res;
+}
+
+bool SdpExtMap::operator==(const SdpExtMap &other) const
+{
+    return id == other.id && direction == other.direction && uri == other.uri && ext_attrs == other.ext_attrs;
+}
+
 bool SdpMedia::operator==(const SdpMedia &other) const
 {
     if (payloads.empty()) {
@@ -244,7 +312,8 @@ bool SdpMedia::operator==(const SdpMedia &other) const
     }
 
     return type == other.type && port == other.port && nports == other.nports && transport == other.transport &&
-           conn == other.conn && dir == other.dir && send == other.send && recv == other.recv;
+           conn == other.conn && dir == other.dir && send == other.send && recv == other.recv && mid == other.mid &&
+           extmaps == other.extmaps;
 }
 
 //
@@ -321,6 +390,7 @@ AmSdp::AmSdp()
     , sessionName()
     , conn()
     , use_ice(false)
+    , use_bundle(false)
     , setup(S_UNDEFINED)
     , send(true)
     , recv(true)
@@ -337,8 +407,10 @@ AmSdp::AmSdp(const AmSdp &p_sdp_msg)
     , sessionName(p_sdp_msg.sessionName)
     , conn(p_sdp_msg.conn)
     , use_ice(p_sdp_msg.use_ice)
+    , use_bundle(p_sdp_msg.use_bundle)
     , setup(p_sdp_msg.setup)
     , attributes(p_sdp_msg.attributes)
+    , groups(p_sdp_msg.groups)
     , send(p_sdp_msg.send)
     , recv(p_sdp_msg.recv)
     , media(p_sdp_msg.media)
@@ -384,6 +456,22 @@ int AmSdp::parse(const char *_sdp_msg)
                 it->is_ice    = true;
                 it->ice_pwd   = ice_pwd;
                 it->ice_ufrag = ice_ufrag;
+            }
+        }
+    }
+
+    // mark media that take part in an a=group:BUNDLE bundle (RFC 9143)
+    if (!ret && use_bundle) {
+        for (vector<SdpGroup>::const_iterator g = groups.begin(); g != groups.end(); ++g) {
+            if (g->semantics_type != SdpGroup::BUNDLE)
+                continue;
+            for (vector<string>::const_iterator tag = g->tags.begin(); tag != g->tags.end(); ++tag) {
+                for (vector<SdpMedia>::iterator it = media.begin(); it != media.end(); ++it) {
+                    if (it->mid == *tag) {
+                        it->use_bundle = true;
+                        break;
+                    }
+                }
             }
         }
     }
@@ -488,6 +576,13 @@ void AmSdp::print(string &body) const
 
     out_buf += "t=0 0\r\n";
 
+    // a=group: lines (BUNDLE, RFC 9143) - only when bundle is in use
+    if (use_bundle) {
+        for (std::vector<SdpGroup>::const_iterator g_it = groups.begin(); g_it != groups.end(); g_it++) {
+            out_buf += g_it->print();
+        }
+    }
+
     // add attributes (session level)
     for (std::vector<SdpAttribute>::const_iterator a_it = attributes.begin(); a_it != attributes.end(); a_it++) {
         out_buf += a_it->print();
@@ -543,6 +638,17 @@ void AmSdp::print(string &body) const
             out_buf += " IN " + addr_t_2_str(media_it->rtcp_conn.addrType) + " " + media_it->rtcp_conn.address;
 
         out_buf += "\r\n" + options;
+
+        if (use_bundle && !media_it->mid.empty()) {
+            out_buf += "a=mid:" + media_it->mid + CRLF;
+        }
+
+        // a=extmap: lines (RFC 8285 RTP header extensions)
+        for (std::vector<SdpExtMap>::const_iterator e_it = media_it->extmaps.begin(); e_it != media_it->extmaps.end();
+             e_it++)
+        {
+            out_buf += e_it->print();
+        }
 
         for (std::vector<SdpCrypto>::const_iterator c_it = media_it->crypto.begin(); c_it != media_it->crypto.end();
              c_it++)
@@ -680,7 +786,7 @@ bool AmSdp::operator==(const AmSdp &other) const
     }
 
     return version == other.version && origin == other.origin && sessionName == other.sessionName && uri == other.uri &&
-           conn == other.conn;
+           conn == other.conn && use_bundle == other.use_bundle && groups == other.groups;
 }
 
 void AmSdp::clear()
@@ -691,6 +797,8 @@ void AmSdp::clear()
     uri.clear();
     conn = SdpConnection();
     attributes.clear();
+    groups.clear();
+    use_bundle = false;
     media.clear();
     l_origin = SdpOrigin();
     send     = true;
@@ -1222,6 +1330,31 @@ static void parse_session_attr(AmSdp *sdp_msg, char *s, char **next)
                 DBG("found unknown value for session attribute 'setup'");
             }
             return;
+        } else if (a.attribute == "group") {
+            char *grp_end = attr_end + 1;
+            char *gp      = col;
+            char *gnext   = parse_until(gp, grp_end, ' ');
+            if (gnext == grp_end)
+                gnext++;
+            string semantics(gp, gnext - 1);
+
+            SdpGroup::Semantics sem;
+            if (SdpGroup::str2semantics(semantics, sem)) {
+                SdpGroup group(semantics, sem);
+                while (gnext < grp_end) {
+                    gp    = gnext;
+                    gnext = parse_until(gp, grp_end, ' ');
+                    if (gnext == grp_end)
+                        gnext++; // last tag: no trailing space
+                    group.tags.push_back(string(gp, gnext - 1));
+                }
+                sdp_msg->groups.push_back(group);
+                if (sem == SdpGroup::BUNDLE)
+                    sdp_msg->use_bundle = true;
+                DBG("SDP: got session group '%s'", a.value.c_str());
+                return;
+            }
+            DBG("SDP: ignoring unsupported group semantics '%s'", semantics.c_str());
         }
         // value attribute
         sdp_msg->attributes.push_back(a);
@@ -1592,6 +1725,49 @@ static char *parse_sdp_attr(AmSdp *sdp_msg, char *s)
         value = string(attr_line, attr_len);
         str2int(value, media.frame_size);
         adjust_media_frame_size(media.frame_size);
+    } else if (attr == "mid") {
+        if (parsing) {
+            size_t attr_len = 0;
+            next            = skip_till_next_line(attr_line, attr_len);
+            media.mid       = string(attr_line, attr_len);
+        }
+    } else if (attr == "extmap") {
+        // a=extmap:<value>["/"<direction>] <uri> [<extensionattributes>] (RFC 8285)
+        if (parsing) {
+            SdpExtMap ext;
+
+            // content end of this line (excludes the trailing CR/LF)
+            size_t content_len = 0;
+            skip_till_next_line(attr_line, content_len);
+            char *content_end = attr_line + content_len;
+
+            // field 1: <value>["/"<direction>]
+            next           = parse_until(attr_line, content_end, ' ');
+            bool   had_uri = next != content_end;
+            string idfield(attr_line, had_uri ? next - 1 : content_end);
+            size_t slash = idfield.find('/');
+            if (slash != string::npos) {
+                str2int(idfield.substr(0, slash), ext.id);
+                if (!SdpExtMap::str2direction(idfield.substr(slash + 1), ext.direction))
+                    DBG("found unknown direction in extmap '%s'", idfield.c_str());
+            } else {
+                str2int(idfield, ext.id);
+            }
+
+            // field 2: <uri> and the optional extension attributes
+            if (had_uri) {
+                attr_line      = next;
+                next           = parse_until(attr_line, content_end, ' ');
+                bool had_attrs = next != content_end;
+                ext.uri        = string(attr_line, had_attrs ? next - 1 : content_end);
+                if (had_attrs) {
+                    attr_line     = next;
+                    ext.ext_attrs = string(attr_line, content_end);
+                }
+            }
+
+            media.extmaps.push_back(ext);
+        }
     } else {
         attr_check(attr);
         string value;

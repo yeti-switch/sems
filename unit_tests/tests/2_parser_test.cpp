@@ -1551,3 +1551,110 @@ TEST(SdpParser, ZeroAdvertizedRate)
     AmSdp  sdp;
     ASSERT_EQ(sdp.parse(sdp_str.c_str()), 1);
 }
+
+TEST(SdpParser, BundleParse)
+{
+    const string bundle_sdp_str = "v=0\r\n"
+                                  "o=- 3615077380 3615077398 IN IP4 192.168.0.110\r\n"
+                                  "s=-\r\n"
+                                  "c=IN IP4 192.168.0.110\r\n"
+                                  "t=0 0\r\n"
+                                  "a=group:BUNDLE 0 1\r\n"
+                                  "m=audio 21964 RTP/AVP 0\r\n"
+                                  "a=mid:0\r\n"
+                                  "a=rtpmap:0 PCMU/8000\r\n"
+                                  "a=sendrecv\r\n"
+                                  "m=video 21966 RTP/AVP 96\r\n"
+                                  "a=mid:1\r\n"
+                                  "a=rtpmap:96 VP8/90000\r\n"
+                                  "a=sendrecv\r\n";
+
+    AmSdp sdp;
+    ASSERT_EQ(sdp.parse(bundle_sdp_str.c_str()), 0);
+
+    ASSERT_TRUE(sdp.use_bundle);
+    ASSERT_EQ(sdp.groups.size(), 1);
+    ASSERT_EQ(sdp.groups[0].semantics, "BUNDLE");
+    ASSERT_EQ(sdp.groups[0].semantics_type, SdpGroup::BUNDLE);
+    ASSERT_EQ(sdp.groups[0].tags.size(), 2);
+    ASSERT_EQ(sdp.groups[0].tags[0], "0");
+    ASSERT_EQ(sdp.groups[0].tags[1], "1");
+
+    ASSERT_EQ(sdp.media.size(), 2);
+    ASSERT_EQ(sdp.media[0].mid, "0");
+    ASSERT_EQ(sdp.media[1].mid, "1");
+    ASSERT_EQ(sdp.media[0].attributes.size(), 0);
+    ASSERT_EQ(sdp.media[1].attributes.size(), 0);
+    ASSERT_TRUE(sdp.media[0].use_bundle);
+    ASSERT_TRUE(sdp.media[1].use_bundle);
+}
+
+TEST(SdpParser, NoBundle)
+{
+    string sdp_str = "v=0\r\n"
+                     "o=- 3615077380 3615077398 IN IP4 192.168.0.110\r\n"
+                     "s=-\r\n"
+                     "c=IN IP4 192.168.0.110\r\n"
+                     "t=0 0\r\n"
+                     "m=audio 21964 RTP/AVP 0\r\n"
+                     "a=rtpmap:0 PCMU/8000\r\n"
+                     "a=sendrecv\r\n";
+    AmSdp  sdp;
+    ASSERT_EQ(sdp.parse(sdp_str.c_str()), 0);
+
+    ASSERT_FALSE(sdp.use_bundle);
+    ASSERT_EQ(sdp.groups.size(), 0);
+    ASSERT_TRUE(sdp.media[0].mid.empty());
+}
+
+TEST(SdpParser, UnsupportedGroupSemanticsKeptAsAttribute)
+{
+    string sdp_str = "v=0\r\n"
+                     "o=- 3615077380 3615077398 IN IP4 192.168.0.110\r\n"
+                     "s=-\r\n"
+                     "c=IN IP4 192.168.0.110\r\n"
+                     "t=0 0\r\n"
+                     "a=group:LS 0 1\r\n"
+                     "m=audio 21964 RTP/AVP 0\r\n"
+                     "a=rtpmap:0 PCMU/8000\r\n";
+    AmSdp  sdp;
+    ASSERT_EQ(sdp.parse(sdp_str.c_str()), 0);
+
+    ASSERT_FALSE(sdp.use_bundle);
+    ASSERT_EQ(sdp.groups.size(), 0);
+}
+
+TEST(SdpParser, ExtMapParse)
+{
+    string sdp_str = "v=0\r\n"
+                     "o=- 1 1 IN IP4 192.168.0.110\r\n"
+                     "s=-\r\n"
+                     "c=IN IP4 192.168.0.110\r\n"
+                     "t=0 0\r\n"
+                     "m=audio 21964 RTP/AVP 0\r\n"
+                     "a=extmap:1 urn:ietf:params:rtp-hdrext:sdes:mid\r\n"
+                     "a=extmap:2/sendonly urn:ietf:params:rtp-hdrext:ssrc-audio-level\r\n"
+                     "a=extmap:3 urn:example:ext attr1 attr2\r\n"
+                     "a=rtpmap:0 PCMU/8000\r\n";
+    AmSdp  sdp;
+    ASSERT_EQ(sdp.parse(sdp_str.c_str()), 0);
+
+    ASSERT_EQ(sdp.media.size(), 1);
+    ASSERT_EQ(sdp.media[0].extmaps.size(), 3);
+
+    // plain extmap (the BUNDLE MID extension)
+    ASSERT_EQ(sdp.media[0].extmaps[0].id, 1);
+    ASSERT_EQ(sdp.media[0].extmaps[0].direction, SdpExtMap::DirUndefined);
+    ASSERT_EQ(sdp.media[0].extmaps[0].uri, "urn:ietf:params:rtp-hdrext:sdes:mid");
+    ASSERT_TRUE(sdp.media[0].extmaps[0].ext_attrs.empty());
+
+    // extmap with a direction
+    ASSERT_EQ(sdp.media[0].extmaps[1].id, 2);
+    ASSERT_EQ(sdp.media[0].extmaps[1].direction, SdpExtMap::SendOnly);
+    ASSERT_EQ(sdp.media[0].extmaps[1].uri, "urn:ietf:params:rtp-hdrext:ssrc-audio-level");
+
+    // extmap with extension attributes
+    ASSERT_EQ(sdp.media[0].extmaps[2].id, 3);
+    ASSERT_EQ(sdp.media[0].extmaps[2].uri, "urn:example:ext");
+    ASSERT_EQ(sdp.media[0].extmaps[2].ext_attrs, "attr1 attr2");
+}

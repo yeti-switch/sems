@@ -316,6 +316,50 @@ struct SdpAttribute {
     bool operator<(const SdpAttribute &other) const;
 };
 
+/** \brief a=group:... line in SDP (RFC 5888 / RFC 9143 BUNDLE) */
+struct SdpGroup {
+    enum Semantics { BUNDLE };
+
+    string              semantics; // raw semantics token "BUNDLE", "LS", "FID", ...
+    Semantics           semantics_type;
+    std::vector<string> tags;
+
+    SdpGroup(const string &semantics, Semantics semantics_type)
+        : semantics(semantics)
+        , semantics_type(semantics_type)
+    {
+    }
+
+    string print() const;
+
+    static bool str2semantics(const string &s, Semantics &out);
+
+    bool operator==(const SdpGroup &other) const;
+};
+
+/** \brief a=extmap:... line in SDP (RFC 8285 RTP header extension) */
+struct SdpExtMap {
+    enum Direction { DirUndefined = 0, SendRecv, SendOnly, RecvOnly, Inactive };
+
+    int       id;        // extmap value (local identifier)
+    Direction direction; // optional direction (the part after '/')
+    string    uri;       // extension URI
+    string    ext_attrs; // optional extension attributes (rest of the line)
+
+    SdpExtMap()
+        : id(0)
+        , direction(DirUndefined)
+    {
+    }
+
+    string print() const; // "a=extmap:<id>[/<direction>] <uri>[ <ext_attrs>]\r\n"
+
+    static bool   str2direction(const string &s, Direction &out);
+    static string direction2str(Direction d);
+
+    bool operator==(const SdpExtMap &other) const;
+};
+
 /** \brief m=... line in SDP */
 struct SdpMedia {
     enum Direction { DirBoth = 0, DirActive = 1, DirPassive = 2, DirUndefined = 3 };
@@ -341,6 +385,10 @@ struct SdpMedia {
 
     bool is_multiplex; // a=rtcp-mux
 
+    // bundling attributes
+    bool   use_bundle;
+    string mid; // a=mid:
+
     std::vector<SdpPayload> payloads;
     /* rtp/savr transport attribute*/
     std::vector<SdpCrypto> crypto;
@@ -356,6 +404,8 @@ struct SdpMedia {
     std::vector<SdpIceCandidate> ice_candidate;
 
     std::vector<SdpAttribute> attributes; // unknown attributes
+
+    std::vector<SdpExtMap> extmaps; // a=extmap: (RFC 8285)
 
     bool operator==(const SdpMedia &other) const;
 
@@ -373,6 +423,7 @@ struct SdpMedia {
         , recv(true)
         , has_mode_attribute(false)
         , is_multiplex(false)
+        , use_bundle(false)
         , is_ice(false)
     {
     }
@@ -402,6 +453,8 @@ struct SdpMedia {
     bool is_simple_rtp() const { return transport == TP_RTPAVP || transport == TP_RTPAVPF; }
 
     bool is_use_ice() const { return is_ice; }
+
+    bool is_use_bundle() const { return use_bundle; }
 };
 
 /**
@@ -443,8 +496,10 @@ class AmSdp {
     bool                      use_ice;
     string                    ice_pwd;
     string                    ice_ufrag;
+    bool                      use_bundle; // a=group:BUNDLE present (RFC 9143)
     Setup                     setup;
     std::vector<SdpAttribute> attributes; // unknown session level attributes
+    std::vector<SdpGroup>     groups;     // a=group
 
     bool send;
     bool recv;
