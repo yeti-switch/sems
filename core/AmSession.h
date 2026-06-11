@@ -757,6 +757,28 @@ inline AmRtpAudio *AmSession::RTPStream()
     return _rtp_str.get();
 }
 
+/* RAII guard over AmSession::lockAudio()/unlockAudio(), serializing access to a
+ * session's audio chain (input/output, RTP stream, codec) against its
+ * media-processing thread. A null session is tolerated and locks nothing.
+ */
+class AmAudioLockGuard {
+    const AmSession *sess;
+
+  public:
+    explicit AmAudioLockGuard(const AmSession *s)
+        : sess(s)
+    {
+        if (sess)
+            sess->lockAudio();
+    }
+    ~AmAudioLockGuard()
+    {
+        if (sess)
+            sess->unlockAudio();
+    }
+    AmAudioLockGuard(const AmAudioLockGuard &)            = delete;
+    AmAudioLockGuard &operator=(const AmAudioLockGuard &) = delete;
+};
 
 #endif
 

@@ -623,35 +623,24 @@ void AmRtpAudio::add_to_history(int16_t *buffer, unsigned int size)
 
 void AmRtpAudio::setPlayoutType(PlayoutType type)
 {
-    if (m_playout_type != type) {
-        if (type == ADAPTIVE_PLAYOUT) {
-            if (session)
-                session->lockAudio();
-            m_playout_type = type;
-            if (fmt.get())
-                playout_buffer.reset(new AmAdaptivePlayout(this, static_cast<unsigned int>(getSampleRate())));
-            if (session)
-                session->unlockAudio();
-            DBG("Adaptive playout buffer activated");
-        } else if (type == JB_PLAYOUT) {
-            if (session)
-                session->lockAudio();
-            m_playout_type = type;
-            if (fmt.get())
-                playout_buffer.reset(new AmJbPlayout(this, static_cast<unsigned int>(getSampleRate())));
-            if (session)
-                session->unlockAudio();
-            DBG("Adaptive jitter buffer activated");
-        } else {
-            if (session)
-                session->lockAudio();
-            m_playout_type = type;
-            if (fmt.get())
-                playout_buffer.reset(new AmPlayoutBuffer(this, static_cast<unsigned int>(getSampleRate())));
-            if (session)
-                session->unlockAudio();
-            DBG("Simple playout buffer activated");
-        }
+    if (m_playout_type == type)
+        return;
+
+    AmAudioLockGuard audio_guard(session);
+    m_playout_type = type;
+
+    if (type == ADAPTIVE_PLAYOUT) {
+        if (fmt.get())
+            playout_buffer.reset(new AmAdaptivePlayout(this, static_cast<unsigned int>(getSampleRate())));
+        DBG("Adaptive playout buffer activated");
+    } else if (type == JB_PLAYOUT) {
+        if (fmt.get())
+            playout_buffer.reset(new AmJbPlayout(this, static_cast<unsigned int>(getSampleRate())));
+        DBG("Adaptive jitter buffer activated");
+    } else {
+        if (fmt.get())
+            playout_buffer.reset(new AmPlayoutBuffer(this, static_cast<unsigned int>(getSampleRate())));
+        DBG("Simple playout buffer activated");
     }
 }
 

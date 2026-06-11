@@ -322,8 +322,7 @@ void AmAudio::setRecorder(const string &id)
 
 void AmAudio::setStereoRecorders(const StereoRecordersList &recorders, const AmSession *lock_session)
 {
-    if (lock_session)
-        lock_session->lockAudio();
+    AmAudioLockGuard audio_guard(lock_session);
 
     pending_stereo_recorders = recorders;
 
@@ -335,9 +334,6 @@ void AmAudio::setStereoRecorders(const StereoRecordersList &recorders, const AmS
 
     // always true on changes allowing to set empty recorders list
     has_pending_stereo_recorders.store(true, std::memory_order_release);
-
-    if (lock_session)
-        lock_session->unlockAudio();
 }
 
 void AmAudio::setInbandDetector(AmInbandDetector *detector)
@@ -619,15 +615,11 @@ void AmAudio::applyPendingStereoRecorders(const AmSession *lock_session)
         return;
     }
 
-    if (lock_session)
-        lock_session->lockAudio();
+    AmAudioLockGuard audio_guard(lock_session);
 
     stereo_recorders = pending_stereo_recorders;
     pending_stereo_recorders.clear();
     stereo_record_enabled = !stereo_recorders.empty();
-
-    if (lock_session)
-        lock_session->unlockAudio();
 }
 
 DblBuffer::DblBuffer()

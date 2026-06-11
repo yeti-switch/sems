@@ -199,33 +199,28 @@ void AmSession::addHandler(AmSessionEventHandler *sess_evh)
 
 void AmSession::setInput(AmAudio *in)
 {
-    lockAudio();
+    AmAudioLockGuard audio_guard(this);
     input = in;
-    unlockAudio();
 }
 
 void AmSession::setOutput(AmAudio *out)
 {
     DBG("AmSession[%p]::setOutput(AmAudio* out = %p)", this, out);
-    lockAudio();
+    AmAudioLockGuard audio_guard(this);
     output = out;
-    unlockAudio();
 }
 
 void AmSession::setInOut(AmAudio *in, AmAudio *out)
 {
-    lockAudio();
+    AmAudioLockGuard audio_guard(this);
     input  = in;
     output = out;
-    unlockAudio();
 }
 
 bool AmSession::isAudioSet()
 {
-    lockAudio();
-    bool set = input || output;
-    unlockAudio();
-    return set;
+    AmAudioLockGuard audio_guard(this);
+    return input || output;
 }
 
 void AmSession::lockAudio() const
@@ -737,18 +732,19 @@ void AmSession::onDtmf(AmDtmfEvent *e)
 
 void AmSession::clearAudio()
 {
-    lockAudio();
+    {
+        AmAudioLockGuard audio_guard(this);
 
-    if (input) {
-        input->close();
-        input = NULL;
-    }
-    if (output) {
-        output->close();
-        output = NULL;
+        if (input) {
+            input->close();
+            input = NULL;
+        }
+        if (output) {
+            output->close();
+            output = NULL;
+        }
     }
 
-    unlockAudio();
     DBG3("Audio cleared !!!");
     postEvent(new AmAudioEvent(AmAudioEvent::cleared));
 }
@@ -1141,8 +1137,6 @@ int AmSession::onSdpCompleted(const AmSdp &local_sdp, const AmSdp &remote_sdp, b
     SdpAttribute("sendonly")); set_on_hold = pos != remote_sdp.media[0].attributes.end();
     }*/
 
-    lockAudio();
-
     // TODO:
     //   - get the right media ID
     //   - check if the stream coresponding to the media ID
@@ -1151,6 +1145,7 @@ int AmSession::onSdpCompleted(const AmSdp &local_sdp, const AmSdp &remote_sdp, b
     int ret = 0;
 
     try {
+        AmAudioLockGuard audio_guard(this);
         ret = RTPStream()->init(local_sdp, remote_sdp, sdp_offer_owner, AmConfig.force_symmetric_rtp);
         RTPStream()->setStereoRecorders(getStereoRecorders(), nullptr);
     } catch (const string &s) {
@@ -1160,8 +1155,6 @@ int AmSession::onSdpCompleted(const AmSdp &local_sdp, const AmSdp &remote_sdp, b
         ERROR("Error while initializing RTP stream (unknown exception in AmRTPStream::init)");
         ret = -1;
     }
-
-    unlockAudio();
 
     if (ret == -1)
         onInitStreamFailed();
@@ -1287,12 +1280,11 @@ int AmSession::sendInvite(const string &headers)
 
 void AmSession::setOnHold(bool hold)
 {
-    lockAudio();
-    bool old_hold = RTPStream()->getOnHold();
+    AmAudioLockGuard audio_guard(this);
+    bool             old_hold = RTPStream()->getOnHold();
     RTPStream()->setOnHold(hold);
     if (hold != old_hold)
         sendReinvite();
-    unlockAudio();
 }
 
 void AmSession::onFailure()
@@ -1439,8 +1431,8 @@ bool AmSession::removeTimers()
 
 int AmSession::readStreams(unsigned long long ts, unsigned char *buffer)
 {
-    int res = 0;
-    lockAudio();
+    int              res = 0;
+    AmAudioLockGuard audio_guard(this);
 
     AmRtpAudio  *stream = RTPStream();
     unsigned int f_size = stream->getFrameSize();
@@ -1463,14 +1455,13 @@ int AmSession::readStreams(unsigned long long ts, unsigned char *buffer)
         }
     }
 
-    unlockAudio();
     return res;
 }
 
 int AmSession::writeStreams(unsigned long long ts, unsigned char *buffer)
 {
-    int res = 0;
-    lockAudio();
+    int              res = 0;
+    AmAudioLockGuard audio_guard(this);
 
     AmRtpAudio *stream = RTPStream();
     if (stream->sendIntReached()) { // FIXME: shouldn't depend on checkInterval call before!
@@ -1479,7 +1470,6 @@ int AmSession::writeStreams(unsigned long long ts, unsigned char *buffer)
         int  got                = 0;
 
         if (0 == output_sample_rate) [[unlikely]] {
-            unlockAudio();
             return 0;
         }
 
@@ -1504,7 +1494,6 @@ int AmSession::writeStreams(unsigned long long ts, unsigned char *buffer)
         }
     }
 
-    unlockAudio();
     return res;
 }
 

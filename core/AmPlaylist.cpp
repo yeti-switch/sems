@@ -175,15 +175,11 @@ bool AmPlaylist::isEmpty()
 
 void AmPlaylist::applyPendingStereoRecorders(const AmSession *lock_session)
 {
-    if (lock_session)
-        lock_session->lockAudio();
+    AmAudioLockGuard audio_guard(lock_session);
 
     cur_mut.lock();
     if (cur_item && cur_item->record) {
         cur_item->record->applyPendingStereoRecorders(nullptr);
     }
     cur_mut.unlock();
-
-    if (lock_session)
-        lock_session->unlockAudio();
 }
