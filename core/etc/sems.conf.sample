@@ -208,7 +208,16 @@ general {
      * default=no
     */
     enable_ice=yes
-    
+
+    /* optional parameter: enable_media_bundling
+     * enable negotiating media multiplexing (BUNDLE, RFC 9143)
+     *
+     * available values: yes, no
+     *
+     * default=no
+    */
+    enable_media_bundling=no
+
     /* optional parameter: pcap_upload_queue
      *
      * http_client destination name

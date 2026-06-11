@@ -121,6 +121,7 @@ struct ConfigContainer {
     bool                                  enable_srtp;
     bool                                  enable_ice;
     bool                                  enable_rtsp;
+    bool                                  enable_media_bundling;
     std::string                           options_transcoder_out_stats_hdr;
     std::string                           options_transcoder_in_stats_hdr;
     std::vector<std::string>              options_supported_hdr_value;

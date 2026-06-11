@@ -42,6 +42,10 @@ using std::string;
 #define COMFORT_NOISE_PAYLOAD_TYPE  13   // RFC 3389
 #define COMFORT_NOISE_ENCODING_NAME "CN" // RFC 3389
 #define DYNAMIC_PAYLOAD_TYPE_START  96   // range: 96->127, see RFC 1890
+
+// BUNDLE MID RTP header extension (RFC 8843 / RFC 9143)
+#define MID_RTP_HDREXT_URI        "urn:ietf:params:rtp-hdrext:sdes:mid"
+#define MID_RTP_HDREXT_DEFAULT_ID 1
 /**
  * @file AmSdp.h
  * Definitions for the SDP parser.
@@ -351,11 +355,19 @@ struct SdpExtMap {
         , direction(DirUndefined)
     {
     }
+    SdpExtMap(int id, const string &uri)
+        : id(id)
+        , direction(DirUndefined)
+        , uri(uri)
+    {
+    }
 
     string print() const; // "a=extmap:<id>[/<direction>] <uri>[ <ext_attrs>]\r\n"
 
     static bool   str2direction(const string &s, Direction &out);
     static string direction2str(Direction d);
+    // parse "<value>["/"<direction>] <uri> [<ext_attrs>]" from [begin, end)
+    static void parse(char *begin, char *end, SdpExtMap &out);
 
     bool operator==(const SdpExtMap &other) const;
 };
@@ -500,6 +512,7 @@ class AmSdp {
     Setup                     setup;
     std::vector<SdpAttribute> attributes; // unknown session level attributes
     std::vector<SdpGroup>     groups;     // a=group
+    std::vector<SdpExtMap>    extmaps;    // a=extmap (RFC 8285), session level
 
     bool send;
     bool recv;

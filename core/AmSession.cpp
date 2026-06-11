@@ -995,6 +995,19 @@ bool AmSession::getSdpOffer(AmSdp &offer)
     offer.conn.network  = NT_IN;
     offer.conn.addrType = ss.ss_family == AF_INET ? AT_V4 : AT_V6;
     offer.conn.address  = RTPStream()->getLocalAddress();
+
+    // BUNDLE (RFC 9143): aggregate a=group:BUNDLE from the streams that advertised bundling (mid set by stream)
+    SdpGroup grp("BUNDLE", SdpGroup::BUNDLE);
+    for (const auto &m : offer.media) {
+        if (m.use_bundle)
+            grp.tags.push_back(m.mid);
+    }
+    offer.groups.clear();
+    if (!grp.tags.empty()) {
+        offer.use_bundle = true;
+        offer.groups.push_back(grp);
+    }
+
     return true;
 }
 
@@ -1102,8 +1115,20 @@ bool AmSession::getSdpAnswer(const AmSdp &offer, AmSdp &answer)
         }
         // sort payload type in the answer according to the priority given in the codec_order configuration key
         std::stable_sort(answer_payloads.begin(), answer_payloads.end(), codec_priority_cmp());
+
         media_index++;
     } //
+
+    // BUNDLE (RFC 9143): aggregate a=group:BUNDLE from the accepted streams (mid set by stream)
+    SdpGroup grp("BUNDLE", SdpGroup::BUNDLE);
+    for (const auto &am : answer.media) {
+        if (am.use_bundle)
+            grp.tags.push_back(am.mid);
+    }
+    if (!grp.tags.empty()) {
+        answer.use_bundle = true;
+        answer.groups.push_back(grp);
+    }
 
     answer.conn.network  = NT_IN;
     answer.conn.addrType = addrtype;

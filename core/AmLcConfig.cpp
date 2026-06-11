@@ -114,6 +114,7 @@
 #define PARAM_ENABLE_RTSP_NAME             "enable_rtsp"
 #define PARAM_ENABLE_SRTP_NAME             "enable_srtp"
 #define PARAM_ENABLE_ICE_NAME              "enable_ice"
+#define PARAM_ENABLE_MEDIA_BUNDLE_NAME     "enable_media_bundling"
 #define PARAM_OPT_TRANSCODE_OUT_NAME       "options_transcoder_out_stats_hdr"
 #define PARAM_OPT_TRANSCODE_IN_NAME        "options_transcoder_in_stats_hdr"
 #define PARAM_TRANSCODE_OUT_NAME           "transcoder_out_stats_hdr"
@@ -499,6 +500,7 @@ static cfg_opt_t general[] = { CFG_FUNC("include", &cfg_include),
                                CFG_BOOL(PARAM_ENABLE_RTSP_NAME, cfg_false, CFGF_NONE),
                                CFG_BOOL(PARAM_ENABLE_SRTP_NAME, cfg_false, CFGF_NONE),
                                CFG_BOOL(PARAM_ENABLE_ICE_NAME, cfg_true, CFGF_NONE),
+                               CFG_BOOL(PARAM_ENABLE_MEDIA_BUNDLE_NAME, cfg_false, CFGF_NONE),
                                CFG_BOOL(PARAM_LOG_SESSIONS_NAME, cfg_false, CFGF_NONE),
                                CFG_BOOL(PARAM_LOG_EVENTS_NAME, cfg_false, CFGF_NONE),
                                CFG_BOOL(PARAM_SINGLE_CODEC_INOK_NAME, cfg_false, CFGF_NONE),
@@ -1084,6 +1086,7 @@ int AmLcConfig::readGeneral(cfg_t *cfg, ConfigContainer *config)
     config->enable_rtsp              = cfg_getbool(gen, PARAM_ENABLE_RTSP_NAME);
     config->enable_srtp              = cfg_getbool(gen, PARAM_ENABLE_SRTP_NAME);
     config->enable_ice               = cfg_getbool(gen, PARAM_ENABLE_ICE_NAME);
+    config->enable_media_bundling    = cfg_getbool(gen, PARAM_ENABLE_MEDIA_BUNDLE_NAME);
     config->log_sessions             = cfg_getbool(gen, PARAM_LOG_SESSIONS_NAME);
     config->accept_forked_dialogs    = cfg_getbool(gen, PARAM_ACCEPT_FORKED_DLG_NAME);
     if (config->use_raw_sockets && (raw_sender::init() < 0)) {

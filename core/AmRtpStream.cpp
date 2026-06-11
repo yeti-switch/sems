@@ -614,6 +614,22 @@ void AmRtpStream::getSdpOffer(unsigned int index, SdpMedia &offer)
     }
 
     applyIceParams(offer);
+
+    // BUNDLE (RFC 9143): mark this m= section bundle-capable
+    if (AmConfig.enable_media_bundling) {
+        if (offer.mid.empty())
+            offer.mid = int2str(index);
+        offer.use_bundle = true;
+        // MID RTP header extension - needed to demux bundled RTP (RFC 8843)
+        bool has_mid_ext = false;
+        for (const auto &e : offer.extmaps)
+            if (e.uri == MID_RTP_HDREXT_URI) {
+                has_mid_ext = true;
+                break;
+            }
+        if (!has_mid_ext)
+            offer.extmaps.push_back(SdpExtMap(MID_RTP_HDREXT_DEFAULT_ID, MID_RTP_HDREXT_URI));
+    }
 }
 
 void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia &offer, SdpMedia &answer)
@@ -640,6 +656,18 @@ void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia &offer, SdpMed
     }
 
     applyIceParams(answer);
+
+    // BUNDLE (RFC 9143): echo the offered mid (RFC 5888 9.1)
+    if (AmConfig.enable_media_bundling && offer.use_bundle && !offer.mid.empty()) {
+        answer.mid        = offer.mid;
+        answer.use_bundle = true;
+        // echo the offered MID extension keeping its id (RFC 8285 6)
+        for (const auto &e : offer.extmaps)
+            if (e.uri == MID_RTP_HDREXT_URI) {
+                answer.extmaps.push_back(SdpExtMap(e.id, e.uri));
+                break;
+            }
+    }
 }
 
 int AmRtpStream::init(const AmSdp &local, const AmSdp &remote, bool sdp_offer_owner, bool force_passive_mode)

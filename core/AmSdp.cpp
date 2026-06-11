@@ -281,6 +281,34 @@ string SdpExtMap::print() const
     return res;
 }
 
+void SdpExtMap::parse(char *begin, char *end, SdpExtMap &out)
+{
+    // field 1: <value>["/"<direction>]
+    char  *next    = parse_until(begin, end, ' ');
+    bool   had_uri = next != end;
+    string idfield(begin, had_uri ? next - 1 : end);
+    size_t slash = idfield.find('/');
+    if (slash != string::npos) {
+        str2int(idfield.substr(0, slash), out.id);
+        if (!str2direction(idfield.substr(slash + 1), out.direction))
+            DBG("found unknown direction in extmap '%s'", idfield.c_str());
+    } else {
+        str2int(idfield, out.id);
+    }
+
+    // field 2: <uri> and the optional extension attributes
+    if (had_uri) {
+        begin          = next;
+        next           = parse_until(begin, end, ' ');
+        bool had_attrs = next != end;
+        out.uri        = string(begin, had_attrs ? next - 1 : end);
+        if (had_attrs) {
+            begin         = next;
+            out.ext_attrs = string(begin, end);
+        }
+    }
+}
+
 bool SdpExtMap::operator==(const SdpExtMap &other) const
 {
     return id == other.id && direction == other.direction && uri == other.uri && ext_attrs == other.ext_attrs;
@@ -411,6 +439,7 @@ AmSdp::AmSdp(const AmSdp &p_sdp_msg)
     , setup(p_sdp_msg.setup)
     , attributes(p_sdp_msg.attributes)
     , groups(p_sdp_msg.groups)
+    , extmaps(p_sdp_msg.extmaps)
     , send(p_sdp_msg.send)
     , recv(p_sdp_msg.recv)
     , media(p_sdp_msg.media)
@@ -472,6 +501,24 @@ int AmSdp::parse(const char *_sdp_msg)
                         break;
                     }
                 }
+            }
+        }
+    }
+
+    // inherit session level a=extmap down to media (RTPStream sees only media level).
+    // media level wins: skip if the media already maps the same uri or the same id (RFC 8285).
+    if (!ret && !extmaps.empty()) {
+        for (vector<SdpMedia>::iterator it = media.begin(); it != media.end(); ++it) {
+            for (vector<SdpExtMap>::const_iterator se = extmaps.begin(); se != extmaps.end(); ++se) {
+                bool conflict = false;
+                for (vector<SdpExtMap>::const_iterator me = it->extmaps.begin(); me != it->extmaps.end(); ++me) {
+                    if (me->uri == se->uri || me->id == se->id) {
+                        conflict = true;
+                        break;
+                    }
+                }
+                if (!conflict)
+                    it->extmaps.push_back(*se);
             }
         }
     }
@@ -581,6 +628,11 @@ void AmSdp::print(string &body) const
         for (std::vector<SdpGroup>::const_iterator g_it = groups.begin(); g_it != groups.end(); g_it++) {
             out_buf += g_it->print();
         }
+    }
+
+    // a=extmap: lines (RFC 8285), session level
+    for (std::vector<SdpExtMap>::const_iterator e_it = extmaps.begin(); e_it != extmaps.end(); e_it++) {
+        out_buf += e_it->print();
     }
 
     // add attributes (session level)
@@ -786,7 +838,7 @@ bool AmSdp::operator==(const AmSdp &other) const
     }
 
     return version == other.version && origin == other.origin && sessionName == other.sessionName && uri == other.uri &&
-           conn == other.conn && use_bundle == other.use_bundle && groups == other.groups;
+           conn == other.conn && use_bundle == other.use_bundle && groups == other.groups && extmaps == other.extmaps;
 }
 
 void AmSdp::clear()
@@ -798,6 +850,7 @@ void AmSdp::clear()
     conn = SdpConnection();
     attributes.clear();
     groups.clear();
+    extmaps.clear();
     use_bundle = false;
     media.clear();
     l_origin = SdpOrigin();
@@ -1355,6 +1408,12 @@ static void parse_session_attr(AmSdp *sdp_msg, char *s, char **next)
                 return;
             }
             DBG("SDP: ignoring unsupported group semantics '%s'", semantics.c_str());
+        } else if (a.attribute == "extmap") {
+            SdpExtMap ext;
+            SdpExtMap::parse(col, attr_end + 1, ext);
+            sdp_msg->extmaps.push_back(ext);
+            DBG("SDP: got session extmap '%s'", a.value.c_str());
+            return;
         }
         // value attribute
         sdp_msg->attributes.push_back(a);
@@ -1732,40 +1791,11 @@ static char *parse_sdp_attr(AmSdp *sdp_msg, char *s)
             media.mid       = string(attr_line, attr_len);
         }
     } else if (attr == "extmap") {
-        // a=extmap:<value>["/"<direction>] <uri> [<extensionattributes>] (RFC 8285)
         if (parsing) {
             SdpExtMap ext;
-
-            // content end of this line (excludes the trailing CR/LF)
-            size_t content_len = 0;
+            size_t    content_len = 0;
             skip_till_next_line(attr_line, content_len);
-            char *content_end = attr_line + content_len;
-
-            // field 1: <value>["/"<direction>]
-            next           = parse_until(attr_line, content_end, ' ');
-            bool   had_uri = next != content_end;
-            string idfield(attr_line, had_uri ? next - 1 : content_end);
-            size_t slash = idfield.find('/');
-            if (slash != string::npos) {
-                str2int(idfield.substr(0, slash), ext.id);
-                if (!SdpExtMap::str2direction(idfield.substr(slash + 1), ext.direction))
-                    DBG("found unknown direction in extmap '%s'", idfield.c_str());
-            } else {
-                str2int(idfield, ext.id);
-            }
-
-            // field 2: <uri> and the optional extension attributes
-            if (had_uri) {
-                attr_line      = next;
-                next           = parse_until(attr_line, content_end, ' ');
-                bool had_attrs = next != content_end;
-                ext.uri        = string(attr_line, had_attrs ? next - 1 : content_end);
-                if (had_attrs) {
-                    attr_line     = next;
-                    ext.ext_attrs = string(attr_line, content_end);
-                }
-            }
-
+            SdpExtMap::parse(attr_line, attr_line + content_len, ext);
             media.extmaps.push_back(ext);
         }
     } else {
