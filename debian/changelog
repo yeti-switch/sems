@@ -1,3 +1,8 @@
+sems (1.193.0) stable; urgency=low
+  * AmRtpStream: add media stats for ICE and DTLS
+  * StreamData: drop session ptr for stream if error occurs while initialization
+ -- Michael Furmur <furmur@pm.me>  Thu, 11 Jun 2026 11:18:32 +0300
+
 sems (1.192.0) stable; urgency=low
   * fix racing STRP connection destroy
  -- Michael Furmur <furmur@pm.me>  Thu, 28 May 2026 15:50:33 +0300
