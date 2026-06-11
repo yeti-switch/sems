@@ -1,3 +1,9 @@
+sems (1.194.0) stable; urgency=low
+  * AmSession: add AmAudioLockGuard and use it for session audio mutex locking
+  * opus: fix codec_inst mem leak on init errors
+  * AmB2BMedia: fix racing on shared RTP stream codec reinit
+ -- Michael Furmur <furmur@pm.me>  Thu, 11 Jun 2026 17:26:37 +0300
+
 sems (1.193.0) stable; urgency=low
   * AmRtpStream: add media stats for ICE and DTLS
   * StreamData: drop session ptr for stream if error occurs while initialization
