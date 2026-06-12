@@ -244,13 +244,13 @@ bool SdpGroup::operator==(const SdpGroup &other) const
 
 bool SdpExtMap::str2direction(const string &s, Direction &out)
 {
-    if (s == "sendrecv")
+    if (s == sendrecv)
         out = SendRecv;
-    else if (s == "sendonly")
+    else if (s == sendonly)
         out = SendOnly;
-    else if (s == "recvonly")
+    else if (s == recvonly)
         out = RecvOnly;
-    else if (s == "inactive")
+    else if (s == inactive)
         out = Inactive;
     else
         return false;
@@ -260,10 +260,10 @@ bool SdpExtMap::str2direction(const string &s, Direction &out)
 string SdpExtMap::direction2str(Direction d)
 {
     switch (d) {
-    case SendRecv:     return "sendrecv";
-    case SendOnly:     return "sendonly";
-    case RecvOnly:     return "recvonly";
-    case Inactive:     return "inactive";
+    case SendRecv:     return sendrecv;
+    case SendOnly:     return sendonly;
+    case RecvOnly:     return recvonly;
+    case Inactive:     return inactive;
     case DirUndefined: break;
     }
     return string();
