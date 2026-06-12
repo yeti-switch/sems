@@ -71,7 +71,11 @@ typedef struct {
 /** \brief RTP extension header type */
 typedef struct {
     u_int16 profile; /* xhdr type */
-    u_int16 len;     /* xhdr length */
+    u_int16 len;     /* xhdr length (in 32-bit words, excluding this 4-byte header) */
 } rtp_xhdr_t;
+
+/* RFC 8285 header extension profiles */
+#define RTP_XHDR_PROFILE_ONE_BYTE 0xBEDE /* one-byte header form */
+#define RTP_XHDR_PROFILE_TWO_BYTE 0x1000 /* two-byte header form (match upper 12 bits) */
 
 #endif

@@ -316,6 +316,13 @@ class AmRtpStream : public AmObject
 
     TransProt transport;
 
+    /** media bundling (RFC 9143) enabled for this stream*/
+    bool bundle_enabled;
+    /** negotiated mid of this stream and the MID RTP header extension id (0 = not negotiated);
+     *  used to stamp the MID extension on outgoing RTP while bundling */
+    string bundle_mid;
+    int    bundle_mid_ext_id;
+
     /** ice attributes*/
     bool     is_ice_stream;
     string   ice_pwd;
@@ -613,10 +620,20 @@ class AmRtpStream : public AmObject
     void setTransport(TransProt trans);
 
     /** Set using ice protocol */
-    void     useIce();
-    bool     isIceStream();
-    bool     isIceControlled();
+    void useIce();
+    bool isIceStream();
+    bool isIceControlled();
+
     uint64_t getIceTieBreaker();
+
+    void setBundleEnabled(bool enabled)
+    {
+        bundle_enabled = enabled && AmConfig.enable_media_bundling;
+    }
+    bool isBundleEnabled() const
+    {
+        return bundle_enabled;
+    }
 
     /** Set using multiplexing for rtcp */
     virtual void setMultiplexing(bool multiplex);

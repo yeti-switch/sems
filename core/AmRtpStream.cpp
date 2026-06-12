@@ -139,6 +139,8 @@ AmRtpStream::AmRtpStream(AmSession *_s, int _if)
     , l_if(_if)
     , r_ssrc_i(false)
     , transport(TP_RTPAVP)
+    , bundle_enabled(false)
+    , bundle_mid_ext_id(0)
     , is_ice_stream(false)
     , ice_controlled(false)
     , ssl_key_log_file(nullptr)
@@ -616,7 +618,7 @@ void AmRtpStream::getSdpOffer(unsigned int index, SdpMedia &offer)
     applyIceParams(offer);
 
     // BUNDLE (RFC 9143): mark this m= section bundle-capable
-    if (AmConfig.enable_media_bundling) {
+    if (bundle_enabled) {
         if (offer.mid.empty())
             offer.mid = int2str(index);
         offer.use_bundle = true;
@@ -658,7 +660,7 @@ void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia &offer, SdpMed
     applyIceParams(answer);
 
     // BUNDLE (RFC 9143): echo the offered mid (RFC 5888 9.1)
-    if (AmConfig.enable_media_bundling && offer.use_bundle && !offer.mid.empty()) {
+    if (bundle_enabled && offer.use_bundle && !offer.mid.empty()) {
         answer.mid        = offer.mid;
         answer.use_bundle = true;
         // echo the offered MID extension keeping its id (RFC 8285 6)
@@ -687,6 +689,18 @@ int AmRtpStream::init(const AmSdp &local, const AmSdp &remote, bool sdp_offer_ow
 
     CLASS_DBG("AmRtpStream[%p]::init() sdp_media_index = %d, sdp_offer_owner = %d", this, sdp_media_index,
               sdp_offer_owner);
+
+    // BUNDLE (RFC 9143): cache the mid and MID RTP header extension id to stamp outgoing RTP
+    bundle_mid.clear();
+    bundle_mid_ext_id = 0;
+    if (bundle_enabled && local_media.use_bundle) {
+        bundle_mid = local_media.mid;
+        for (const auto &e : local_media.extmaps)
+            if (e.uri == MID_RTP_HDREXT_URI) {
+                bundle_mid_ext_id = e.id;
+                break;
+            }
+    }
 
     if (local_media.type == MT_AUDIO) {
         payloads.clear();
@@ -1684,6 +1698,10 @@ int AmRtpStream::compile_and_send(const int payload, bool marker, unsigned int t
     rp.marker    = marker;
     rp.sequence  = sequence++;
     rp.ssrc      = l_ssrc;
+    // BUNDLE (RFC 9143): stamp the MID RTP header extension so the peer can demux (RFC 8843).
+    // Covers audio, DTMF, comfort-noise and ping - they all reach here.
+    if (bundle_mid_ext_id && !bundle_mid.empty())
+        rp.addHeaderExtension(bundle_mid_ext_id, (const unsigned char *)bundle_mid.data(), bundle_mid.size());
     rp.compile((unsigned char *)buffer, size);
 
     if (cur_rtp_trans && cur_rtp_trans->send(&rp, AmStreamConnection::RTP_CONN) < 0) {

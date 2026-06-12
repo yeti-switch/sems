@@ -64,6 +64,7 @@
 
 AmRtpPacket::AmRtpPacket()
     : data_offset(0)
+    , pending_ext_count(0)
 {
 }
 
@@ -113,8 +114,9 @@ int AmRtpPacket::rtp_parse(AmObject *caller)
     data_offset = sizeof(rtp_hdr_t) + (hdr->cc * 4);
 
     if (hdr->x != 0) {
-        if (b_size >= data_offset + 4) {
-            data_offset += ntohs(((rtp_xhdr_t *)(buffer + data_offset))->len) * 4;
+        // skip the extension block(RFC 3550 / RFC 8285)
+        if (b_size >= data_offset + sizeof(rtp_xhdr_t)) {
+            data_offset += sizeof(rtp_xhdr_t) + ntohs(((rtp_xhdr_t *)(buffer + data_offset))->len) * 4;
         }
     }
 
@@ -372,6 +374,78 @@ int AmRtpPacket::process_receiver_report(RtcpReceiverReportHeader &rr, RtcpBidir
     return 0;
 }
 
+bool AmRtpPacket::addHeaderExtension(uint8_t id, const unsigned char *value, uint8_t len)
+{
+    // one-byte form: id 1..14 (0 is padding, 15 is reserved), data length 1..16
+    if (id < 1 || id > 14 || len < 1 || len > MAX_RTP_EXT_VALUE || !value)
+        return false;
+    if (pending_ext_count >= MAX_RTP_EXT)
+        return false;
+    RtpExtension &e = pending_ext[pending_ext_count++];
+    e.id            = id;
+    e.len           = len;
+    memcpy(e.value, value, len);
+    return true;
+}
+
+bool AmRtpPacket::getHeaderExtension(uint8_t id, unsigned char *out, size_t out_cap, size_t &out_len) const
+{
+    out_len = 0;
+    if (b_size < sizeof(rtp_hdr_t))
+        return false;
+
+    const rtp_hdr_t *hdr = (const rtp_hdr_t *)buffer;
+    if (!hdr->x)
+        return false;
+
+    unsigned int xoff = sizeof(rtp_hdr_t) + hdr->cc * 4;
+    if (b_size < xoff + sizeof(rtp_xhdr_t))
+        return false;
+
+    const rtp_xhdr_t *xh       = (const rtp_xhdr_t *)(buffer + xoff);
+    uint16_t          profile  = ntohs(xh->profile);
+    bool              one_byte = (profile == RTP_XHDR_PROFILE_ONE_BYTE);
+    bool              two_byte = ((profile & 0xFFF0) == RTP_XHDR_PROFILE_TWO_BYTE);
+    if (!one_byte && !two_byte)
+        return false;
+
+    unsigned int p   = xoff + sizeof(rtp_xhdr_t);
+    unsigned int end = p + ntohs(xh->len) * 4;
+    if (end > b_size)
+        end = b_size;
+
+    while (p < end) {
+        uint8_t eid, elen;
+        if (one_byte) {
+            uint8_t b = buffer[p++];
+            if (b == 0) // padding
+                continue;
+            eid  = b >> 4;
+            elen = (b & 0x0F) + 1;
+            if (eid == 15) // reserved: stop parsing
+                break;
+        } else {
+            eid = buffer[p++];
+            if (eid == 0) // padding
+                continue;
+            if (p >= end)
+                break;
+            elen = buffer[p++];
+        }
+        if (p + elen > end)
+            break;
+        if (eid == id) {
+            size_t n = (elen < out_cap) ? elen : out_cap;
+            if (out && n)
+                memcpy(out, buffer + p, n);
+            out_len = n;
+            return true;
+        }
+        p += elen;
+    }
+    return false;
+}
+
 unsigned char *AmRtpPacket::getData()
 {
     return buffer + data_offset;
@@ -388,15 +462,23 @@ int AmRtpPacket::compile(unsigned char *data_buf, unsigned int size)
     assert(size);
 
     d_size = size;
-    b_size = d_size + sizeof(rtp_hdr_t);
-    assert(b_size <= 4096);
-    rtp_hdr_t *hdr = (rtp_hdr_t *)buffer;
 
+    // RFC 8285 one-byte header extension block: 4-byte xhdr + elements padded to 32-bit words
+    unsigned int ext_size = 0;
+    if (pending_ext_count) {
+        unsigned int elems = 0;
+        for (unsigned int i = 0; i < pending_ext_count; i++)
+            elems += 1 + pending_ext[i].len; // 1-byte element header + value
+        ext_size = sizeof(rtp_xhdr_t) + ((elems + 3) & ~3u);
+    }
+
+    b_size = sizeof(rtp_hdr_t) + ext_size + d_size;
     if (b_size > sizeof(buffer)) {
         ERROR("builtin buffer size (%d) exceeded: %d", (int)sizeof(buffer), b_size);
         return -1;
     }
 
+    rtp_hdr_t *hdr = (rtp_hdr_t *)buffer;
     memset(hdr, 0, sizeof(rtp_hdr_t));
     hdr->version = RTP_VERSION;
     hdr->m       = marker;
@@ -406,9 +488,27 @@ int AmRtpPacket::compile(unsigned char *data_buf, unsigned int size)
     hdr->ts   = htonl(timestamp);
     hdr->ssrc = htonl(ssrc);
 
-    data_offset = sizeof(rtp_hdr_t);
+    unsigned int off = sizeof(rtp_hdr_t);
+    if (ext_size) {
+        hdr->x         = 1;
+        rtp_xhdr_t *xh = (rtp_xhdr_t *)(buffer + off);
+        xh->profile    = htons(RTP_XHDR_PROFILE_ONE_BYTE);
+        xh->len        = htons((ext_size - sizeof(rtp_xhdr_t)) / 4);
+        unsigned int p = off + sizeof(rtp_xhdr_t);
+        for (unsigned int i = 0; i < pending_ext_count; i++) {
+            buffer[p++] = (pending_ext[i].id << 4) | ((pending_ext[i].len - 1) & 0x0F);
+            memcpy(buffer + p, pending_ext[i].value, pending_ext[i].len);
+            p += pending_ext[i].len;
+        }
+        while (p < off + ext_size) // padding to 32-bit word boundary
+            buffer[p++] = 0;
+        off += ext_size;
+    }
+
+    data_offset = off;
     memcpy(&buffer[data_offset], data_buf, d_size);
 
+    pending_ext_count = 0; // consumed
     return 0;
 }
 

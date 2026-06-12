@@ -31,6 +31,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <netinet/in.h>
+#include <stdint.h>
 
 #include "AmLcConfig.h"
 #include "sip/msg_sensor.h"
@@ -59,6 +60,17 @@ class AmRtpPacket {
 
     unsigned int data_offset;
     unsigned int d_size;
+
+    // RFC 8285 header extensions
+    static const unsigned int MAX_RTP_EXT       = 8;
+    static const unsigned int MAX_RTP_EXT_VALUE = 16;
+    struct RtpExtension {
+        uint8_t       id;
+        uint8_t       len;
+        unsigned char value[MAX_RTP_EXT_VALUE];
+    };
+    RtpExtension pending_ext[MAX_RTP_EXT];
+    unsigned int pending_ext_count;
 
   public:
     unsigned char  payload;
@@ -112,6 +124,11 @@ class AmRtpPacket {
     void mirrorSent(msg_sensor *sensor, struct sockaddr_storage *laddr);
     void setBuffer(unsigned char *buf, unsigned int b);
     void setBufferSize(unsigned int b);
+
+    // RFC 8285 RTP header extensions.
+    bool addHeaderExtension(uint8_t id, const unsigned char *value, uint8_t len);
+    void clearHeaderExtensions() { pending_ext_count = 0; }
+    bool getHeaderExtension(uint8_t id, unsigned char *out, size_t out_cap, size_t &out_len) const;
 };
 
 #endif
