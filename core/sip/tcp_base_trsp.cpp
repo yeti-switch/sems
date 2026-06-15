@@ -445,6 +445,7 @@ int tcp_base_trsp::check_connection()
 void tcp_base_trsp::on_read(short ev)
 {
     assert(input);
+    atomic_ref_guard _ref_guard(this);
 
     int bytes = 0;
     { // locked section
