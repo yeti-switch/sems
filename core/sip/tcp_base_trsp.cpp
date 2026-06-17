@@ -205,6 +205,7 @@ tcp_base_trsp::~tcp_base_trsp()
     }
 
     delete input;
+    input = NULL;
 }
 
 void tcp_base_trsp::close()
