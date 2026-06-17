@@ -266,24 +266,10 @@ void tcp_base_trsp::generate_transport_errors()
     }
 }
 
-void tcp_base_trsp::add_read_event_ul()
-{
-    sock_mut.unlock();
-    add_read_event();
-    sock_mut.lock();
-}
-
 void tcp_base_trsp::add_read_event()
 {
     DBG3("%p add read_ev %p", this, read_ev);
     event_add(read_ev, server_sock->get_idle_timeout());
-}
-
-void tcp_base_trsp::add_write_event_ul(struct timeval *timeout)
-{
-    sock_mut.unlock();
-    add_write_event(timeout);
-    sock_mut.lock();
 }
 
 void tcp_base_trsp::add_write_event(struct timeval *timeout)

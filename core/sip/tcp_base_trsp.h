@@ -124,21 +124,9 @@ class tcp_base_trsp : public trsp_socket {
     void add_read_event();
 
     /**
-     * Same as add_read_event() but unlock before
-     * calling event_add().
-     */
-    void add_read_event_ul();
-
-    /**
      * Adds one-shot write-event to event base.
      */
     void add_write_event(struct timeval *timeout = NULL);
-
-    /**
-     * Same as add_write_event() but unlock before
-     * calling event_add().
-     */
-    void add_write_event_ul(struct timeval *timeout);
 
     /**
      * Instantiates read_ev & write_ev
