@@ -136,8 +136,10 @@ sip_msg::~sip_msg()
         }
     }
 
-    if (local_socket)
+    if (local_socket) {
         dec_ref(local_socket);
+        local_socket = NULL;
+    }
 }
 
 void sip_msg::copy_msg_buf(const char *msg_buf, int msg_len)
@@ -153,9 +155,10 @@ void sip_msg::release()
     buf = NULL;
     hdrs.clear();
     u.request = NULL;
-    if (local_socket)
+    if (local_socket) {
         dec_ref(local_socket);
-    local_socket = NULL;
+        local_socket = NULL;
+    }
 }
 
 int sip_msg::send(unsigned int flags)
