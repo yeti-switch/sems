@@ -1,3 +1,7 @@
+sems (1.196.0) stable; urgency=low
+  * tcp_base_trsp: duplicated TCP connection aliases
+ -- Michael Furmur <furmur@pm.me>  Thu, 18 Jun 2026 22:28:01 +0300
+
 sems (1.195.0) stable; urgency=low
   * initial media multiplexing support (RFC 9143)
  -- Michael Furmur <furmur@pm.me>  Mon, 15 Jun 2026 15:27:34 +0300
