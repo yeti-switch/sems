@@ -663,43 +663,48 @@ trsp_worker::~trsp_worker()
     event_base_free(evbase);
 }
 
-void trsp_worker::add_connection(tcp_base_trsp *client_sock)
+int trsp_worker::add_connection(tcp_base_trsp *new_sock)
 {
-    string conn_id = get_connection_id(client_sock);
+    string conn_id = get_connection_id(new_sock);
 
-    DBG3("new TCP connection from %s:%u", client_sock->get_peer_ip().c_str(), client_sock->get_peer_port());
+    DBG3("add TCP connection alias for %s. sd:%d", conn_id.data(), new_sock->get_sd());
 
-    connections_mut.lock();
-    connections[conn_id] = client_sock;
-    inc_ref(client_sock);
-    connections_mut.unlock();
+    AmLock l(connections_mut);
+
+    auto ret = connections.try_emplace(conn_id, new_sock);
+    if (!ret.second) {
+        ERROR("attempt to add duplicate connection alias %s. sd:%d", conn_id.data(), new_sock->get_sd());
+        return 1;
+    }
+
+    inc_ref(new_sock);
+    return 0;
 }
 
 void trsp_worker::remove_connection(tcp_base_trsp *client_sock)
 {
     string conn_id = get_connection_id(client_sock);
 
-    DBG3("removing TCP connection from %s", conn_id.c_str());
+    DBG3("removing TCP connection alias for %s", conn_id.c_str());
 
-    connections_mut.lock();
-    auto sock_it = connections.find(conn_id);
+    AmLock l(connections_mut);
+    auto   sock_it = connections.find(conn_id);
     if (sock_it != connections.end()) {
 
         if (client_sock->server_sock->statistics)
             client_sock->server_sock->statistics->changeCountConnection(true, client_sock);
 
         if (client_sock->sd != sock_it->second->sd) {
-            ERROR("trying to remove socket with unknown sd: %d", client_sock->sd);
+            ERROR("attempt to remove connection alias with mismatched sd:%d, saved_sd:%d", client_sock->sd,
+                  sock_it->second->sd);
             dec_ref(client_sock);
-            connections_mut.unlock();
             return;
         }
 
         dec_ref(sock_it->second);
-        DBG3("TCP connection from %s removed", conn_id.c_str());
+        DBG3("TCP connection alias for %s removed", conn_id.c_str());
         connections.erase(sock_it);
     }
-    connections_mut.unlock();
 }
 
 bool trsp_worker::remove_connection(const string &ip, unsigned short port, unsigned short if_num)
@@ -767,31 +772,44 @@ int trsp_worker::send(trsp_server_socket *server_sock, const sockaddr_storage *s
     return ret;
 }
 
+// called from trsp_server_socket::on_accept()
 void trsp_worker::create_connected(trsp_server_socket *server_sock, int sd, const sockaddr_storage *sa)
 {
     if (sd < 0) {
         return;
     }
+
     tcp_base_trsp *new_sock = server_sock->sock_factory->new_connection(server_sock, this, sd, sa, "", evbase);
     if (new_sock) {
-        add_connection(new_sock);
-        new_sock->set_connected(true);
-        new_sock->add_read_event();
+        if (!add_connection(new_sock)) {
+            new_sock->set_connected(true);
+            new_sock->add_read_event();
+        } else {
+            DBG3("close newly accepted connection for sd:%d");
+            delete new_sock;
+        }
     } else {
         close(sd);
     }
 }
 
-
+// called from trsp_worker::send() with locked connections_mut
 tcp_base_trsp *trsp_worker::new_connection(trsp_server_socket *server_sock, const sockaddr_storage *sa,
                                            const string &host)
 {
-    string conn_id = get_connection_id(sa, server_sock);
-
     tcp_base_trsp *new_sock = server_sock->sock_factory->new_connection(server_sock, this, -1, sa, host, evbase);
     if (!new_sock)
         return 0;
-    connections[conn_id] = new_sock;
+
+    string conn_id = get_connection_id(sa, server_sock);
+    DBG3("add TCP connection alias for %s", conn_id.data());
+    auto ret = connections.try_emplace(conn_id, new_sock);
+    if (!ret.second) {
+        ERROR("attempt to add duplicate alias %s. close connection with sd:%d", conn_id.data(), new_sock->get_sd());
+        delete new_sock;
+        return nullptr;
+    }
+
     inc_ref(new_sock);
     return new_sock;
 }
