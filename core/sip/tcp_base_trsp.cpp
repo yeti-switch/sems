@@ -673,8 +673,10 @@ int trsp_worker::add_connection(tcp_base_trsp *new_sock)
 
     auto ret = connections.try_emplace(conn_id, new_sock);
     if (!ret.second) {
-        ERROR("attempt to add duplicate connection alias %s. sd:%d", conn_id.data(), new_sock->get_sd());
-        return 1;
+        DBG3("attempt to add duplicate connection alias %s on accept. sd:%d. replace old one", conn_id.data(),
+             new_sock->get_sd());
+        dec_ref(ret.first->second);
+        ret.first->second = new_sock;
     }
 
     inc_ref(new_sock);
