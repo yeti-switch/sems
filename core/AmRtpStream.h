@@ -626,20 +626,16 @@ class AmRtpStream : public AmObject
 
     uint64_t getIceTieBreaker();
 
-    void setBundleEnabled(bool enabled)
-    {
-        bundle_enabled = enabled && AmConfig.enable_media_bundling;
-    }
-    bool isBundleEnabled() const
-    {
-        return bundle_enabled;
-    }
-
     /** Set using multiplexing for rtcp */
     virtual void setMultiplexing(bool multiplex);
 
     void setReuseMediaPort(bool reuse_media);
     void addAdditionTransport(AddressType type = AT_NONE);
+
+    MediaType getMediaType() const
+    {
+        return (transport == TP_UDPTL || transport == TP_UDPTLSUDPTL) ? MT_IMAGE : MT_AUDIO;
+    }
 
     unsigned int get_ssrc()
     {

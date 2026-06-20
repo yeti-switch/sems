@@ -618,6 +618,9 @@ void AmRtpStream::getSdpOffer(unsigned int index, SdpMedia &offer)
     applyIceParams(offer);
 
     // BUNDLE (RFC 9143): mark this m= section bundle-capable
+    // BUNDLE applies to RTP media only - never to T.38/UDPTL fax (MT_IMAGE)
+    bundle_enabled =
+        getMediaType() == MT_AUDIO && session && session->isBundleMediaStream() && AmConfig.enable_media_bundling;
     if (bundle_enabled) {
         if (offer.mid.empty())
             offer.mid = int2str(index);
@@ -660,6 +663,9 @@ void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia &offer, SdpMed
     applyIceParams(answer);
 
     // BUNDLE (RFC 9143): echo the offered mid (RFC 5888 9.1)
+    // BUNDLE applies to RTP media only - never to T.38/UDPTL fax (MT_IMAGE)
+    bundle_enabled =
+        getMediaType() == MT_AUDIO && session && session->isBundleMediaStream() && AmConfig.enable_media_bundling;
     if (bundle_enabled && offer.use_bundle && !offer.mid.empty()) {
         answer.mid        = offer.mid;
         answer.use_bundle = true;

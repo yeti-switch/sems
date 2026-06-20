@@ -180,6 +180,9 @@ class AmSession : public virtual AmObject,
     /** use ice protocol in media stream **/
     bool use_ice_media_stream;
 
+    /** offer BUNDLE (RFC 9143) on the session's media streams **/
+    bool use_bundle_media_stream;
+
     /** use rtcp multiplexing in media stream **/
     bool rtcp_multiplexing;
 
@@ -328,7 +331,15 @@ class AmSession : public virtual AmObject,
     bool isUseIceMediaStream() const { return use_ice_media_stream; }
     void useIceMediaStream() { use_ice_media_stream = true; }
 
-    void setRtcpMultiplexing(bool multiplexing) { rtcp_multiplexing = multiplexing; }
+    bool isBundleMediaStream() const { return use_bundle_media_stream; }
+    void enableBundleMediaStream() { use_bundle_media_stream = true; }
+
+    void setRtcpMultiplexing(bool multiplexing)
+    {
+        rtcp_multiplexing = multiplexing;
+        if (hasRtpStream())
+            RTPStream()->setMultiplexing(multiplexing);
+    }
     bool isRtcpMultiplexing() { return rtcp_multiplexing; }
 
     void setZrtpEnabled(bool enable)
