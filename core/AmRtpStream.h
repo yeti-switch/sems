@@ -623,6 +623,7 @@ class AmRtpStream : public AmObject
     void useIce();
     bool isIceStream();
     bool isIceControlled();
+    bool isIceNominateFirstValid();
 
     uint64_t getIceTieBreaker();
 

@@ -113,7 +113,7 @@ void IceContext::useCandidate(AmStunConnection *conn)
         setCurrentCandidate(conn);
         allowStunPair();
         break;
-    case ICE_CONNECTIVITY_CHECK: DBG("use candidate in incorrect ice state %d", state); break;
+    case ICE_CONNECTIVITY_CHECK: setCurrentCandidate(conn); break;
     default:                     break;
     }
 }
@@ -314,9 +314,12 @@ void IceContext::updateStunTimers(std::unordered_map<AmStunConnection *, unsigne
                     frozen_conn.reset(pair->second);
                 switch (pstate) {
                 case AmStunConnection::PAIR_WAITING:
-                case AmStunConnection::PAIR_FROZEN:
-                case AmStunConnection::PAIR_IN_PROGRESS: finish = false;
-                default:                                 break;
+                case AmStunConnection::PAIR_FROZEN:  finish = false; break;
+                case AmStunConnection::PAIR_IN_PROGRESS:
+                    if (!stream->isIceNominateFirstValid())
+                        finish = false;
+                    break;
+                default: break;
                 }
                 pair++;
             }

@@ -180,6 +180,9 @@ class AmSession : public virtual AmObject,
     /** use ice protocol in media stream **/
     bool use_ice_media_stream;
 
+    /** nominate the first valid pair instead of waiting for all ICE checks to finish **/
+    bool ice_nominate_first_valid;
+
     /** offer BUNDLE (RFC 9143) on the session's media streams **/
     bool use_bundle_media_stream;
 
@@ -330,6 +333,9 @@ class AmSession : public virtual AmObject,
 
     bool isUseIceMediaStream() const { return use_ice_media_stream; }
     void useIceMediaStream() { use_ice_media_stream = true; }
+
+    bool isIceNominateFirstValid() const { return ice_nominate_first_valid; }
+    void enableIceNominateFirstValid() { ice_nominate_first_valid = true; }
 
     bool isBundleMediaStream() const { return use_bundle_media_stream; }
     void enableBundleMediaStream() { use_bundle_media_stream = true; }

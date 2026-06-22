@@ -1949,6 +1949,11 @@ bool AmRtpStream::isIceControlled()
     return ice_controlled;
 }
 
+bool AmRtpStream::isIceNominateFirstValid()
+{
+    return session && session->isIceNominateFirstValid();
+}
+
 uint64_t AmRtpStream::getIceTieBreaker()
 {
     return ice_tiebreaker;
