@@ -1,3 +1,12 @@
+sems (1.198.0) stable; urgency=low
+  * add AmSession::ice_nominate_first_valid opt (default: false)
+    to nominate first succeeded ICE pair without waiting for all candidates to be checked.
+    can be set using AmSession::enableIceNominateFirstValid()
+  * add AmSession::ice_allow_no_candidates opt (default: true)
+    to wait for peer-reflexive candidate even if no ICE candidates left after filtering.
+    new cfg opt: general.ice_connectivity_check_timeout (default: 5)
+ -- Michael Furmur <furmur@pm.me>  Tue, 23 Jun 2026 18:17:44 +0300
+
 sems (1.197.0) stable; urgency=low
   * AmSession: add enableBundleMediaStream()
  -- Michael Furmur <furmur@pm.me>  Mon, 22 Jun 2026 10:32:13 +0300
