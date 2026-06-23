@@ -297,7 +297,8 @@ void IceContext::updateStunTimers(std::unordered_map<AmStunConnection *, unsigne
     switch (state) {
     case ICE_CONNECTIVITY_CHECK:
     {
-        bool               finish = true;
+        bool               finish    = true;
+        bool               succeeded = false;
         ReferenceUniquePtr wait_conn(nullptr);
         ReferenceUniquePtr frozen_conn(nullptr);
         {
@@ -319,12 +320,13 @@ void IceContext::updateStunTimers(std::unordered_map<AmStunConnection *, unsigne
                     if (!stream->isIceNominateFirstValid())
                         finish = false;
                     break;
-                default: break;
+                case AmStunConnection::PAIR_SUCCEEDED: succeeded = true; break;
+                default:                               break;
                 }
                 pair++;
             }
         }
-        if (finish) {
+        if (finish && succeeded) {
             DBG("ice: finished connectivity check phase(type %d)", type);
             setState(ICE_NOMINATIONS);
         } else {
