@@ -138,6 +138,16 @@ class AmRtpSendingErrorEvent : public AmEvent {
     ~AmRtpSendingErrorEvent() {}
 };
 
+/** \brief event fired when ICE connectivity check fails to nominate a pair */
+class AmIceConnectivityFailedEvent : public AmEvent {
+  public:
+    AmIceConnectivityFailedEvent()
+        : AmEvent(0)
+    {
+    }
+    ~AmIceConnectivityFailedEvent() {}
+};
+
 /** helper class for assigning boolean floag to a payload ID
  * it is used to check if the payload should be relayed or not */
 class PayloadMask {
@@ -513,6 +523,8 @@ class AmRtpStream : public AmObject
 
     void onLeavePassiveMode();
     void onRtpEndpointLearned();
+    void onIceConnectivityFailed();
+    bool isIceAllowNoCandidates();
     bool isSymmetricRtpEnable();
 
     void allowStunConnection(AmMediaTransport * transport, sockaddr_storage * remote_addr, int priority);

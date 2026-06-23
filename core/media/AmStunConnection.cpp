@@ -1,5 +1,6 @@
 #include "log.h"
 #include "AmStunConnection.h"
+#include "AmLcConfig.h"
 #include "AmMediaTransport.h"
 #include "AmRtpStream.h"
 #include "AmConcurrentVector.h"
@@ -67,6 +68,8 @@ IceContext::IceContext(AmRtpStream *stream, int type)
     , current_candidate(nullptr)
     , phase_ts{}
     , restart_count(0)
+    , fail_deadline_ms(0)
+    , fail_notified(false)
 {
     CLASS_DBG("IceContext(): transport type %d", type);
     stun_processor::instance()->add_ice_context(this);
@@ -121,14 +124,28 @@ void IceContext::useCandidate(AmStunConnection *conn)
 void IceContext::initContext()
 {
     if (state == ICE_INITIAL) {
+        bool no_pairs;
         {
             AmLock lock(pairs_mut);
-            if (!pairs.empty())
+            no_pairs = pairs.empty();
+            if (!no_pairs)
                 pairs.rbegin()->second->setState(AmStunConnection::PAIR_WAITING);
         }
 
         setCurrentCandidate(nullptr);
         setState(ICE_CONNECTIVITY_CHECK);
+
+        if (no_pairs) {
+            if (!stream->isIceAllowNoCandidates()) {
+                // strict mode: empty candidate list is an immediate failure
+                onConnectivityFailed();
+            } else {
+                // lenient: give peer-reflexive discovery a chance, up to the configured timeout
+                auto timeout_s = AmConfig.ice_connectivity_check_timeout;
+                if (timeout_s)
+                    setConnectivityCheckTimer(wheeltimer::instance()->unix_ms_clock.get() + timeout_s * 1000ULL);
+            }
+        }
     }
 }
 
@@ -203,6 +220,9 @@ void IceContext::reset()
         state = ICE_INITIAL;
     }
 
+    setConnectivityCheckTimer(0);
+    fail_notified = false;
+
     for (auto conn : to_remove) {
         stun_processor::instance()->remove_timer(conn);
         dec_ref(conn);
@@ -263,6 +283,25 @@ void IceContext::setState(IceContext::State initial)
     state = initial;
     if (initial < ICE_STATE_MAX && !timerisset(&phase_ts[initial]))
         gettimeofday(&phase_ts[initial], nullptr);
+
+    // any progress past the connectivity-check phase clears the failure timer
+    if (initial == ICE_NOMINATIONS || initial == ICE_KEEP_ALIVE)
+        setConnectivityCheckTimer(0);
+}
+
+void IceContext::setConnectivityCheckTimer(unsigned long long deadline_ms)
+{
+    fail_deadline_ms = deadline_ms;
+}
+
+void IceContext::onConnectivityFailed()
+{
+    if (fail_notified)
+        return;
+    fail_notified = true;
+    setConnectivityCheckTimer(0);
+    DBG("ice: connectivity check failed (type %d), notify session", type);
+    stream->onIceConnectivityFailed();
 }
 
 void IceContext::setCurrentCandidate(AmStunConnection *conn)
@@ -297,14 +336,18 @@ void IceContext::updateStunTimers(std::unordered_map<AmStunConnection *, unsigne
     switch (state) {
     case ICE_CONNECTIVITY_CHECK:
     {
-        bool               finish    = true;
-        bool               succeeded = false;
+        bool               finish     = true;
+        bool               succeeded  = false;
+        bool               all_failed = true;
         ReferenceUniquePtr wait_conn(nullptr);
         ReferenceUniquePtr frozen_conn(nullptr);
         {
             AmLock lock(pairs_mut);
-            if (pairs.empty())
+            if (pairs.empty()) {
+                if (fail_deadline_ms && wheeltimer::instance()->unix_ms_clock.get() > fail_deadline_ms)
+                    onConnectivityFailed();
                 break;
+            }
 
             auto pair = pairs.rbegin();
             while (pair != pairs.rend()) {
@@ -313,6 +356,8 @@ void IceContext::updateStunTimers(std::unordered_map<AmStunConnection *, unsigne
                     wait_conn.reset(pair->second);
                 if (pstate == AmStunConnection::PAIR_FROZEN && !frozen_conn)
                     frozen_conn.reset(pair->second);
+                if (pstate != AmStunConnection::PAIR_FAILED)
+                    all_failed = false;
                 switch (pstate) {
                 case AmStunConnection::PAIR_WAITING:
                 case AmStunConnection::PAIR_FROZEN:  finish = false; break;
@@ -325,6 +370,12 @@ void IceContext::updateStunTimers(std::unordered_map<AmStunConnection *, unsigne
                 }
                 pair++;
             }
+        }
+
+        // every pair settled to FAILED -> notify and stop here
+        if (all_failed) {
+            onConnectivityFailed();
+            break;
         }
         if (finish && succeeded) {
             DBG("ice: finished connectivity check phase(type %d)", type);

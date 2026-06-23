@@ -1295,6 +1295,17 @@ void AmRtpStream::onRtpEndpointLearned()
         session->onRtpEndpointLearned();
 }
 
+void AmRtpStream::onIceConnectivityFailed()
+{
+    if (session)
+        session->postEvent(new AmIceConnectivityFailedEvent());
+}
+
+bool AmRtpStream::isIceAllowNoCandidates()
+{
+    return session && session->isIceAllowNoCandidates();
+}
+
 bool AmRtpStream::isSymmetricRtpEnable()
 {
     return symmetric_rtp_enable;

@@ -75,6 +75,14 @@ class IceContext {
     unsigned int        restart_count;
     vector<IcePairStat> archived_pairs; // stats of pairs dropped on ICE restart
 
+    unsigned long long fail_deadline_ms;
+    bool               fail_notified;
+
+    /** set deadline (abs-ms in wheeltimer::unix_ms_clock); 0 disarms */
+    void setConnectivityCheckTimer(unsigned long long deadline_ms);
+    /** post AmIceConnectivityFailedEvent to the session (once per context) */
+    void onConnectivityFailed();
+
   public:
     void              setCurrentCandidate(AmStunConnection *conn);
     AmStunConnection *getNominatedPair();

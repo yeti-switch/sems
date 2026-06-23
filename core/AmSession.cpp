@@ -94,6 +94,7 @@ AmSession::AmSession(AmSipDialog *p_dlg)
     , reuse_media_slot(true)
     , use_ice_media_stream(false)
     , ice_nominate_first_valid(false)
+    , ice_allow_no_candidates(true)
     , use_bundle_media_stream(false)
     , rtcp_multiplexing(false)
     , rtp_interface(-1)
@@ -796,6 +797,12 @@ void AmSession::process(AmEvent *ev)
         onRtpSendingError();
         return;
     }
+
+    AmIceConnectivityFailedEvent *ice_fail_ev = dynamic_cast<AmIceConnectivityFailedEvent *>(ev);
+    if (ice_fail_ev) {
+        onIceConnectivityFailed();
+        return;
+    }
 }
 
 void AmSession::onSipRequest(const AmSipRequest &req)
@@ -1217,6 +1224,15 @@ void AmSession::onRtpSendingError()
         dlg->bye();
         setStopped();
     }
+}
+
+void AmSession::onIceConnectivityFailed()
+{
+    if (sess_stopped.get())
+        return;
+    DBG("ICE connectivity failed, stopping Session");
+    dlg->bye();
+    setStopped();
 }
 
 void AmSession::onSessionTimeout()

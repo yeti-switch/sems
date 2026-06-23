@@ -183,6 +183,9 @@ class AmSession : public virtual AmObject,
     /** nominate the first valid pair instead of waiting for all ICE checks to finish **/
     bool ice_nominate_first_valid;
 
+    /** use connectivity-check timer **/
+    bool ice_allow_no_candidates;
+
     /** offer BUNDLE (RFC 9143) on the session's media streams **/
     bool use_bundle_media_stream;
 
@@ -336,6 +339,9 @@ class AmSession : public virtual AmObject,
 
     bool isIceNominateFirstValid() const { return ice_nominate_first_valid; }
     void enableIceNominateFirstValid() { ice_nominate_first_valid = true; }
+
+    bool isIceAllowNoCandidates() const { return ice_allow_no_candidates; }
+    void setIceAllowNoCandidates(bool v) { ice_allow_no_candidates = v; }
 
     bool isBundleMediaStream() const { return use_bundle_media_stream; }
     void enableBundleMediaStream() { use_bundle_media_stream = true; }
@@ -683,6 +689,9 @@ class AmSession : public virtual AmObject,
 
     /** This callback is called if RTP sending failed */
     virtual void onRtpSendingError();
+
+    /** This callback is called when ICE connectivity check fails */
+    virtual void onIceConnectivityFailed();
 
     /** This callback is called if session
         timeout encountered (session timers) */

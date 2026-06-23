@@ -128,6 +128,7 @@
 #define PARAM_MAX_FORWARDS_NAME            "max_forwards"
 #define PARAM_MAX_SHUTDOWN_TIME_NAME       "max_shutdown_time"
 #define PARAM_DEAD_RTP_TIME_NAME           "dead_rtp_time"
+#define PARAM_ICE_CONN_CHECK_TO_NAME       "ice_connectivity_check_timeout"
 #define PARAM_DTMF_DETECTOR_NAME           "dtmf_detector"
 #define PARAM_SINGLE_CODEC_INOK_NAME       "single_codec_in_ok"
 #define PARAM_CODEC_ORDER_NAME             "codec_order"
@@ -206,6 +207,7 @@
 #define VALUE_SDM_ERR_REASON         "Server shutting down"
 #define VALUE_MAX_SHUTDOWN_TIME      10
 #define VALUE_DEAD_RTP_TIME          5 * 60
+#define VALUE_ICE_CONN_CHECK_TIMEOUT 5
 #define VALUE_SPANDSP                "spandsp"
 #define VALUE_INTERNAL               "internal"
 #define VALUE_DISABLE                "disabled"
@@ -518,6 +520,7 @@ static cfg_opt_t general[] = { CFG_FUNC("include", &cfg_include),
                                CFG_INT(PARAM_MAX_FORWARDS_NAME, 70, CFGF_NONE),
                                CFG_INT(PARAM_MAX_SHUTDOWN_TIME_NAME, VALUE_MAX_SHUTDOWN_TIME, CFGF_NONE),
                                CFG_INT(PARAM_DEAD_RTP_TIME_NAME, VALUE_DEAD_RTP_TIME, CFGF_NONE),
+                               CFG_INT(PARAM_ICE_CONN_CHECK_TO_NAME, VALUE_ICE_CONN_CHECK_TIMEOUT, CFGF_NONE),
                                CFG_INT(PARAM_SYMMETRIC_DELAY_NAME, VALUE_SYMMETRIC_RTP_DELAY, CFGF_NONE),
                                CFG_INT(PARAM_SYMMETRIC_PACKETS_NAME, 1, CFGF_NONE),
                                CFG_STR(PARAM_SYMMETRIC_MODE_NAME, VALUE_PACKETS, CFGF_NONE),
@@ -1148,9 +1151,10 @@ int AmLcConfig::readGeneral(cfg_t *cfg, ConfigContainer *config)
     config->node_id                          = cint(cfg_getint(gen, PARAM_NODE_ID_NAME));
     if (config->node_id != 0)
         config->node_id_prefix = int2str(config->node_id) + "-";
-    config->max_shutdown_time = cuint(cfg_getint(gen, PARAM_MAX_SHUTDOWN_TIME_NAME));
-    config->dead_rtp_time     = cuint(cfg_getint(gen, PARAM_DEAD_RTP_TIME_NAME));
-    value                     = cfg_getstr(gen, PARAM_DTMF_DETECTOR_NAME);
+    config->max_shutdown_time              = cuint(cfg_getint(gen, PARAM_MAX_SHUTDOWN_TIME_NAME));
+    config->dead_rtp_time                  = cuint(cfg_getint(gen, PARAM_DEAD_RTP_TIME_NAME));
+    config->ice_connectivity_check_timeout = cuint(cfg_getint(gen, PARAM_ICE_CONN_CHECK_TO_NAME));
+    value                                  = cfg_getstr(gen, PARAM_DTMF_DETECTOR_NAME);
     if (value == VALUE_SPANDSP)
         config->default_dtmf_detector = Dtmf::SpanDSP;
     else

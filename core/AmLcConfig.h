@@ -137,6 +137,7 @@ struct ConfigContainer {
     unsigned int                          max_forwards;
     unsigned int                          max_shutdown_time;
     unsigned int                          dead_rtp_time;
+    unsigned int                          ice_connectivity_check_timeout;
     Dtmf::InbandDetectorType              default_dtmf_detector;
     bool                                  dtmf_offer_multirate;
     unsigned int                          dtmf_default_volume;
