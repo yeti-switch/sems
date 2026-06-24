@@ -803,6 +803,12 @@ void AmSession::process(AmEvent *ev)
         onIceConnectivityFailed();
         return;
     }
+
+    MediaEstablishedEvent *media_est_ev = dynamic_cast<MediaEstablishedEvent *>(ev);
+    if (media_est_ev) {
+        onMediaEstablished();
+        return;
+    }
 }
 
 void AmSession::onSipRequest(const AmSipRequest &req)
@@ -1233,6 +1239,11 @@ void AmSession::onIceConnectivityFailed()
     DBG("ICE connectivity failed, stopping Session");
     dlg->bye();
     setStopped();
+}
+
+void AmSession::onMediaEstablished()
+{
+    DBG("media established for session[%s]", getLocalTag().c_str());
 }
 
 void AmSession::onSessionTimeout()

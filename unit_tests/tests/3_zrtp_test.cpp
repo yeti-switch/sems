@@ -107,8 +107,8 @@ class ZRTPTest : public ::testing::Test {
     }
     void TearDown() override
     {
-        AmRtpReceiver::dispose();
         AmMediaProcessor::dispose();
+        AmRtpReceiver::dispose();
     }
 };
 

@@ -1,11 +1,19 @@
 #include "AmMediaIceRestartState.h"
 #include "AmMediaState.h"
 #include "AmMediaTransport.h"
+#include "AmRtpStream.h"
 
 AmMediaIceRestartState::AmMediaIceRestartState(AmMediaTransport *transport)
     : AmMediaState(transport)
     , AmMediaIceState(transport)
 {
+}
+
+AmMediaState *AmMediaIceRestartState::init(const AmMediaStateArgs &args)
+{
+    if (auto *stream = transport->getRtpStream())
+        stream->clearEstablished();
+    return AmMediaIceState::init(args);
 }
 
 AmMediaState *AmMediaIceRestartState::allowStunConnection(const sockaddr_storage *remote_addr, uint32_t priority)

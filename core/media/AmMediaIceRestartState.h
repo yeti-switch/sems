@@ -5,7 +5,8 @@
 class AmMediaIceRestartState : public AmMediaIceState {
   public:
     AmMediaIceRestartState(AmMediaTransport *transport);
-    const char *state2str() override;
+    AmMediaState *init(const AmMediaStateArgs &args) override;
+    const char   *state2str() override;
 
   protected:
     void          removeConnections();

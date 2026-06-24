@@ -148,6 +148,7 @@ AmMediaState *AmMediaIceState::allowStunPair(const sockaddr_storage *remote_addr
               transport->type2str());
 
     resetCurRtpConnection();
+    markEstablishIfReady();
     return this;
 }
 

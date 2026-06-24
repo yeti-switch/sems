@@ -33,6 +33,7 @@
 #include "AmRtpPacket.h"
 #include "rtcp/RtcpStat.h"
 #include "AmEvent.h"
+#include "AmMediaEvents.h"
 #include "AmDtmfSender.h"
 #include "AmComfortNoiseSender.h"
 #include "sip/msg_sensor.h"
@@ -116,36 +117,6 @@ template <int packets_count> class PacketMem {
         __sync_synchronize();
     }
     void debug() { DBG("used: 0x%lx", used); }
-};
-
-/** \brief event fired on RTP timeout */
-class AmRtpTimeoutEvent : public AmEvent {
-  public:
-    AmRtpTimeoutEvent()
-        : AmEvent(0)
-    {
-    }
-    ~AmRtpTimeoutEvent() {}
-};
-
-/** \brief event fired on RTP sending error */
-class AmRtpSendingErrorEvent : public AmEvent {
-  public:
-    AmRtpSendingErrorEvent()
-        : AmEvent(0)
-    {
-    }
-    ~AmRtpSendingErrorEvent() {}
-};
-
-/** \brief event fired when ICE connectivity check fails to nominate a pair */
-class AmIceConnectivityFailedEvent : public AmEvent {
-  public:
-    AmIceConnectivityFailedEvent()
-        : AmEvent(0)
-    {
-    }
-    ~AmIceConnectivityFailedEvent() {}
 };
 
 /** helper class for assigning boolean floag to a payload ID
@@ -366,6 +337,9 @@ class AmRtpStream : public AmObject
     /** do check rtp timeout */
     bool monitor_rtp_timeout;
 
+    /** MediaEstablishedEvent already posted; re-armed by clearEstablished() on ICE restart */
+    bool media_established_fired;
+
     /** Payload type for telephone event */
     unique_ptr<const SdpPayload> remote_telephone_event_pt;
     unique_ptr<const SdpPayload> local_telephone_event_pt;
@@ -524,6 +498,9 @@ class AmRtpStream : public AmObject
     void onLeavePassiveMode();
     void onRtpEndpointLearned();
     void onIceConnectivityFailed();
+
+    void onTransportEstablished();
+    void clearEstablished();
     bool isIceAllowNoCandidates();
     bool isSymmetricRtpEnable();
 

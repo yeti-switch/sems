@@ -1,6 +1,7 @@
 #include "AmMediaTransport.h"
 #include "AmMediaSrtpState.h"
 #include "AmMediaSecureUdptlState.h"
+#include "AmRtpStream.h"
 
 AmMediaSrtpState::AmMediaSrtpState(AmMediaTransport *transport)
     : AmMediaState(transport)
@@ -68,6 +69,12 @@ void AmMediaSrtpState::updateConnections(const AmMediaStateArgs &args)
     transport->findCurRawConn([&](auto conn) { conn->setRAddr(*args.address, *args.port); });
 }
 
+AmMediaState *AmMediaSrtpState::init(const AmMediaStateArgs &args)
+{
+    markEstablishIfReady();
+    return AmMediaState::init(args);
+}
+
 AmMediaState *AmMediaSrtpState::initSrtp(AmStreamConnection::ConnectionType base_conn_type)
 {
     vector<AmStreamConnection *> new_conns;
@@ -93,15 +100,19 @@ AmMediaState *AmMediaSrtpState::initSrtp(AmStreamConnection::ConnectionType base
         transport->setCurRtcpConn(0);
     });
 
+    markEstablishIfReady();
     return this;
 }
 
 AmMediaState *AmMediaSrtpState::update(const AmMediaStateArgs &args)
 {
     if (args.dtls_srtp.has_value() && !args.dtls_srtp.value()) {
+        if (auto *stream = transport->getRtpStream())
+            stream->clearEstablished();
         auto sec = new AmMediaSecureUdptlState(transport);
         return sec->init(args);
     }
+    markEstablishIfReady();
     return AmMediaState::update(args);
 }
 
@@ -129,7 +140,14 @@ AmMediaState *AmMediaSrtpState::onSrtpKeysAvailable(uint8_t transport_type, uint
         }
     });
 
+    markEstablishIfReady();
     return this;
+}
+
+void AmMediaSrtpState::markEstablishIfReady()
+{
+    if (transport->getConnFactory()->srtp_cred.srtp_profile > srtp_profile_reserved)
+        transport->markEstablish();
 }
 
 const char *AmMediaSrtpState::state2str()

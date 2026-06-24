@@ -9,7 +9,14 @@ AmMediaSecureUdptlState::AmMediaSecureUdptlState(AmMediaTransport *transport)
 AmMediaState *AmMediaSecureUdptlState::init(const AmMediaStateArgs &args)
 {
     transport->setMode(AmMediaTransport::TRANSPORT_MODE_DTLS_FAX);
+    markEstablishIfReady();
     return AmMediaState::init(args);
+}
+
+void AmMediaSecureUdptlState::markEstablishIfReady()
+{
+    if (transport->getCurUdptlConn() && transport->getConnFactory()->srtp_cred.srtp_profile > srtp_profile_reserved)
+        transport->markEstablish();
 }
 
 void AmMediaSecureUdptlState::addConnections(const AmMediaStateArgs &args)

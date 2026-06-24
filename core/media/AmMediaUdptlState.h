@@ -7,5 +7,6 @@ class AmMediaUdptlState : virtual public AmMediaState {
     AmMediaUdptlState(AmMediaTransport *transport);
     AmMediaState *init(const AmMediaStateArgs &args) override;
     void          addConnections(const AmMediaStateArgs &args) override;
+    void          markEstablishIfReady() override;
     const char   *state2str() override;
 };

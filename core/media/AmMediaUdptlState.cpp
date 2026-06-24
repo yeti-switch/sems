@@ -9,7 +9,14 @@ AmMediaUdptlState::AmMediaUdptlState(AmMediaTransport *transport)
 AmMediaState *AmMediaUdptlState::init(const AmMediaStateArgs &args)
 {
     transport->setMode(AmMediaTransport::TRANSPORT_MODE_FAX);
+    markEstablishIfReady();
     return AmMediaState::init(args);
+}
+
+void AmMediaUdptlState::markEstablishIfReady()
+{
+    if (transport->getCurUdptlConn())
+        transport->markEstablish();
 }
 
 void AmMediaUdptlState::addConnections(const AmMediaStateArgs &args)

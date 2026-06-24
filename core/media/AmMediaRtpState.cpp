@@ -1,18 +1,35 @@
 #include "AmMediaTransport.h"
 #include "AmMediaRtpState.h"
+#include "AmRtpStream.h"
 
 AmMediaRtpState::AmMediaRtpState(AmMediaTransport *transport)
     : AmMediaState(transport)
 {
 }
 
+AmMediaState *AmMediaRtpState::init(const AmMediaStateArgs &args)
+{
+    markEstablishIfReady();
+    return AmMediaState::init(args);
+}
+
 AmMediaState *AmMediaRtpState::update(const AmMediaStateArgs &args)
 {
     if (args.udptl.value_or(false)) {
+        if (auto *stream = transport->getRtpStream())
+            stream->clearEstablished();
         auto new_state = new AmMediaUdptlState(transport);
         return new_state->init(args);
-    } else
+    } else {
+        markEstablishIfReady();
         return AmMediaState::update(args);
+    }
+}
+
+void AmMediaRtpState::markEstablishIfReady()
+{
+    if (transport->getCurRtpConn())
+        transport->markEstablish();
 }
 
 void AmMediaRtpState::addConnections(const AmMediaStateArgs &args)

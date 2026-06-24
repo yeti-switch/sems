@@ -148,6 +148,7 @@ AmRtpStream::AmRtpStream(AmSession *_s, int _if)
     , cur_rtcp_trans(0)
     , cur_udptl_trans(0)
     , monitor_rtp_timeout(true)
+    , media_established_fired(false)
     , mute(false)
     , sending(true)
     , receiving(true)
@@ -1299,6 +1300,20 @@ void AmRtpStream::onIceConnectivityFailed()
 {
     if (session)
         session->postEvent(new AmIceConnectivityFailedEvent());
+}
+
+void AmRtpStream::onTransportEstablished()
+{
+    if (media_established_fired || !session)
+        return;
+    session->postEvent(new MediaEstablishedEvent());
+    media_established_fired = true;
+}
+
+void AmRtpStream::clearEstablished()
+{
+    media_established_fired = false;
+    iterateTransports([](AmMediaTransport *tr) { tr->clearEstablish(); });
 }
 
 bool AmRtpStream::isIceAllowNoCandidates()

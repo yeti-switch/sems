@@ -35,6 +35,7 @@ AmMediaTransport::AmMediaTransport(AmRtpStream *_stream, int _if, int _proto_id,
     , srtp_enable(false)
     , dtls_enable(false)
     , zrtp_enable(false)
+    , media_establish(false)
 {
     memset(&l_saddr, 0, sizeof(sockaddr_storage));
 
@@ -117,6 +118,19 @@ void AmMediaTransport::onSrtpKeysAvailable(uint8_t transport_type, uint16_t srtp
 
     if (state.get() != next_state)
         state.reset(next_state);
+}
+
+void AmMediaTransport::markEstablish()
+{
+    if (media_establish)
+        return;
+    media_establish = true;
+    stream->onTransportEstablished();
+}
+
+void AmMediaTransport::clearEstablish()
+{
+    media_establish = false;
 }
 
 void AmMediaTransport::onCloseDtlsSession()
@@ -596,6 +610,11 @@ void AmMediaTransport::onRtpPacket(AmRtpPacket *packet, AmStreamConnection *conn
 {
     if (!getCurRtpConn())
         setCurRtpConn(conn);
+    if (!media_establish) {
+        AmLock l(state_mutex);
+        if (state)
+            state->markEstablishIfReady();
+    }
     stream->onRtpPacket(packet, this);
 }
 
@@ -603,6 +622,11 @@ void AmMediaTransport::onRtcpPacket(AmRtpPacket *packet, AmStreamConnection *con
 {
     if (!getCurRtcpConn())
         setCurRtcpConn(conn);
+    if (!media_establish) {
+        AmLock l(state_mutex);
+        if (state)
+            state->markEstablishIfReady();
+    }
     stream->onRtcpPacket(packet, this);
 }
 
@@ -613,6 +637,11 @@ void AmMediaTransport::onRawPacket(AmRtpPacket *packet, AmStreamConnection *conn
         stream->freeRtpPacket(packet);
     } else if (mode == TRANSPORT_MODE_FAX || mode == TRANSPORT_MODE_DTLS_FAX) {
         setCurUdptlConn(conn);
+        if (!media_establish) {
+            AmLock l(state_mutex);
+            if (state)
+                state->markEstablishIfReady();
+        }
         stream->onUdptlPacket(packet, this);
     } else {
         setCurRawConn(conn);

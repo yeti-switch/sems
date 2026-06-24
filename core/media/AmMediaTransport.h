@@ -70,11 +70,19 @@ class AmMediaTransport : public AmMediaConnectionsHolder,
         if (state.get() != next_state)
             state.reset(next_state);
     }
-    void        allowStunConnection(const sockaddr_storage *remote_addr, uint32_t priority);
-    void        allowStunPair(const sockaddr_storage *remote_addr);
-    void        onSrtpKeysAvailable(uint8_t transport_type, uint16_t srtp_profile, const string &local_key,
-                                    const string &remote_key);
-    void        onCloseDtlsSession();
+    void allowStunConnection(const sockaddr_storage *remote_addr, uint32_t priority);
+    void allowStunPair(const sockaddr_storage *remote_addr);
+    void onSrtpKeysAvailable(uint8_t transport_type, uint16_t srtp_profile, const string &local_key,
+                             const string &remote_key);
+    void onCloseDtlsSession();
+
+    void markEstablish();
+    void clearEstablish();
+    bool isEstablished() const
+    {
+        return media_establish;
+    }
+
     const char *state2str();
     const char *state2strUnsafe();
 
@@ -311,6 +319,7 @@ class AmMediaTransport : public AmMediaConnectionsHolder,
     bool                  srtp_enable;
     bool                  dtls_enable;
     bool                  zrtp_enable;
+    bool                  media_establish;
 
     vector<SdpCrypto> local_crypto;
     SdpFingerPrint    local_dtls_fingerprint;
