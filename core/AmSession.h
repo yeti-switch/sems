@@ -694,7 +694,7 @@ class AmSession : public virtual AmObject,
     virtual void onIceConnectivityFailed();
 
     /** This callback is called once per media session when the media path becomes usable */
-    virtual void onMediaEstablished();
+    virtual void onMediaEstablished(unsigned long setup_time_ms);
 
     /** This callback is called if session
         timeout encountered (session timers) */

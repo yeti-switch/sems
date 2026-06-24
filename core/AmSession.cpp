@@ -806,7 +806,7 @@ void AmSession::process(AmEvent *ev)
 
     MediaEstablishedEvent *media_est_ev = dynamic_cast<MediaEstablishedEvent *>(ev);
     if (media_est_ev) {
-        onMediaEstablished();
+        onMediaEstablished(media_est_ev->setup_time_ms);
         return;
     }
 }
@@ -1241,9 +1241,9 @@ void AmSession::onIceConnectivityFailed()
     setStopped();
 }
 
-void AmSession::onMediaEstablished()
+void AmSession::onMediaEstablished(unsigned long setup_time_ms)
 {
-    DBG("media established for session[%s]", getLocalTag().c_str());
+    DBG("media established for session[%s] in %lu ms", getLocalTag().c_str(), setup_time_ms);
 }
 
 void AmSession::onSessionTimeout()

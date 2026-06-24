@@ -149,6 +149,7 @@ AmRtpStream::AmRtpStream(AmSession *_s, int _if)
     , cur_udptl_trans(0)
     , monitor_rtp_timeout(true)
     , media_established_fired(false)
+    , media_setup_start(std::chrono::steady_clock::now())
     , mute(false)
     , sending(true)
     , receiving(true)
@@ -1306,13 +1307,17 @@ void AmRtpStream::onTransportEstablished()
 {
     if (media_established_fired || !session)
         return;
-    session->postEvent(new MediaEstablishedEvent());
+    auto elapsed_ms =
+        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - media_setup_start)
+            .count();
+    session->postEvent(new MediaEstablishedEvent(static_cast<unsigned long>(elapsed_ms)));
     media_established_fired = true;
 }
 
 void AmRtpStream::clearEstablished()
 {
     media_established_fired = false;
+    media_setup_start       = std::chrono::steady_clock::now();
     iterateTransports([](AmMediaTransport *tr) { tr->clearEstablish(); });
 }
 

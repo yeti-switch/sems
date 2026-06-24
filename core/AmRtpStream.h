@@ -49,6 +49,7 @@
 #include <queue>
 #include <memory>
 #include <atomic>
+#include <chrono>
 
 using std::pair;
 using std::string;
@@ -339,6 +340,9 @@ class AmRtpStream : public AmObject
 
     /** MediaEstablishedEvent already posted; re-armed by clearEstablished() on ICE restart */
     bool media_established_fired;
+
+    /** wall-clock anchor for measuring media setup latency reported with MediaEstablishedEvent */
+    std::chrono::steady_clock::time_point media_setup_start;
 
     /** Payload type for telephone event */
     unique_ptr<const SdpPayload> remote_telephone_event_pt;

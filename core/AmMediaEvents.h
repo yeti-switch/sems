@@ -40,12 +40,16 @@ class AmIceConnectivityFailedEvent : public AmEvent {
  *  - DTLS+RTP / DTLS+UDPTL / ZRTP: after SRTP keys are negotiated;
  *  - ICE RTP/SRTP/UDPTL: after a candidate pair is nominated;
  *  - ICE DTLS/ZRTP variants: after SRTP keys are negotiated.
- * Re-armed on ICE restart.
+ * Re-armed on ICE restart. setup_time_ms — duration from RTP stream
+ * construction (or last ICE-restart re-arm) to event fire, in milliseconds.
  */
 class MediaEstablishedEvent : public AmEvent {
   public:
-    MediaEstablishedEvent()
+    unsigned long setup_time_ms;
+
+    explicit MediaEstablishedEvent(unsigned long setup_ms)
         : AmEvent(0)
+        , setup_time_ms(setup_ms)
     {
     }
     ~MediaEstablishedEvent() {}
