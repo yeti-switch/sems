@@ -107,8 +107,8 @@ class ZRTPTest : public ::testing::Test {
     }
     void TearDown() override
     {
-        AmMediaProcessor::dispose();
         AmRtpReceiver::dispose();
+        AmMediaProcessor::dispose();
     }
 };
 
@@ -151,6 +151,12 @@ TEST_F(ZRTPTest, SingleTest)
         }
         EXPECT_TRUE(sessionA.zrtp_activated.get());
         EXPECT_TRUE(sessionB.zrtp_activated.get());
+
+        AmMediaProcessor::instance()->clearSession(&sessionA);
+        AmMediaProcessor::instance()->clearSession(&sessionB);
+        while (sessionA.isProcessingMedia() || sessionB.isProcessingMedia()) {
+            sleep(1);
+        }
     } catch (const AmSession::Exception &except) {
         error = except.reason;
     } catch (const string &reason) {
