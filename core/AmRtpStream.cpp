@@ -149,7 +149,6 @@ AmRtpStream::AmRtpStream(AmSession *_s, int _if)
     , cur_udptl_trans(0)
     , monitor_rtp_timeout(true)
     , media_established_fired(false)
-    , media_setup_start(std::chrono::steady_clock::now())
     , mute(false)
     , sending(true)
     , receiving(true)
@@ -682,6 +681,8 @@ void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia &offer, SdpMed
 
 int AmRtpStream::init(const AmSdp &local, const AmSdp &remote, bool sdp_offer_owner, bool force_passive_mode)
 {
+    clearEstablished();
+
     init_error.clear();
     if ((sdp_media_index < 0) || ((unsigned)sdp_media_index >= local.media.size()) ||
         ((unsigned)sdp_media_index >= remote.media.size()))
