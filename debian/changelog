@@ -1,3 +1,7 @@
+sems (1.199.1) stable; urgency=low
+  * AmRtpStream: move media_setup_start point to AmRtpStream::init()
+ -- Michael Furmur <furmur@pm.me>  Thu, 25 Jun 2026 19:35:24 +0300
+
 sems (1.199.0) stable; urgency=low
   * AmSession: add onMediaEstablished callback
  -- Michael Furmur <furmur@pm.me>  Thu, 25 Jun 2026 16:49:15 +0300
