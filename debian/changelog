@@ -1,3 +1,7 @@
+sems (1.199.0) stable; urgency=low
+  * AmSession: add onMediaEstablished callback
+ -- Michael Furmur <furmur@pm.me>  Thu, 25 Jun 2026 16:49:15 +0300
+
 sems (1.198.0) stable; urgency=low
   * add AmSession::ice_nominate_first_valid opt (default: false)
     to nominate first succeeded ICE pair without waiting for all candidates to be checked.
