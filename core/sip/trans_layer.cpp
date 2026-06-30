@@ -2001,7 +2001,8 @@ int _trans_layer::update_uac_reply(trans_bucket *bucket, sip_trans *t, sip_msg *
                             if (t->dialog_id.len) {
                                 dlg_id = t->dialog_id;
                             }
-                            AmSessionContainer::instance()->postEvent(c2stlstr(dlg_id), new AmSipRedirect());
+                            string target(new_tr->msg->u.request->ruri_str.toString());
+                            AmSessionContainer::instance()->postEvent(c2stlstr(dlg_id), new AmSipRedirect(target));
 
                             /* don't pass reply to UA */
                             forget_reply = true;

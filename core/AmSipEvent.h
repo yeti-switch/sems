@@ -113,8 +113,10 @@ class AmSipReplyEvent : public AmSipEvent {
 
 /** \brief SIP redirect event */
 struct AmSipRedirect : public AmEvent {
-    AmSipRedirect()
+    string target;
+    AmSipRedirect(const string &_target)
         : AmEvent(-1)
+        , target(_target)
     {
     }
 };
