@@ -209,7 +209,7 @@ class AmArg : public AmObject {
     ArgBlob     *asBlob() const { return v_blob; }
     ValueStruct *asStruct() const { return v_struct; }
 
-    template <typename T> T asNumber()
+    template <typename T> T asNumber() const
     {
         switch (type) {
         case Int:      return static_cast<T>(v_int);
