@@ -1,3 +1,9 @@
+sems (1.200.0) stable; urgency=low
+  * fix duplicated MediaEstablished event on multiple stream inits
+  * disable MediaEstablished event for RTSP
+  * AmArg: make asNumber() const
+ -- Michael Furmur <furmur@pm.me>  Wed, 01 Jul 2026 13:05:02 +0300
+
 sems (1.199.1) stable; urgency=low
   * AmRtpStream: move media_setup_start point to AmRtpStream::init()
  -- Michael Furmur <furmur@pm.me>  Thu, 25 Jun 2026 19:35:24 +0300
