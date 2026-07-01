@@ -322,6 +322,7 @@ int HttpDestination::parse(const string &name, cfg_t *cfg, const DefaultValues &
             break;
         }
         case AuthType_s3:
+        case AuthType_ruby_api:
         {
             access_key = cfg_getstr(cfg, PARAM_AUTH_ACCESS_KEY);
             secret_key = cfg_getstr(cfg, PARAM_AUTH_SECRET_KEY);
@@ -558,6 +559,10 @@ HttpDestination::AuthType HttpDestination::str2AuthType(const string &type)
 
     if (type == AUTH_TYPE_S3_VALUE) {
         return AuthType_s3;
+    }
+
+    if (type == AUTH_TYPE_RUBY_API_VALUE) {
+        return AuthType_ruby_api;
     }
 
     return AuthType_Unknown;

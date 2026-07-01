@@ -17,6 +17,7 @@
 #define PARAM_AUTH_TYPE           "type"
 #define AUTH_TYPE_FB_OA2_VALUE    "firebase_oauth2"
 #define AUTH_TYPE_S3_VALUE        "s3"
+#define AUTH_TYPE_RUBY_API_VALUE  "ruby_api_auth"
 #define PARAM_AUTH_PRIVATE_KEY    "private_key"
 #define PARAM_AUTH_JWT_KIT        "jwt_kid"
 #define PARAM_AUTH_JWT_ISS        "jwt_iss"

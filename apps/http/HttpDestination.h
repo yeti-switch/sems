@@ -87,6 +87,7 @@ struct HttpDestination {
         AuthType_Unknown,
         AuthType_Firebase_oauth2,
         AuthType_s3,
+        AuthType_ruby_api,
     } auth_type;
     string auth_type_str;
 
