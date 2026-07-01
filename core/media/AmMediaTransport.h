@@ -61,6 +61,8 @@ class AmMediaTransport : public AmMediaConnectionsHolder,
         args.family              = getLocalAddrFamily();
         AmMediaState *next_state = nullptr;
         if (!state) {
+            media_establish = false;
+            resetStreamMediaSetupTimer();
             next_state = new T(this);
             next_state = next_state->init(args);
         } else {
@@ -241,6 +243,8 @@ class AmMediaTransport : public AmMediaConnectionsHolder,
     }
 
   protected:
+    void resetStreamMediaSetupTimer();
+
     ssize_t recv(int sd);
     void    recvPacket(int fd) override;
 

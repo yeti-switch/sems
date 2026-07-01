@@ -503,10 +503,11 @@ class AmRtpStream : public AmObject
     void onRtpEndpointLearned();
     void onIceConnectivityFailed();
 
-    void onTransportEstablished();
-    void clearEstablished();
-    bool isIceAllowNoCandidates();
-    bool isSymmetricRtpEnable();
+    virtual void onTransportEstablished();
+    void         clearEstablished();
+    void         resetMediaSetupTimer();
+    bool         isIceAllowNoCandidates();
+    bool         isSymmetricRtpEnable();
 
     void allowStunConnection(AmMediaTransport * transport, sockaddr_storage * remote_addr, int priority);
     void allowStunPair(AmMediaTransport * transport, sockaddr_storage * remote_addr);

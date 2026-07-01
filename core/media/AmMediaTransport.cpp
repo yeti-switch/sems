@@ -133,6 +133,11 @@ void AmMediaTransport::clearEstablish()
     media_establish = false;
 }
 
+void AmMediaTransport::resetStreamMediaSetupTimer()
+{
+    stream->resetMediaSetupTimer();
+}
+
 void AmMediaTransport::onCloseDtlsSession()
 {
     vector<AmStreamConnection::ConnectionType> types{ AmStreamConnection::UDPTL_CONN, AmStreamConnection::RTP_CONN };

@@ -42,6 +42,7 @@ class RtspAudio : public AmRtpAudio {
 
     void onRtpTimeout() override;
     void onMaxRtpTimeReached() override;
+    void onTransportEstablished() override {}
 
   public:
     RtspAudio(AmSession *_s, const string &uri, int samplerate_hint = 0);
