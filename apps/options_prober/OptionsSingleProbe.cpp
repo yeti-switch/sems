@@ -2,6 +2,7 @@
 
 #include "AmArgValidator.h"
 #include "AmUriParser.h"
+#include "AmUtils.h"
 #include "AmSession.h"
 #include "sip/parse_via.h"
 #include "sip/parse_uri.h"
@@ -261,6 +262,9 @@ bool SipSingleProbe::initFromAmArg(const AmArg &a)
     }
     options_hdrs += preprocess_append_headers();
 
+    auto half_ms = std::chrono::duration_cast<std::chrono::milliseconds>(interval).count() / 2;
+    recheck_time = std::chrono::system_clock::now() + std::chrono::milliseconds(get_random() % (half_ms + 1));
+
     return true;
 }
 
@@ -330,11 +334,13 @@ void SipSingleProbe::getInfo(AmArg &a, const RequestShaper::timep &now)
     a["last_reply_delay_ms"] = last_reply_delay.count();
     a["last_error_reason"]   = last_error_reason;
 
+    a["recheck_timeout_ms"] = std::chrono::duration_cast<std::chrono::milliseconds>(recheck_time - now).count();
+
     if (postponed) {
-        a["postpone_timeout_msec"] =
+        a["postpone_timeout_ms"] =
             std::chrono::duration_cast<std::chrono::milliseconds>(postponed_next_attempt - now).count();
     } else {
-        a["postpone_timeout_msec"] = 0;
+        a["postpone_timeout_ms"] = 0;
     }
 }
 
