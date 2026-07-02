@@ -1,3 +1,8 @@
+sems (1.201.0) stable; urgency=low
+  * add target value to AmSipRedirect event
+  * options_prober: add random (0 to half of the checking interval) initial check time offset for probers
+ -- Michael Furmur <furmur@pm.me>  Thu, 02 Jul 2026 11:59:16 +0300
+
 sems (1.200.0) stable; urgency=low
   * fix duplicated MediaEstablished event on multiple stream inits
   * disable MediaEstablished event for RTSP
