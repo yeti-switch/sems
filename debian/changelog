@@ -1,3 +1,7 @@
+sems (1.201.1) stable; urgency=low
+  * http_client: add ruby api_auth support
+ -- Michael Furmur <furmur@pm.me>  Fri, 03 Jul 2026 12:06:52 +0300
+
 sems (1.201.0) stable; urgency=low
   * add target value to AmSipRedirect event
   * options_prober: add random (0 to half of the checking interval) initial check time offset for probers
