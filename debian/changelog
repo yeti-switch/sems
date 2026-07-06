@@ -1,3 +1,7 @@
+sems (1.201.2) stable; urgency=low
+  * http_client: use hmac-sha256 for ruby api auth
+ -- Michael Furmur <furmur@pm.me>  Fri, 03 Jul 2026 12:06:52 +0300
+
 sems (1.201.1) stable; urgency=low
   * http_client: add ruby api_auth support
  -- Michael Furmur <furmur@pm.me>  Fri, 03 Jul 2026 12:06:52 +0300
