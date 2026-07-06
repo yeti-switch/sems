@@ -125,7 +125,10 @@ class HttpClient : public AmThread,
     void on_sync_context_timer();
     void on_resend_timer_event();
     void update_resolve_list();
-    void authorization(HttpDestination &d, HttpEvent *u);
+    void authorization(HttpDestination &d, HttpEvent *u) const;
+    void authorization_firebase_oauth2(HttpDestination &d, HttpEvent *u, const HttpDestination &auth) const;
+    void authorization_s3(HttpDestination &d, HttpEvent *u, const HttpDestination &auth) const;
+    void authorization_ruby_api(HttpDestination &d, HttpEvent *u, const HttpDestination &auth) const;
 
     rpc_handler       showStats;
     async_rpc_handler postRequest;

@@ -875,12 +875,12 @@ void HttpClient::on_upload_request(HttpUploadEvent *u)
     }
 }
 
-void HttpClient::authorization(HttpDestination &d, HttpEvent *u)
+void HttpClient::authorization(HttpDestination &d, HttpEvent *u) const
 {
     if (d.auth_required.empty())
         return;
 
-    HttpAuthsMap::iterator it = auths.find(d.auth_required);
+    auto it = auths.find(d.auth_required);
 
     if (it == auths.end())
         return;
@@ -888,118 +888,120 @@ void HttpClient::authorization(HttpDestination &d, HttpEvent *u)
     auto auth = it->second;
 
     switch (auth->auth_type) {
-    case HttpDestination::AuthType::AuthType_Firebase_oauth2:
-        if (auth->access_token.empty())
-            return;
+    case HttpDestination::AuthType::AuthType_Firebase_oauth2: authorization_firebase_oauth2(d, u, *auth); break;
+    case HttpDestination::AuthType::AuthType_s3:              authorization_s3(d, u, *auth); break;
+    case HttpDestination::AuthType::AuthType_ruby_api:        authorization_ruby_api(d, u, *auth); break;
+    default:                                                  ;
+    }
+}
 
-        u->headers.emplace("Authorization", "Bearer " + auth->access_token);
-        break;
+void HttpClient::authorization_firebase_oauth2(HttpDestination &d, HttpEvent *u, const HttpDestination &auth) const
+{
+    if (auth.access_token.empty())
+        return;
 
-    case HttpDestination::AuthType::AuthType_s3:
-        if (auth->access_key.empty() || auth->secret_key.empty())
-            return;
+    u->headers.emplace("Authorization", "Bearer " + auth.access_token);
+}
 
-        if (auto upload_event = dynamic_cast<HttpUploadEvent *>(u)) {
-            if (upload_event->file_name.empty()) {
-                upload_event->file_name = filename_from_fullpath(upload_event->file_path);
-            }
+void HttpClient::authorization_s3(HttpDestination &d, HttpEvent *u, const HttpDestination &auth) const
+{
+    if (auth.access_key.empty() || auth.secret_key.empty())
+        return;
 
-            auto resource = get_url_resource(d.url[upload_event->failover_idx] + '/' + upload_event->file_name);
-            if (!resource)
-                return;
-
-            string date(get_rfc5322_date_str());
-
-            string sig_str;
-            sig_str.reserve(256);
-
-            sig_str += "PUT\n\n";
-            sig_str += d.content_type;
-            sig_str += '\n';
-            sig_str += date;
-            sig_str += '\n';
-            sig_str += *resource;
-
-            // if failover happens renew headers (e.g. 'resource' or 'date' can be changed)
-            upload_event->headers.erase("Authorization");
-            upload_event->headers.erase("Date");
-
-            upload_event->headers.emplace("Authorization", "AWS " + auth->access_key + ':' +
-                                                               compute_hmac_sha1(sig_str, auth->secret_key));
-            upload_event->headers.emplace("Date", date);
+    if (auto upload_event = dynamic_cast<HttpUploadEvent *>(u)) {
+        if (upload_event->file_name.empty()) {
+            upload_event->file_name = filename_from_fullpath(upload_event->file_path);
         }
 
-        break;
-
-    case HttpDestination::AuthType::AuthType_ruby_api:
-    {
-        if (auth->access_key.empty() || auth->secret_key.empty())
-            return;
-
-        string method;
-        string full_url;
-        string content_hash;
-
-        if (auto upload_event = dynamic_cast<HttpUploadEvent *>(u)) {
-            if (upload_event->file_name.empty())
-                upload_event->file_name = filename_from_fullpath(upload_event->file_path);
-            method   = "PUT";
-            full_url = d.url[upload_event->failover_idx] + '/' + upload_event->file_name;
-
-            auto hash = compute_file_sha256_base64(upload_event->file_path);
-            if (!hash)
-                return;
-            content_hash = std::move(*hash);
-        } else if (auto get_event = dynamic_cast<HttpGetEvent *>(u)) {
-            method   = "GET";
-            full_url = get_event->url;
-        } else if (auto post_event = dynamic_cast<HttpPostEvent *>(u)) {
-            method   = "POST";
-            full_url = d.url[u->failover_idx];
-
-            if (!post_event->data.empty())
-                content_hash = compute_sha256_base64(post_event->data);
-        } else {
-            // MultiPartForm requests: body is assembled by curl, content hash is not computed
-            method   = "POST";
-            full_url = d.url[u->failover_idx];
-        }
-
-        auto resource = get_url_resource(full_url);
+        auto resource = get_url_resource(d.url[upload_event->failover_idx] + '/' + upload_event->file_name);
         if (!resource)
             return;
 
-        string date(get_http_gmt_date_str());
+        string date(get_rfc5322_date_str());
 
-        // canonical string: method,content-type,content-sha256,request-path,date
         string sig_str;
         sig_str.reserve(256);
-        sig_str += method;
-        sig_str += ',';
+
+        sig_str += "PUT\n\n";
         sig_str += d.content_type;
-        sig_str += ',';
-        sig_str += content_hash;
-        sig_str += ',';
-        sig_str += *resource;
-        sig_str += ',';
+        sig_str += '\n';
         sig_str += date;
+        sig_str += '\n';
+        sig_str += *resource;
 
-        // if failover happens renew headers (e.g. 'resource', 'date' or content hash can be changed)
-        u->headers.erase("Authorization");
-        u->headers.erase("Date");
-        u->headers.erase("X-Authorization-Content-SHA256");
+        // if failover happens renew headers (e.g. 'resource' or 'date' can be changed)
+        upload_event->headers.erase("Authorization");
+        upload_event->headers.erase("Date");
 
-        u->headers.emplace("Authorization", "APIAuth-HMAC-SHA256 " + auth->access_key + ':' +
-                                                compute_hmac_sha256(sig_str, auth->secret_key));
-        u->headers.emplace("Date", date);
-        if (!content_hash.empty())
-            u->headers.emplace("X-Authorization-Content-SHA256", content_hash);
+        upload_event->headers.emplace("Authorization",
+                                      "AWS " + auth.access_key + ':' + compute_hmac_sha1(sig_str, auth.secret_key));
+        upload_event->headers.emplace("Date", date);
+    }
+}
 
-        break;
+void HttpClient::authorization_ruby_api(HttpDestination &d, HttpEvent *u, const HttpDestination &auth) const
+{
+    if (auth.access_key.empty() || auth.secret_key.empty())
+        return;
+
+    string method;
+    string full_url;
+    string content_hash;
+
+    if (auto upload_event = dynamic_cast<HttpUploadEvent *>(u)) {
+        if (upload_event->file_name.empty())
+            upload_event->file_name = filename_from_fullpath(upload_event->file_path);
+        method   = "PUT";
+        full_url = d.url[upload_event->failover_idx] + '/' + upload_event->file_name;
+
+        auto hash = compute_file_sha256_base64(upload_event->file_path);
+        if (!hash)
+            return;
+        content_hash = std::move(*hash);
+    } else if (auto get_event = dynamic_cast<HttpGetEvent *>(u)) {
+        method   = "GET";
+        full_url = get_event->url;
+    } else if (auto post_event = dynamic_cast<HttpPostEvent *>(u)) {
+        method   = "POST";
+        full_url = d.url[u->failover_idx];
+
+        if (!post_event->data.empty())
+            content_hash = compute_sha256_base64(post_event->data);
+    } else {
+        // MultiPartForm requests: body is assembled by curl, content hash is not computed
+        method   = "POST";
+        full_url = d.url[u->failover_idx];
     }
 
-    default:;
-    }
+    auto resource = get_url_resource(full_url);
+    if (!resource)
+        return;
+
+    string date(get_http_gmt_date_str());
+
+    // canonical string: method,content-type,content-sha256,request-path,date
+    string sig_str;
+    sig_str.reserve(256);
+    sig_str += method;
+    sig_str += ',';
+    sig_str += d.content_type;
+    sig_str += ',';
+    sig_str += content_hash;
+    sig_str += ',';
+    sig_str += *resource;
+    sig_str += ',';
+    sig_str += date;
+
+    // if failover happens renew headers (e.g. 'resource', 'date' or content hash can be changed)
+    u->headers.erase("Authorization");
+    u->headers.erase("Date");
+    u->headers.erase("X-Authorization-Content-SHA256");
+
+    u->headers.emplace("Authorization",
+                       "APIAuth-HMAC-SHA256 " + auth.access_key + ':' + compute_hmac_sha256(sig_str, auth.secret_key));
+    u->headers.emplace("Date", date);
+    if (!content_hash.empty())
+        u->headers.emplace("X-Authorization-Content-SHA256", content_hash);
 }
 
 void HttpClient::on_post_request(HttpPostEvent *u)
