@@ -34,6 +34,7 @@ static std::optional<string> get_url_resource(const string &url);
 static string                get_rfc5322_date_str();
 static string                get_http_gmt_date_str();
 static string                compute_hmac_sha1(const string &msg, const string &key);
+static string                compute_hmac_sha256(const string &msg, const string &key);
 static string                compute_sha256_base64(const string &msg);
 static std::optional<string> compute_file_sha256_base64(const string &file_path);
 
@@ -988,8 +989,8 @@ void HttpClient::authorization(HttpDestination &d, HttpEvent *u)
         u->headers.erase("Date");
         u->headers.erase("X-Authorization-Content-SHA256");
 
-        u->headers.emplace("Authorization",
-                           "APIAuth " + auth->access_key + ':' + compute_hmac_sha1(sig_str, auth->secret_key));
+        u->headers.emplace("Authorization", "APIAuth-HMAC-SHA256 " + auth->access_key + ':' +
+                                                compute_hmac_sha256(sig_str, auth->secret_key));
         u->headers.emplace("Date", date);
         if (!content_hash.empty())
             u->headers.emplace("X-Authorization-Content-SHA256", content_hash);
@@ -1421,6 +1422,15 @@ static string compute_hmac_sha1(const string &msg, const string &key)
 {
     Botan::secure_vector<uint8_t> sec_key(key.begin(), key.end());
     auto                          hmac = Botan::MessageAuthenticationCode::create_or_throw("HMAC(SHA-1)");
+    hmac->set_key(sec_key);
+    hmac->update(msg);
+    return Botan::base64_encode(hmac->final());
+}
+
+static string compute_hmac_sha256(const string &msg, const string &key)
+{
+    Botan::secure_vector<uint8_t> sec_key(key.begin(), key.end());
+    auto                          hmac = Botan::MessageAuthenticationCode::create_or_throw("HMAC(SHA-256)");
     hmac->set_key(sec_key);
     hmac->update(msg);
     return Botan::base64_encode(hmac->final());
