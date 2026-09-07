@@ -778,20 +778,21 @@ void CoreRpc::requestLogDump(const AmArg &args, AmArg &ret)
 void CoreRpc::requestConnTerminate(const AmArg &args, AmArg &)
 {
     args.assertArrayFmt("s");
-    string conn       = args[0].asCStr();
-    auto   addr_ifnum = explode(conn, "/");
-    if (addr_ifnum.size() != 2)
+    // ip:port/if_num/proto as shown by 'show connections'. proto is optional: all transports
+    string conn  = args[0].asCStr();
+    auto   parts = explode(conn, "/");
+    if (parts.size() != 2 && parts.size() != 3)
         throw AmSession::Exception(500, "incorrect connection format");
-    size_t pos = addr_ifnum[0].find_last_of(":");
+    size_t pos = parts[0].find_last_of(":");
     if (pos == string::npos)
         throw AmSession::Exception(500, "incorrect connection format");
-    string       portstr(addr_ifnum[0], pos + 1);
-    string       ip(addr_ifnum[0], 0, pos);
+    string       portstr(parts[0], pos + 1);
+    string       ip(parts[0], 0, pos);
     unsigned int port, if_num;
-    if (str2i(portstr, port) || str2i(addr_ifnum[1], if_num)) {
+    if (str2i(portstr, port) || str2i(parts[1], if_num)) {
         throw AmSession::Exception(500, "incorrect connection format");
     }
-    SipCtrlInterface::instance()->terminateConection(ip, port, if_num);
+    SipCtrlInterface::instance()->terminateConection(ip, port, if_num, parts.size() == 3 ? parts[2] : "");
 }
 
 class ReloadCertificateThread : public AmThread {

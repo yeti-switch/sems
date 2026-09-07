@@ -220,10 +220,10 @@ class trsp_worker : public AmThread {
     int send(trsp_server_socket *server_sock, const sockaddr_storage *sa, const string &host, const char *msg,
              const int msg_len, unsigned int flags);
 
-    int                add_connection(tcp_base_trsp *client_sock);
-    void               remove_connection(tcp_base_trsp *client_sock);
-    bool               remove_connection(const string &ip, unsigned short port, unsigned short if_num);
-    void               getInfo(AmArg &ret);
+    int  add_connection(tcp_base_trsp *client_sock);
+    void remove_connection(tcp_base_trsp *client_sock);
+    bool remove_connection(const string &ip, unsigned short port, unsigned short if_num, const string &proto);
+    void getInfo(AmArg &ret);
     unsigned long long getTcpQueueSize();
     unsigned long long getTlsQueueSize();
     unsigned long long getWsQueueSize();

@@ -12,20 +12,29 @@
 #include "AmUtils.h"
 #include "format_helper.h"
 
-inline string get_connection_id(const string &dst_ip, unsigned short dst_port, unsigned short if_num)
+// transport is part of the key: tcp and tls peers may share the same ip:port
+inline string get_connection_id(const string &dst_ip, unsigned short dst_port, unsigned short if_num, const char *proto)
 {
-    return format("{}:{}/{}", dst_ip, dst_port, if_num);
+    return format("{}:{}/{}/{}", dst_ip, dst_port, if_num, proto);
+}
+
+inline string get_connection_id(const string &dst_ip, unsigned short dst_port, unsigned short if_num,
+                                trsp_socket::socket_transport transport)
+{
+    return ::get_connection_id(dst_ip, dst_port, if_num, trsp_socket::socket_transport2proto_str(transport));
 }
 
 inline string get_connection_id(tcp_base_trsp *client_sock)
 {
-    return ::get_connection_id(client_sock->get_peer_ip(), client_sock->get_peer_port(), client_sock->get_if());
+    return ::get_connection_id(client_sock->get_peer_ip(), client_sock->get_peer_port(), client_sock->get_if(),
+                               client_sock->get_transport_id());
 }
 
 inline string get_connection_id(const sockaddr_storage *sa, trsp_server_socket *server_sock)
 {
     char host_buf[NI_MAXHOST] = "";
-    return ::get_connection_id(am_inet_ntop(sa, host_buf, NI_MAXHOST), am_get_port(sa), server_sock->get_if());
+    return ::get_connection_id(am_inet_ntop(sa, host_buf, NI_MAXHOST), am_get_port(sa), server_sock->get_if(),
+                               server_sock->get_transport_id());
 }
 
 trsp_base_input::trsp_base_input()
@@ -719,23 +728,31 @@ void trsp_worker::remove_connection(tcp_base_trsp *client_sock)
     }
 }
 
-bool trsp_worker::remove_connection(const string &ip, unsigned short port, unsigned short if_num)
+bool trsp_worker::remove_connection(const string &ip, unsigned short port, unsigned short if_num, const string &proto)
 {
-    string conn_id = get_connection_id(ip, port, if_num);
-    connections_mut.lock();
-    auto sock_it = connections.find(conn_id);
-    if (sock_it != connections.end()) {
+    // empty proto: match every transport (legacy 'ip:port/if_num' format)
+    static const char *protos[] = { "tcp", "tls", "ws", "wss" };
+
+    bool   removed = false;
+    AmLock l(connections_mut);
+    for (auto p : protos) {
+        if (!proto.empty() && proto != p)
+            continue;
+
+        string conn_id = get_connection_id(ip, port, if_num, p);
+        auto   sock_it = connections.find(conn_id);
+        if (sock_it == connections.end())
+            continue;
+
         if (sock_it->second->server_sock->statistics)
             sock_it->second->server_sock->statistics->changeCountConnection(true, sock_it->second);
 
         dec_ref(sock_it->second);
         DBG3("TCP connection from %s removed", conn_id.c_str());
         connections.erase(sock_it);
-        connections_mut.unlock();
-        return true;
+        removed = true;
     }
-    connections_mut.unlock();
-    return false;
+    return removed;
 }
 
 int trsp_worker::send(trsp_server_socket *server_sock, const sockaddr_storage *sa, const string &host, const char *msg,
