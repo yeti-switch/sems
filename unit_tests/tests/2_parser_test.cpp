@@ -846,6 +846,30 @@ TEST(Parser, SeparatorTest)
     ASSERT_EQ(parse_via(&sipvia, via_, via.size()), MALFORMED_SIP_MSG);
 }
 
+// rfc5923 Via alias parameter
+TEST(Parser, ViaAliasTest)
+{
+    {
+        sip_via     sipvia;
+        string      via  = "SIP/2.0/TLS p1.example.com;branch=z9hG4bKa7c8dze;alias";
+        const char *via_ = via.c_str();
+        ASSERT_EQ(parse_via(&sipvia, via_, via.size()), EXIT_SUCCESS);
+        ASSERT_EQ(sipvia.parms.size(), 1);
+        ASSERT_TRUE(sipvia.parms.front()->has_alias);
+        ASSERT_FALSE(sipvia.parms.front()->has_rport);
+    }
+    {
+        sip_via     sipvia;
+        string      via  = "SIP/2.0/TCP 192.0.2.1:5060;ALIAS;rport;branch=z9hG4bKa7c8dze";
+        const char *via_ = via.c_str();
+        ASSERT_EQ(parse_via(&sipvia, via_, via.size()), EXIT_SUCCESS);
+        ASSERT_EQ(sipvia.parms.size(), 1);
+        ASSERT_TRUE(sipvia.parms.front()->has_alias);
+        ASSERT_TRUE(sipvia.parms.front()->has_rport);
+        ASSERT_EQ(sipvia.parms.front()->port_i, 5060);
+    }
+}
+
 // rfc4475 3.1.2.6
 TEST(Parser, UnterminatedQuotedTest)
 {

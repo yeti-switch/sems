@@ -56,7 +56,8 @@ class trsp_socket : public atomic_ref_cnt {
         force_outbound_if       = (1 << 1),
         use_raw_sockets         = (1 << 2),
         no_transport_in_contact = (1 << 3),
-        static_client_port      = (1 << 4)
+        static_client_port      = (1 << 4),
+        via_alias               = (1 << 5)
     };
 
     // 3 low bits of socket_transport
@@ -86,6 +87,8 @@ class trsp_socket : public atomic_ref_cnt {
         wss_ipv6   = tr_proto_wss | static_cast<int>(tr_addr_family_ipv6)
     };
     static const char *socket_transport2proto_str(const socket_transport transport);
+    /** SIP default port for the transport: 5061 for tls, 5060 otherwise */
+    static unsigned short default_port(const socket_transport transport);
 
     static int log_level_raw_msgs;
 
@@ -257,6 +260,12 @@ class trsp_socket : public atomic_ref_cnt {
     virtual void getInfo(AmArg &) {}
 
     virtual void inc_sip_parse_error() {};
+
+    /**
+     * RFC 5923: request with Via ';alias' was received over this socket.
+     * via_port is Via sent-by port, 0 if absent. no-op for connectionless transports
+     */
+    virtual void add_via_alias(unsigned short) {}
 };
 
 class trsp_acl {

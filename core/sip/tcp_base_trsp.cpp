@@ -13,7 +13,7 @@
 #include "format_helper.h"
 
 // transport is part of the key: tcp and tls peers may share the same ip:port
-inline string get_connection_id(const string &dst_ip, unsigned short dst_port, unsigned short if_num, const char *proto)
+string get_connection_id(const string &dst_ip, unsigned short dst_port, unsigned short if_num, const char *proto)
 {
     return format("{}:{}/{}/{}", dst_ip, dst_port, if_num, proto);
 }
@@ -222,6 +222,7 @@ void tcp_base_trsp::close()
     atomic_ref_guard _ref_guard(this);
 
     server_worker->remove_connection(this);
+    server_sock->remove_aliases(get_connection_id(this));
 
     closed = true;
     DBG3("********* closing connection ***********");
@@ -643,6 +644,22 @@ tcp_base_trsp::msg_buf::~msg_buf()
     delete[] msg;
 }
 
+void tcp_base_trsp::add_via_alias(unsigned short via_port)
+{
+    if (!server_sock->is_opt_set(trsp_socket::via_alias))
+        return;
+
+    // must match the resolver defaults: alias is looked up by the resolved address
+    if (!via_port)
+        via_port = default_port(transport);
+
+    sockaddr_storage alias_sa;
+    memcpy(&alias_sa, &peer_addr, sizeof(sockaddr_storage));
+    am_set_port(&alias_sa, via_port);
+
+    server_sock->add_alias(&alias_sa, this);
+}
+
 void tcp_base_trsp::copy_peer_addr(sockaddr_storage *sa)
 {
     memcpy(sa, &peer_addr, sizeof(sockaddr_storage));
@@ -728,35 +745,31 @@ void trsp_worker::remove_connection(tcp_base_trsp *client_sock)
     }
 }
 
-bool trsp_worker::remove_connection(const string &ip, unsigned short port, unsigned short if_num, const string &proto)
+bool trsp_worker::remove_connection(const string &conn_id)
 {
-    // empty proto: match every transport (legacy 'ip:port/if_num' format)
-    static const char *protos[] = { "tcp", "tls", "ws", "wss" };
-
-    bool   removed = false;
-    AmLock l(connections_mut);
-    for (auto p : protos) {
-        if (!proto.empty() && proto != p)
-            continue;
-
-        string conn_id = get_connection_id(ip, port, if_num, p);
+    trsp_server_socket *server_sock = nullptr;
+    {
+        AmLock l(connections_mut);
         auto   sock_it = connections.find(conn_id);
         if (sock_it == connections.end())
-            continue;
+            return false;
 
-        if (sock_it->second->server_sock->statistics)
-            sock_it->second->server_sock->statistics->changeCountConnection(true, sock_it->second);
+        server_sock = sock_it->second->server_sock;
+        if (server_sock->statistics)
+            server_sock->statistics->changeCountConnection(true, sock_it->second);
 
         dec_ref(sock_it->second);
         DBG3("TCP connection from %s removed", conn_id.c_str());
         connections.erase(sock_it);
-        removed = true;
     }
-    return removed;
+
+    // outside of connections_mut
+    server_sock->remove_aliases(conn_id);
+    return true;
 }
 
 int trsp_worker::send(trsp_server_socket *server_sock, const sockaddr_storage *sa, const string &host, const char *msg,
-                      const int msg_len, unsigned int flags)
+                      const int msg_len, unsigned int flags, bool create_connection)
 {
     tcp_base_trsp *sock    = NULL;
     string         conn_id = get_connection_id(sa, server_sock);
@@ -776,8 +789,7 @@ int trsp_worker::send(trsp_server_socket *server_sock, const sockaddr_storage *s
                  peer_ssl->ssl_marker);
     }
 
-    if (!sock) {
-        // TODO: add flags to avoid new connections (ex: UAs behind NAT)
+    if (!sock && create_connection) {
         tcp_base_trsp *new_sock = new_connection(server_sock, sa, host);
         if (new_sock) {
             sock = new_sock;
@@ -1091,10 +1103,78 @@ void trsp_server_socket::on_accept(int sd, [[maybe_unused]] short ev)
 int trsp_server_socket::send(const sockaddr_storage *sa, const string &host, const char *msg, const int msg_len,
                              unsigned int flags)
 {
-    uint32_t     h   = hash_addr(sa);
-    unsigned int idx = h % workers.size();
+    if (!(flags & TR_FLAG_SKIP_ALIASES)) {
+        sockaddr_storage aliased_sa;
+        memcpy(&aliased_sa, sa, sizeof(sockaddr_storage));
+        if (resolve_alias(&aliased_sa)) {
+            unsigned int idx = hash_addr(&aliased_sa) % workers.size();
+            DBG("trsp_server_socket::send: aliased %s:%u -> port %u, idx = %u", get_addr_str(sa).c_str(),
+                am_get_port(sa), am_get_port(&aliased_sa), idx);
+            if (workers[idx]->send(this, &aliased_sa, host, msg, msg_len, flags, false) == 0)
+                return 0;
+            DBG("aliased connection is gone. fallback to %s:%u", get_addr_str(sa).c_str(), am_get_port(sa));
+        }
+    }
+
+    unsigned int idx = hash_addr(sa) % workers.size();
     DBG("trsp_server_socket::send: idx = %u", idx);
-    return workers[idx]->send(this, sa, host, msg, msg_len, flags);
+    return workers[idx]->send(this, sa, host, msg, msg_len, flags, true);
+}
+
+void trsp_server_socket::add_alias(const sockaddr_storage *alias_sa, tcp_base_trsp *sock)
+{
+    string alias_id = get_connection_id(alias_sa, this);
+    string conn_id  = get_connection_id(sock);
+
+    // peer already connects from its advertised port. nothing to alias
+    if (alias_id == conn_id)
+        return;
+
+    DBG("add alias %s for connection %s", alias_id.c_str(), conn_id.c_str());
+
+    AmLock l(aliases_mut);
+    aliases[alias_id] = { conn_id, sock->get_peer_port() };
+}
+
+bool trsp_server_socket::resolve_alias(sockaddr_storage *sa)
+{
+    AmLock l(aliases_mut);
+    if (aliases.empty())
+        return false;
+
+    auto it = aliases.find(get_connection_id(sa, this));
+    if (it == aliases.end())
+        return false;
+
+    am_set_port(sa, it->second.peer_port);
+    return true;
+}
+
+void trsp_server_socket::remove_aliases(const string &conn_id)
+{
+    AmLock l(aliases_mut);
+    for (auto it = aliases.begin(); it != aliases.end();) {
+        if (it->second.conn_id == conn_id) {
+            DBG("remove alias %s of connection %s", it->first.c_str(), conn_id.c_str());
+            it = aliases.erase(it);
+        } else {
+            ++it;
+        }
+    }
+}
+
+bool trsp_server_socket::remove_alias(const string &alias_id)
+{
+    AmLock l(aliases_mut);
+    return aliases.erase(alias_id) > 0;
+}
+
+void trsp_server_socket::getAliasesInfo(AmArg &ret)
+{
+    ret.assertStruct();
+    AmLock l(aliases_mut);
+    for (auto const &[alias_id, entry] : aliases)
+        ret[alias_id] = entry.conn_id;
 }
 
 void trsp_server_socket::set_connect_timeout(unsigned int ms)

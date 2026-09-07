@@ -1490,10 +1490,8 @@ int _resolver::set_destination_ip(const cstring &next_scheme, const cstring &nex
 
     if (!am_get_port(remote_ip)) {
         if (!next_port) {
-            if (!lower_cmp_n(next_trsp, "tls"))
-                next_port = 5061;
-            else
-                next_port = 5060;
+            next_port = trsp_socket::default_port(!lower_cmp_n(next_trsp, "tls") ? trsp_socket::tls_ipv4
+                                                                                 : trsp_socket::tcp_ipv4);
         }
         am_set_port(remote_ip, next_port);
     }

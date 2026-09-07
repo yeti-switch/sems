@@ -24,6 +24,9 @@ using std::string;
 class trsp_server_socket;
 class trsp_worker;
 class tcp_base_trsp;
+
+/** connections/aliases table key: 'ip:port/if_num/proto' */
+string get_connection_id(const string &dst_ip, unsigned short dst_port, unsigned short if_num, const char *proto);
 struct sip_msg;
 
 struct trsp_input {
@@ -101,7 +104,7 @@ class tcp_base_trsp : public trsp_socket {
 
 
     /** fake implementation: we will never bind a connection socket */
-    int bind(const string &address, unsigned short port) { return 0; }
+    int bind(const string &address, unsigned short port) override { return 0; }
 
     /**
      * Closes the connection/socket
@@ -162,7 +165,7 @@ class tcp_base_trsp : public trsp_socket {
     virtual ~tcp_base_trsp();
 
   public:
-    bool         is_reliable() const { return true; }
+    bool         is_reliable() const override { return true; }
     virtual void copy_peer_addr(sockaddr_storage *sa);
 
     const string &get_peer_ip() { return peer_ip; }
@@ -173,7 +176,9 @@ class tcp_base_trsp : public trsp_socket {
 
     virtual void set_connected(bool val);
 
-    void               getInfo(AmArg &ret);
+    void add_via_alias(unsigned short via_port) override;
+
+    void               getInfo(AmArg &ret) override;
     unsigned long long getQueueSize();
 };
 
@@ -218,12 +223,12 @@ class trsp_worker : public AmThread {
     virtual ~trsp_worker();
 
     int send(trsp_server_socket *server_sock, const sockaddr_storage *sa, const string &host, const char *msg,
-             const int msg_len, unsigned int flags);
+             const int msg_len, unsigned int flags, bool create_connection);
 
-    int  add_connection(tcp_base_trsp *client_sock);
-    void remove_connection(tcp_base_trsp *client_sock);
-    bool remove_connection(const string &ip, unsigned short port, unsigned short if_num, const string &proto);
-    void getInfo(AmArg &ret);
+    int                add_connection(tcp_base_trsp *client_sock);
+    void               remove_connection(tcp_base_trsp *client_sock);
+    bool               remove_connection(const string &conn_id);
+    void               getInfo(AmArg &ret);
     unsigned long long getTcpQueueSize();
     unsigned long long getTlsQueueSize();
     unsigned long long getWsQueueSize();
@@ -278,6 +283,17 @@ class trsp_server_socket : public trsp_socket {
      */
     struct timeval idle_timeout;
 
+    /**
+     * RFC 5923 aliases: 'ip:via_port/if/proto' -> aliased connection.
+     * alias ip is always the connection peer ip, so only the peer port is kept
+     */
+    struct alias_entry {
+        string         conn_id;
+        unsigned short peer_port;
+    };
+    AmMutex                  aliases_mut;
+    map<string, alias_entry> aliases;
+
     /* callback on new connection */
     void on_accept(int sd, short ev);
 
@@ -321,6 +337,15 @@ class trsp_server_socket : public trsp_socket {
     void                           inc_sip_parse_error() override { statistics->sipParseErrors.inc(); }
     trsp_statistics::trsp_st_base *get_statistics() { return statistics; }
     void                           getAcceptQueueSize(StatCounterInterface::iterate_func_type f);
+
+    void add_alias(const sockaddr_storage *alias_sa, tcp_base_trsp *sock);
+    /** replaces port in sa with the aliased connection peer port. false if no alias */
+    bool resolve_alias(sockaddr_storage *sa);
+    /** drop all aliases of the connection */
+    void remove_aliases(const string &conn_id);
+    /** drop single alias by its id. false if not found */
+    bool remove_alias(const string &alias_id);
+    void getAliasesInfo(AmArg &ret);
 };
 
 class trsp : public AmThread {

@@ -72,14 +72,14 @@ inline void contact_wr(char **c, const cstring &contact)
     *((*c)++) = LF;
 }
 
-inline int via_len(const cstring &trsp, const cstring &addr, const cstring &branch, bool rport)
+inline int via_len(const cstring &trsp, const cstring &addr, const cstring &branch, bool rport, bool alias)
 {
     return 16                                           /* 'Via: SIP/2.0/' + SP + CRLF */
            + trsp.len + addr.len + 8 + MAGIC_BRANCH_LEN /*';branch=' + MAGIC_BRANCH_COOKIE*/
-           + branch.len + (rport ? 6 /*;rport*/ : 0);
+           + branch.len + (rport ? 6 /*;rport*/ : 0) + (alias ? 6 /*;alias*/ : 0);
 }
 
-inline void via_wr(char **c, const cstring &trsp, const cstring &addr, const cstring &branch, bool rport)
+inline void via_wr(char **c, const cstring &trsp, const cstring &addr, const cstring &branch, bool rport, bool alias)
 {
     memcpy(*c, "Via: SIP/2.0/", 13);
     *c += 13 /*'Via: SIP/2.0/'*/;
@@ -102,6 +102,11 @@ inline void via_wr(char **c, const cstring &trsp, const cstring &addr, const cst
 
     if (rport) {
         memcpy(*c, ";rport", 6);
+        *c += 6;
+    }
+
+    if (alias) {
+        memcpy(*c, ";alias", 6);
         *c += 6;
     }
 

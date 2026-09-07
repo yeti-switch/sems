@@ -75,6 +75,10 @@ class msg_logger;
 #define TR_FLAG_DISABLE_BL 2
 // allow 301/302 redirrect
 #define TR_FLAG_ALLOW_REDIRECT 4
+// add ';alias' to our Via (RFC 5923), reliable transports only. dialog-level, not from config
+#define TR_FLAG_VIA_ALIAS 8
+// don't use aliased connections for this request
+#define TR_FLAG_SKIP_ALIASES 16
 
 /* Each counter has a method for incrementing to allow changing implementation
  * of the stats class later without touching the code using it. (One possible

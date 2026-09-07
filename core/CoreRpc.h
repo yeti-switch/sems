@@ -58,6 +58,7 @@ class CoreRpc final : public RpcTreeHandler, public AmDynInvokeFactory {
     rpc_handler showStatus;
     rpc_handler showShutdownStatus;
     rpc_handler showConnections;
+    rpc_handler showConnectionAliases;
     rpc_handler showTrBlacklist;
     rpc_handler showTrCount;
     rpc_handler showTrList;

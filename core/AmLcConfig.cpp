@@ -78,6 +78,7 @@
 #define PARAM_ANNOUNCE_PORT_NAME           "announce-port"
 #define PARAM_CONNECT_TIMEOUT_NAME         "connect-timeout"
 #define PARAM_IDLE_TIMEOUT_NAME            "idle-timeout"
+#define PARAM_CONNECTION_REUSE_NAME        "connection-reuse"
 #define PARAM_CORS_MODE_NAME               "cors_mode"
 #define PARAM_WHITELIST_NAME               "whitelist"
 #define PARAM_METHOD_NAME                  "method"
@@ -320,6 +321,7 @@ static cfg_opt_t sip_tcp[] = { CFG_STR(PARAM_ADDRESS_NAME, "", CFGF_NODEFAULT),
                                CFG_INT(PARAM_DSCP_NAME, 0, CFGF_NONE),
                                CFG_INT(PARAM_CONNECT_TIMEOUT_NAME, 0, CFGT_NONE),
                                CFG_INT(PARAM_IDLE_TIMEOUT_NAME, 0, CFGT_NONE),
+                               CFG_BOOL(PARAM_CONNECTION_REUSE_NAME, cfg_false, CFGF_NONE),
                                CFG_SEC(SECTION_OPT_NAME, acl, CFGF_NODEFAULT),
                                CFG_SEC(SECTION_ORIGACL_NAME, acl, CFGF_NODEFAULT),
                                CFG_SEC(SECTION_REG_ACL_NAME, acl, CFGF_NODEFAULT),
@@ -372,6 +374,7 @@ static cfg_opt_t sip_tls[] = { CFG_STR(PARAM_ADDRESS_NAME, "", CFGF_NODEFAULT),
                                CFG_INT(PARAM_DSCP_NAME, 0, CFGF_NONE),
                                CFG_INT(PARAM_CONNECT_TIMEOUT_NAME, 0, CFGT_NONE),
                                CFG_INT(PARAM_IDLE_TIMEOUT_NAME, 0, CFGT_NONE),
+                               CFG_BOOL(PARAM_CONNECTION_REUSE_NAME, cfg_false, CFGF_NONE),
                                CFG_SEC(SECTION_OPT_NAME, acl, CFGF_NODEFAULT),
                                CFG_SEC(SECTION_ORIGACL_NAME, acl, CFGF_NODEFAULT),
                                CFG_SEC(SECTION_REG_ACL_NAME, acl, CFGF_NODEFAULT),
@@ -394,6 +397,7 @@ static cfg_opt_t sip_wss[] = { CFG_STR(PARAM_ADDRESS_NAME, "", CFGF_NODEFAULT),
                                CFG_INT(PARAM_DSCP_NAME, 0, CFGF_NONE),
                                CFG_INT(PARAM_CONNECT_TIMEOUT_NAME, 0, CFGT_NONE),
                                CFG_INT(PARAM_IDLE_TIMEOUT_NAME, 0, CFGT_NONE),
+                               CFG_BOOL(PARAM_CONNECTION_REUSE_NAME, cfg_false, CFGF_NONE),
                                CFG_SEC(SECTION_OPT_NAME, acl, CFGF_NODEFAULT),
                                CFG_SEC(SECTION_ORIGACL_NAME, acl, CFGF_NODEFAULT),
                                CFG_SEC(SECTION_REG_ACL_NAME, acl, CFGF_NODEFAULT),
@@ -417,6 +421,7 @@ static cfg_opt_t sip_ws[] = { CFG_STR(PARAM_ADDRESS_NAME, "", CFGF_NODEFAULT),
                               CFG_INT(PARAM_DSCP_NAME, 0, CFGF_NONE),
                               CFG_INT(PARAM_CONNECT_TIMEOUT_NAME, 0, CFGT_NONE),
                               CFG_INT(PARAM_IDLE_TIMEOUT_NAME, 0, CFGT_NONE),
+                              CFG_BOOL(PARAM_CONNECTION_REUSE_NAME, cfg_false, CFGF_NONE),
                               CFG_SEC(SECTION_OPT_NAME, acl, CFGF_NODEFAULT),
                               CFG_SEC(SECTION_ORIGACL_NAME, acl, CFGF_NODEFAULT),
                               CFG_SEC(SECTION_REG_ACL_NAME, acl, CFGF_NODEFAULT),
@@ -1888,6 +1893,7 @@ IP_info *AmLcConfig::readInterface(cfg_t *cfg, const std::string &if_name, Addre
     if (stinfo) {
         stinfo->tcp_connect_timeout = cuint(cfg_getint(cfg, PARAM_CONNECT_TIMEOUT_NAME));
         stinfo->tcp_idle_timeout    = cuint(cfg_getint(cfg, PARAM_IDLE_TIMEOUT_NAME));
+        info->sig_sock_opts |= cfg_getbool(cfg, PARAM_CONNECTION_REUSE_NAME) ? trsp_socket::via_alias : 0;
     }
 
     // TLS specific opts

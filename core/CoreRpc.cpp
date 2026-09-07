@@ -139,6 +139,8 @@ void CoreRpc::init_rpc_tree()
     auto &show_shutdown = reg_leaf(show, "shutdown");
     reg_method(show_shutdown, "status", "", "", &CoreRpc::showShutdownStatus, this);
     reg_method(show, "connections", "", "", &CoreRpc::showConnections, this);
+    reg_method(show, "connection-aliases", "RFC 5923 aliases: alias id -> connection id", "",
+               &CoreRpc::showConnectionAliases, this);
     reg_method(show, "version", "show version", "", &CoreRpc::showVersion, this);
     reg_method(show, "config", "show config", "", &CoreRpc::showConfig, this);
     reg_method(show, "interfaces", "active media streams info", "", &CoreRpc::showInterfaces, this);
@@ -503,6 +505,11 @@ void CoreRpc::showConnections(const AmArg &, AmArg &ret)
     SipCtrlInterface::instance()->getInfo(ret);
 }
 
+void CoreRpc::showConnectionAliases(const AmArg &, AmArg &ret)
+{
+    SipCtrlInterface::instance()->getAliasesInfo(ret);
+}
+
 void CoreRpc::showTrBlacklist(const AmArg &, AmArg &ret)
 {
     AmArg &l = ret["entries"];
@@ -778,7 +785,8 @@ void CoreRpc::requestLogDump(const AmArg &args, AmArg &ret)
 void CoreRpc::requestConnTerminate(const AmArg &args, AmArg &)
 {
     args.assertArrayFmt("s");
-    // ip:port/if_num/proto as shown by 'show connections'. proto is optional: all transports
+    // ip:port/if_num/proto as shown by 'show connections' or 'show connection-aliases'.
+    // proto is optional: all transports. alias id drops the alias only
     string conn  = args[0].asCStr();
     auto   parts = explode(conn, "/");
     if (parts.size() != 2 && parts.size() != 3)

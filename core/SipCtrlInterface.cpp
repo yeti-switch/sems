@@ -1364,13 +1364,42 @@ void prepare_routes_uas(const list<sip_header *> &routes, string &route_field)
     }
 }
 
+
+template <class F> static bool for_each_socket(trsp_server_socket **sockets, unsigned short n, F f)
+{
+    for (unsigned short i = 0; i < n; i++)
+        if (f(sockets[i]))
+            return true;
+    return false;
+}
+
 void _SipCtrlInterface::terminateConection(const std::string &ip, unsigned short port, unsigned short if_num,
                                            const std::string &proto)
 {
-    for (unsigned int i = 0; i < nr_trsp_workers; i++) {
-        trsp_worker &trsp_worker = *trsp_workers[i];
-        if (trsp_worker.remove_connection(ip, port, if_num, proto))
-            break;
+    // empty proto: legacy 'ip:port/if_num' format, every transport
+    static const char *protos[] = { "tcp", "tls", "ws", "wss" };
+
+    for (auto p : protos) {
+        if (!proto.empty() && proto != p)
+            continue;
+
+        string conn_id = get_connection_id(ip, port, if_num, p);
+
+        // alias id: drop the alias only, connection stays
+        auto drop_alias = [&](trsp_server_socket *s) { return s->remove_alias(conn_id); };
+        if (!proto.empty() &&
+            (for_each_socket(reinterpret_cast<trsp_server_socket **>(tcp_sockets), nr_tcp_sockets, drop_alias) ||
+             for_each_socket(reinterpret_cast<trsp_server_socket **>(tls_sockets), nr_tls_sockets, drop_alias) ||
+             for_each_socket(reinterpret_cast<trsp_server_socket **>(ws_sockets), nr_ws_sockets, drop_alias) ||
+             for_each_socket(reinterpret_cast<trsp_server_socket **>(wss_sockets), nr_wss_sockets, drop_alias)))
+        {
+            return;
+        }
+
+        for (unsigned int i = 0; i < nr_trsp_workers; i++) {
+            if (trsp_workers[i]->remove_connection(conn_id))
+                break;
+        }
     }
 }
 
@@ -1382,6 +1411,19 @@ void _SipCtrlInterface::getInfo(AmArg &ret)
         trsp_worker &trsp_worker = *trsp_workers[i];
         trsp_worker.getInfo(ret);
     }
+}
+
+void _SipCtrlInterface::getAliasesInfo(AmArg &ret)
+{
+    ret.assertStruct();
+    auto f = [&](trsp_server_socket *s) -> bool {
+        s->getAliasesInfo(ret[AmConfig.sip_ifs[s->get_if()].name]);
+        return false;
+    };
+    for_each_socket(reinterpret_cast<trsp_server_socket **>(tcp_sockets), nr_tcp_sockets, f);
+    for_each_socket(reinterpret_cast<trsp_server_socket **>(tls_sockets), nr_tls_sockets, f);
+    for_each_socket(reinterpret_cast<trsp_server_socket **>(ws_sockets), nr_ws_sockets, f);
+    for_each_socket(reinterpret_cast<trsp_server_socket **>(wss_sockets), nr_wss_sockets, f);
 }
 
 unsigned long long _SipCtrlInterface::getTcpQueueSize()

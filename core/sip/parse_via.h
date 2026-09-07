@@ -64,6 +64,8 @@ struct sip_via_parm {
     cstring      rport;
     unsigned int rport_i;
 
+    bool has_alias; // RFC 5923
+
     sip_via_parm();
     sip_via_parm(const sip_via_parm &p);
     ~sip_via_parm();

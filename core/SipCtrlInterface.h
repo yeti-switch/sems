@@ -165,6 +165,8 @@ class _SipCtrlInterface : public sip_ua {
 
     void terminateConection(const string &ip, unsigned short port, unsigned short if_num, const string &proto);
     void getInfo(AmArg &ret);
+    void getAliasesInfo(AmArg &ret);
+
     unsigned long long getTcpQueueSize();
     unsigned long long getTlsQueueSize();
     unsigned long long getWsQueueSize();

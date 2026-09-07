@@ -52,6 +52,7 @@ sip_via_parm::sip_via_parm()
     , has_rport(false)
     , rport()
     , rport_i()
+    , has_alias(false)
 {
 }
 
@@ -67,6 +68,7 @@ sip_via_parm::sip_via_parm(const sip_via_parm &p)
     , has_rport(p.has_rport)
     , rport(p.rport)
     , rport_i(p.rport_i)
+    , has_alias(p.has_alias)
 {
 }
 
@@ -395,6 +397,12 @@ inline int parse_via_params(sip_via_parm *parm, const char **c, int len)
         VP_RPORT3,
         VP_RPORT,
 
+        VP_ALIAS1,
+        VP_ALIAS2,
+        VP_ALIAS3,
+        VP_ALIAS4,
+        VP_ALIAS,
+
         VP_OTHER
     };
 
@@ -415,6 +423,9 @@ inline int parse_via_params(sip_via_parm *parm, const char **c, int len)
 
             case VP_BEG:
                 switch (*c) {
+                case 'a':
+                case 'A': st = VP_ALIAS1; break;
+
                 case 'b':
                 case 'B': st = VP_BRANCH1; break;
 
@@ -466,7 +477,19 @@ inline int parse_via_params(sip_via_parm *parm, const char **c, int len)
                 case_VIA_PARAM(VP_RPORT2, 'r', 'R', VP_RPORT3);
                 case_VIA_PARAM(VP_RPORT3, 't', 'T', VP_RPORT);
 
-            case VP_OTHER: goto next_param;
+                // "a"
+                case_VIA_PARAM(VP_ALIAS1, 'l', 'L', VP_ALIAS2);
+                case_VIA_PARAM(VP_ALIAS2, 'i', 'I', VP_ALIAS3);
+                case_VIA_PARAM(VP_ALIAS3, 'a', 'A', VP_ALIAS4);
+                case_VIA_PARAM(VP_ALIAS4, 's', 'S', VP_ALIAS);
+
+            // trailing chars after a known name: it's another param
+            case VP_BRANCH:
+            case VP_RECVD:
+            case VP_RPORT:
+            case VP_ALIAS:  st = VP_OTHER; break;
+
+            case VP_OTHER:  goto next_param;
             }
         }
 
@@ -487,13 +510,14 @@ inline int parse_via_params(sip_via_parm *parm, const char **c, int len)
                 parm->rport.s = (*it)->name.s + (*it)->name.len;
             }
             break;
+        case VP_ALIAS: parm->has_alias = true; break;
         }
 
     next_param:
         continue; // makes compiler happy
     }
 
-    DBG3("has_rport: %i", parm->has_rport);
+    DBG3("has_rport: %i, has_alias: %i", parm->has_rport, parm->has_alias);
 
     return ret;
 }

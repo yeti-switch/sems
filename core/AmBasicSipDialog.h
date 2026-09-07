@@ -116,6 +116,10 @@ class AmBasicSipDialog : public AmObject {
     bool   patch_ruri_next_hop;
     bool   next_hop_fixed;
 
+    // RFC 5923 connection reuse. see TR_FLAG_VIA_ALIAS / TR_FLAG_SKIP_ALIASES
+    bool via_alias;
+    bool skip_conn_aliases;
+
     string force_outbound_interface_by_name;
 
     int         outbound_interface;
@@ -312,6 +316,12 @@ class AmBasicSipDialog : public AmObject {
 
     bool         getNextHopFixed() const { return next_hop_fixed; }
     virtual void setNextHopFixed(bool nh_fixed) { next_hop_fixed = nh_fixed; }
+
+    bool         getViaAlias() const { return via_alias; }
+    virtual void setViaAlias(bool enable) { via_alias = enable; }
+
+    bool         getSkipConnAliases() const { return skip_conn_aliases; }
+    virtual void setSkipConnAliases(bool skip) { skip_conn_aliases = skip; }
 
     void     setMaxForwards(uint32_t mf) { max_forwards = mf; }
     uint32_t getMaxForwards() const { return max_forwards; }

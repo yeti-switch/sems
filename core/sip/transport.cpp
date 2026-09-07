@@ -51,6 +51,11 @@ const char *trsp_socket::socket_transport2proto_str(const socket_transport trans
     }
 }
 
+unsigned short trsp_socket::default_port(const socket_transport transport)
+{
+    return (transport & sock_transport_proto_mask) == tr_proto_tls ? 5061 : 5060;
+}
+
 trsp_socket::trsp_socket(unsigned short if_num_, unsigned short proto_idx_, unsigned int opts, socket_transport trans,
                          unsigned int sys_if_idx_, int sd_)
     : sd(sd_)

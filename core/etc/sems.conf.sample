@@ -912,6 +912,16 @@ signaling-interfaces {
                 */
                 idle-timeout=900000
 
+                /* optional parameter connection-reuse
+                *
+                * RFC 5923 connection reuse:
+                * accept ';alias' from peers and reuse their connections for our requests.
+                * our own Via ';alias' is set per dialog by the application
+                *
+                * default: off
+                */
+                //connection-reuse = on
+
                 /* optional parameter static-client-port
                 *
                 * use static client port and reused socket
@@ -1022,6 +1032,16 @@ signaling-interfaces {
                 * default: 3600000 - 1 hour
                 */
                 idle-timeout=900000 //optional
+
+                /* optional parameter connection-reuse
+                *
+                * RFC 5923 connection reuse:
+                * accept ';alias' from peers and reuse their connections for our requests.
+                * our own Via ';alias' is set per dialog by the application
+                *
+                * default: off
+                */
+                //connection-reuse = on
             }
 
             /*
@@ -1071,6 +1091,16 @@ signaling-interfaces {
                 * default: 3600000 - 1 hour
                 */
                 idle-timeout=900000 //optional
+
+                /* optional parameter connection-reuse
+                *
+                * RFC 5923 connection reuse:
+                * accept ';alias' from peers and reuse their connections for our requests.
+                * our own Via ';alias' is set per dialog by the application
+                *
+                * default: off
+                */
+                //connection-reuse = on
 
                /*
                 * section described TLS client settings

@@ -1176,7 +1176,7 @@ static int patch_ruri_with_remote_ip(string &n_uri, sip_msg *msg)
     return 0;
 }
 
-static int generate_and_parse_new_msg(sip_msg *msg, sip_msg *&p_msg)
+static int generate_and_parse_new_msg(sip_msg *msg, sip_msg *&p_msg, unsigned int flags)
 {
     int request_len = sip_request_line_len(msg->u.request->method_str, msg->u.request->ruri_str);
 
@@ -1191,6 +1191,8 @@ static int generate_and_parse_new_msg(sip_msg *msg, sip_msg *&p_msg)
         via += ":" + int2str(msg->local_socket->get_actual_port());
 
     cstring trsp = msg->local_socket->get_transport();
+
+    bool via_alias = (flags & TR_FLAG_VIA_ALIAS) && msg->local_socket->is_reliable();
 
     // patch Contact-HF transport parameter
     vector<string>           contact_buffers(msg->contacts.size());
@@ -1207,7 +1209,7 @@ static int generate_and_parse_new_msg(sip_msg *msg, sip_msg *&p_msg)
     }
 
     // add 'rport' parameter defaultwise? yes, for now
-    request_len += via_len(trsp, stl2cstr(via), branch, true);
+    request_len += via_len(trsp, stl2cstr(via), branch, true, via_alias);
 
     request_len += copy_hdrs_len(msg->vias);
     request_len += copy_hdrs_len_no_via_contact_content_length(msg->hdrs);
@@ -1231,7 +1233,7 @@ static int generate_and_parse_new_msg(sip_msg *msg, sip_msg *&p_msg)
     char *c = p_msg->buf;
     sip_request_line_wr(&c, msg->u.request->method_str, msg->u.request->ruri_str);
 
-    via_wr(&c, trsp, stl2cstr(via), branch, true);
+    via_wr(&c, trsp, stl2cstr(via), branch, true, via_alias);
     copy_hdrs_wr(&c, msg->vias);
     copy_hdrs_wr_no_via_contact_content_length(&c, msg->hdrs);
 
@@ -1360,7 +1362,7 @@ try_next_dest:
     }
 
     // generate new msg and parse it
-    err = generate_and_parse_new_msg(msg, p_msg);
+    err = generate_and_parse_new_msg(msg, p_msg, flags);
     if (err != 0) {
         return err;
     }
@@ -1704,6 +1706,9 @@ void _trans_layer::received_msg(sip_msg *msg, const trsp_acls &acls)
 
         DROP_MSG;
     }
+
+    if (msg->type == SIP_REQUEST && msg->via_p1 && msg->via_p1->has_alias)
+        msg->local_socket->add_via_alias(msg->via_p1->port_i);
 
     process_rcvd_msg(msg, acls);
 }
@@ -2801,7 +2806,7 @@ try_next_dest:
         }
 
         sip_msg *p_msg = nullptr;
-        if (generate_and_parse_new_msg(&tmp_msg, p_msg)) {
+        if (generate_and_parse_new_msg(&tmp_msg, p_msg, n_tr->flags)) {
             ERROR("could not generate&parse new message");
             tmp_msg.release();
             return -1;
@@ -2845,7 +2850,7 @@ try_next_dest:
             sip_msg *p_msg = nullptr;
 
             // patch R-URI, generate& parse new message
-            if (patch_ruri_with_remote_ip(n_uri, tr->msg) || generate_and_parse_new_msg(tr->msg, p_msg)) {
+            if (patch_ruri_with_remote_ip(n_uri, tr->msg) || generate_and_parse_new_msg(tr->msg, p_msg, tr->flags)) {
                 ERROR("could not patch R-URI with new destination");
                 return -1;
             }
@@ -2857,7 +2862,7 @@ try_next_dest:
             sip_msg *p_msg = nullptr;
 
             // patch R-URI, generate & parse new message
-            if (generate_and_parse_new_msg(tr->msg, p_msg)) {
+            if (generate_and_parse_new_msg(tr->msg, p_msg, tr->flags)) {
                 return -1;
             }
 
@@ -3006,7 +3011,7 @@ int _trans_layer::retarget(sip_trans *t, sip_msg *&msg, std::unique_ptr<sip_tran
 
     sip_msg *p_msg = NULL;
 
-    res = generate_and_parse_new_msg(&tmp_msg, p_msg);
+    res = generate_and_parse_new_msg(&tmp_msg, p_msg, n_tr->flags);
     tmp_msg.release();
 
     // restore original RURI

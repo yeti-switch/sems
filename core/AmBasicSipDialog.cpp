@@ -64,6 +64,8 @@ AmBasicSipDialog::AmBasicSipDialog(AmBasicSipEventHandler *h)
     , next_hop_1st_req(AmConfig.next_hop_1st_req)
     , patch_ruri_next_hop(false)
     , next_hop_fixed(false)
+    , via_alias(false)
+    , skip_conn_aliases(false)
     , outbound_interface(-1)
     , outbound_proto_id(-1)
     , outbound_address_type(AT_NONE)
@@ -894,6 +896,11 @@ int AmBasicSipDialog::sendRequest(const string &method, const AmMimeBody *body, 
     if ((flags & SIP_FLAGS_NOBL) || !remote_tag.empty()) {
         send_flags |= TR_FLAG_DISABLE_BL;
     }
+
+    if (via_alias)
+        send_flags |= TR_FLAG_VIA_ALIAS;
+    if (skip_conn_aliases)
+        send_flags |= TR_FLAG_SKIP_ALIASES;
 
     res = SipCtrlInterface::send(req, local_tag, remote_tag.empty() || !next_hop_1st_req ? next_hop : "",
                                  outbound_interface, send_flags, targets.release(), logger, sensor, timers_override,
