@@ -768,8 +768,34 @@ bool trsp_worker::remove_connection(const string &conn_id)
     return true;
 }
 
+// RFC 6125 style: case-insensitive, '*.example.com' matches exactly one leftmost label
+static bool peer_name_matches(const string &name, const string &host)
+{
+    if (name.size() > 2 && name[0] == '*' && name[1] == '.') {
+        auto dot = host.find('.');
+        if (dot == string::npos || dot == 0)
+            return false;
+        return !strcasecmp(name.c_str() + 1, host.c_str() + dot);
+    }
+    return !strcasecmp(name.c_str(), host.c_str());
+}
+
+// RFC 5923 8.2: aliased connection is reused only if the resolved host matches the peer identity.
+// no names or no host (ip literal next hop): nothing to check
+static bool peer_names_match(tcp_base_trsp *sock, const string &host)
+{
+    auto names = sock->get_peer_names();
+    if (names.empty() || host.empty())
+        return true;
+    if (std::any_of(names.begin(), names.end(), [&](const string &n) { return peer_name_matches(n, host); }))
+        return true;
+    DBG("host %s doesn't match peer names of the aliased connection %s:%u", host.c_str(), sock->get_peer_ip().c_str(),
+        sock->get_peer_port());
+    return false;
+}
+
 int trsp_worker::send(trsp_server_socket *server_sock, const sockaddr_storage *sa, const string &host, const char *msg,
-                      const int msg_len, unsigned int flags, bool create_connection)
+                      const int msg_len, unsigned int flags, bool aliased)
 {
     tcp_base_trsp *sock    = NULL;
     string         conn_id = get_connection_id(sa, server_sock);
@@ -777,7 +803,7 @@ int trsp_worker::send(trsp_server_socket *server_sock, const sockaddr_storage *s
     bool new_conn = false;
     connections_mut.lock();
     auto sock_it = connections.find(conn_id);
-    if (sock_it != connections.end()) {
+    if (sock_it != connections.end() && (!aliased || peer_names_match(sock_it->second, host))) {
         sock = sock_it->second;
         inc_ref(sock);
         sockaddr_ssl    *sa_ssl = (sockaddr_ssl *)sa;
@@ -789,7 +815,7 @@ int trsp_worker::send(trsp_server_socket *server_sock, const sockaddr_storage *s
                  peer_ssl->ssl_marker);
     }
 
-    if (!sock && create_connection) {
+    if (!sock && !aliased) {
         tcp_base_trsp *new_sock = new_connection(server_sock, sa, host);
         if (new_sock) {
             sock = new_sock;
@@ -1110,7 +1136,7 @@ int trsp_server_socket::send(const sockaddr_storage *sa, const string &host, con
             unsigned int idx = hash_addr(&aliased_sa) % workers.size();
             DBG("trsp_server_socket::send: aliased %s:%u -> port %u, idx = %u", get_addr_str(sa).c_str(),
                 am_get_port(sa), am_get_port(&aliased_sa), idx);
-            if (workers[idx]->send(this, &aliased_sa, host, msg, msg_len, flags, false) == 0)
+            if (workers[idx]->send(this, &aliased_sa, host, msg, msg_len, flags, true) == 0)
                 return 0;
             DBG("aliased connection is gone. fallback to %s:%u", get_addr_str(sa).c_str(), am_get_port(sa));
         }
@@ -1118,7 +1144,7 @@ int trsp_server_socket::send(const sockaddr_storage *sa, const string &host, con
 
     unsigned int idx = hash_addr(sa) % workers.size();
     DBG("trsp_server_socket::send: idx = %u", idx);
-    return workers[idx]->send(this, sa, host, msg, msg_len, flags, true);
+    return workers[idx]->send(this, sa, host, msg, msg_len, flags, false);
 }
 
 void trsp_server_socket::add_alias(const sockaddr_storage *alias_sa, tcp_base_trsp *sock)
@@ -1173,6 +1199,7 @@ void trsp_server_socket::getAliasesInfo(AmArg &ret)
 {
     ret.assertStruct();
     AmLock l(aliases_mut);
+    // peer names are shown by the connection info
     for (auto const &[alias_id, entry] : aliases)
         ret[alias_id] = entry.conn_id;
 }

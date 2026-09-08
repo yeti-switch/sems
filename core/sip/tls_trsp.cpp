@@ -490,6 +490,22 @@ void tls_trsp_socket::tls_session_established(const Botan::TLS::Session_Summary 
     }
 
     ciphersuite = session.ciphersuite_code();
+
+    // as Botan::X509_Certificate::matches_dns_name(): SAN dns and ipv4 entries, CN only without SAN
+    if (!session.peer_certs().empty()) {
+        auto &cert = session.peer_certs().front();
+        auto &san  = cert.subject_alt_name();
+        if (san.has_items()) {
+            peer_names.assign(san.dns().begin(), san.dns().end());
+            for (auto ip : san.ipv4_address()) {
+                in_addr a = { .s_addr = htonl(ip) };
+                peer_names.push_back(inet_ntoa(a));
+            }
+        } else {
+            peer_names = cert.subject_info("X520.CommonName");
+        }
+    }
+
     copy_peer_addr(&peer_addr);
     sockaddr_ssl *sa_ssl = reinterpret_cast<sockaddr_ssl *>(&peer_addr);
 
@@ -583,6 +599,9 @@ void tls_trsp_socket::getInfo(AmArg &ret)
         ret["ssl_mac"]        = toString(ssl->mac);
         ret["tls_queue_size"] = orig_send_q.size();
         ret["sni"]            = sni;
+        ret["peer_names"].assertArray();
+        for (auto const &name : peer_names)
+            ret["peer_names"].push(name);
     }
     tcp_base_trsp::getInfo(ret);
 }

@@ -119,6 +119,8 @@ class tls_trsp_socket : public tcp_base_trsp, public Botan::TLS::Callbacks {
     bool     tls_connected;
     uint16_t ciphersuite;
     string   sni;
+    /** from the peer certificate on handshake: SAN dns/ipv4 entries, or CN if there is no SAN */
+    vector<string> peer_names;
 
     std::shared_ptr<Botan::RandomNumberGenerator> rand_gen;
     Botan::TLS::Channel                          *tls_channel;
@@ -137,6 +139,9 @@ class tls_trsp_socket : public tcp_base_trsp, public Botan::TLS::Callbacks {
     void tls_record_received(uint64_t seq_no, std::span<const uint8_t> data);
     void tls_alert(Botan::TLS::Alert alert);
     void tls_session_established(const Botan::TLS::Session_Summary &session);
+
+    vector<string> get_peer_names() const { return peer_names; }
+
     void tls_verify_cert_chain(const std::vector<Botan::X509_Certificate>              &cert_chain,
                                const std::vector<std::optional<Botan::OCSP::Response>> &ocsp_responses,
                                const std::vector<Botan::Certificate_Store *> &trusted_roots, Botan::Usage_Type usage,

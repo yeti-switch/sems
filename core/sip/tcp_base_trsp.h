@@ -177,6 +177,12 @@ class tcp_base_trsp : public trsp_socket {
     virtual void set_connected(bool val);
 
     void add_via_alias(unsigned short via_port) override;
+    /**
+     * peer names asserted by the transport, e.g. from the tls peer certificate.
+     * see RFC 5923 8.2
+     * empty: nothing asserted, any host
+     */
+    virtual vector<string> get_peer_names() const { return {}; }
 
     void               getInfo(AmArg &ret) override;
     unsigned long long getQueueSize();
@@ -223,7 +229,7 @@ class trsp_worker : public AmThread {
     virtual ~trsp_worker();
 
     int send(trsp_server_socket *server_sock, const sockaddr_storage *sa, const string &host, const char *msg,
-             const int msg_len, unsigned int flags, bool create_connection);
+             const int msg_len, unsigned int flags, bool aliased);
 
     int                add_connection(tcp_base_trsp *client_sock);
     void               remove_connection(tcp_base_trsp *client_sock);

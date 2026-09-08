@@ -115,6 +115,6 @@ TEST(TransportTest, WebSocket)
                   "Contact: <sip:ivan@test.com>\r\n"
                   "Content-Type: application/sdp\r\n"
                   "Content-Length: 0\r\n\r\n";
-    worker.send(&server, &sa, "test.com", data, sizeof(data), 0, true);
+    worker.send(&server, &sa, "test.com", data, sizeof(data), 0, false);
     worker.join();
 }
