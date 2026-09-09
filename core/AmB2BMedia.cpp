@@ -267,35 +267,33 @@ void StreamData::initialize(bool audio)
     leg->getLowFiPLs(lowfi_payloads);
 }
 
-bool StreamData::initStream(PlayoutType playout_type, AmSdp &local_sdp, AmSdp &remote_sdp)
+AmRtpStream::InitResult StreamData::initStream(PlayoutType playout_type, AmSdp &local_sdp, AmSdp &remote_sdp)
 {
     resetStats();
+    initialized = false;
 
     auto *stream = getStream();
-    if (!stream) {
-        initialized = false;
-        return false;
-    }
+    if (!stream)
+        return AmRtpStream::InitResult::TransportError;
 
     // The owner AmSession may be concurrently encoding/decoding this stream on a
     // media-processor thread under its audio_mut; stream->init() below frees and
     // recreates the codec, so it must not run inside encode()/decode().
-    int res;
+    AmRtpStream::InitResult res;
     {
         AmAudioLockGuard audio_guard(leg);
         res = stream->init(local_sdp, remote_sdp, sdp_offer_owner, force_symmetric_rtp);
     }
 
-    if (res == 0) {
+    if (res == AmRtpStream::InitResult::Ok) {
         stream->setPlayoutType(playout_type);
         initialized = true;
         // do not unmute if muted because of 0.0.0.0 remote IP (the mute flag is set during init)
         // if (!stream->muted()) stream->setOnHold(muted);
     } else {
-        initialized = false;
-        DBG("stream initialization failed");
         // there still can be payloads to be relayed (if all possible payloads are
         // to be relayed this needs not to be an error)
+        DBG("stream initialization failed: %s", stream->init_error.c_str());
     }
 
     /* prioritize stream disabled sending over StreamData::muted */
@@ -305,7 +303,7 @@ bool StreamData::initStream(PlayoutType playout_type, AmSdp &local_sdp, AmSdp &r
     // this change breaks setReceiving(bool receiving_a, bool receiving_b) behavior
     // stream->setReceiving(receiving);
 
-    return initialized;
+    return res;
 }
 
 void StreamData::clear()
@@ -1183,14 +1181,14 @@ void AmB2BMedia::initPairStream(StreamPair &pair)
     if (!pair.active())
         return;
 
-    try {
-        if (have_a_leg_local_sdp && have_a_leg_remote_sdp)
-            pair.a.initStream(playout_type, a_leg_local_sdp, a_leg_remote_sdp);
-        if (have_b_leg_local_sdp && have_b_leg_remote_sdp)
-            pair.b.initStream(playout_type, b_leg_local_sdp, b_leg_remote_sdp);
-    } catch (const string &err) {
-        ERROR("initPairStream failed: %s", err.c_str());
-    }
+    auto init = [&](StreamData &sd, AmSdp &local, AmSdp &remote) {
+        if (sd.initStream(playout_type, local, remote) == AmRtpStream::InitResult::TransportError)
+            throw sd.getStream()->init_error;
+    };
+    if (have_a_leg_local_sdp && have_a_leg_remote_sdp)
+        init(pair.a, a_leg_local_sdp, a_leg_remote_sdp);
+    if (have_b_leg_local_sdp && have_b_leg_remote_sdp)
+        init(pair.b, b_leg_local_sdp, b_leg_remote_sdp);
 }
 
 void AmB2BMedia::syncPairWiring(StreamPair &pair)
@@ -1292,8 +1290,8 @@ void AmB2BMedia::updateRelayPair(StreamPair &pair, bool a_leg, const string &con
     pair.b.resumeStreamProcessing();
 }
 
-void AmB2BMedia::createUpdateStreams(bool a_leg, const AmSdp &local_sdp, const AmSdp &remote_sdp, RelayController *ctrl,
-                                     bool sdp_offer_owner)
+bool AmB2BMedia::createUpdateStreams(bool a_leg, const AmSdp &local_sdp, const AmSdp &remote_sdp, RelayController *ctrl,
+                                     bool sdp_offer_owner, string &error)
 {
     TRACE("%s (%c): create/updating streams with local & remote SDP\n",
           a_leg ? (a ? a->getLocalTag().c_str() : NULL) : (b ? b->getLocalTag().c_str() : NULL), a_leg ? 'A' : 'B');
@@ -1313,13 +1311,13 @@ void AmB2BMedia::createUpdateStreams(bool a_leg, const AmSdp &local_sdp, const A
     }
 
     createStreams(local_sdp, a_leg);
-    updateStreamsUnsafe(a_leg, ctrl, sdp_offer_owner);
+    return updateStreamsUnsafe(a_leg, ctrl, sdp_offer_owner, error);
 }
 
-void AmB2BMedia::updateStreams(bool a_leg, RelayController *ctrl, bool sdp_offer_owner)
+bool AmB2BMedia::updateStreams(bool a_leg, RelayController *ctrl, bool sdp_offer_owner, string &error)
 {
     AmLock l(mutex);
-    updateStreamsUnsafe(a_leg, ctrl, sdp_offer_owner);
+    return updateStreamsUnsafe(a_leg, ctrl, sdp_offer_owner, error);
 }
 
 void AmB2BMedia::applyStateTransitions()
@@ -1363,7 +1361,7 @@ void AmB2BMedia::applyStateTransitions()
     });
 }
 
-void AmB2BMedia::updateStreamsUnsafe(bool a_leg, RelayController *ctrl, bool sdp_offer_owner)
+bool AmB2BMedia::updateStreamsUnsafe(bool a_leg, RelayController *ctrl, bool sdp_offer_owner, string &error)
 {
     applyStateTransitions();
 
@@ -1381,32 +1379,40 @@ void AmB2BMedia::updateStreamsUnsafe(bool a_leg, RelayController *ctrl, bool sdp
     // Warning: do not apply the new mask unless the offer answer succeeds?
     // we can safely apply the changes once we have local & remote SDP (i.e. the
     // negotiation is finished) otherwise we might handle the RTP in a wrong way
+    // string is thrown by stream init (transport) and by relay setRAddr (unresolvable relay
+    // destination); the walk is abandoned, the caller tears the call down anyway
     int idx = 0;
-    forEachPair([&](StreamPair &pair) {
-        int this_idx = idx++;
-        if (this_idx >= static_cast<int>(remote_sdp.media.size()))
-            return;
-
-        (a_leg ? pair.a : pair.b).setSdpOfferOwner(sdp_offer_owner);
-
-        const SdpMedia &m                  = remote_sdp.media[this_idx];
-        const string   &connection_address = (m.conn.address.empty() ? remote_sdp.conn.address : m.conn.address);
-        if (m.type == MT_AUDIO) {
-            DBG("updateStreams() processing audio stream %d", this_idx);
-            DBG("[%p] updateStreams() update AudioStreamPair %p/%p", static_cast<void *>(this),
-                static_cast<void *>(pair.a.getStream()), static_cast<void *>(pair.b.getStream()));
-            updateAudioPair(pair, a_leg, ctrl, connection_address, m, needs_processing);
-        } else {
-            DBG("updateStreams() processing non-audio stream %d", this_idx);
-            if (ignore_relay_streams)
+    try {
+        forEachPair([&](StreamPair &pair) {
+            int this_idx = idx++;
+            if (this_idx >= static_cast<int>(remote_sdp.media.size()))
                 return;
-            if (!canRelay(m))
-                return;
-            DBG("[%p] updating %s-leg relay_stream %d. %p", static_cast<void *>(this), a_leg ? "A" : "B", this_idx,
-                static_cast<void *>((a_leg ? pair.a : pair.b).getStream()));
-            updateRelayPair(pair, a_leg, connection_address, m);
-        }
-    });
+
+            (a_leg ? pair.a : pair.b).setSdpOfferOwner(sdp_offer_owner);
+
+            const SdpMedia &m                  = remote_sdp.media[this_idx];
+            const string   &connection_address = (m.conn.address.empty() ? remote_sdp.conn.address : m.conn.address);
+            if (m.type == MT_AUDIO) {
+                DBG("updateStreams() processing audio stream %d", this_idx);
+                DBG("[%p] updateStreams() update AudioStreamPair %p/%p", static_cast<void *>(this),
+                    static_cast<void *>(pair.a.getStream()), static_cast<void *>(pair.b.getStream()));
+                updateAudioPair(pair, a_leg, ctrl, connection_address, m, needs_processing);
+            } else {
+                DBG("updateStreams() processing non-audio stream %d", this_idx);
+                if (ignore_relay_streams)
+                    return;
+                if (!canRelay(m))
+                    return;
+                DBG("[%p] updating %s-leg relay_stream %d. %p", static_cast<void *>(this), a_leg ? "A" : "B", this_idx,
+                    static_cast<void *>((a_leg ? pair.a : pair.b).getStream()));
+                updateRelayPair(pair, a_leg, connection_address, m);
+            }
+        });
+    } catch (const string &e) {
+        ERROR("[%p] %s-leg streams update failed: %s", static_cast<void *>(this), a_leg ? "A" : "B", e.c_str());
+        error = e;
+        return false;
+    }
 
     if (needs_processing)
         addToMediaProcessorUnsafe();
@@ -1414,6 +1420,7 @@ void AmB2BMedia::updateStreamsUnsafe(bool a_leg, RelayController *ctrl, bool sdp
         AmMediaProcessor::instance()->removeSession(this);
 
     TRACE("streams updated with SDP");
+    return true;
 }
 
 void AmB2BMedia::stop(AmB2BSession *s)

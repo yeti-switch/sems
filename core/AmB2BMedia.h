@@ -202,10 +202,10 @@ class StreamData {
 
     /** initialize given stream for transcoding & regular audio processing
      *
-     * Returns false if the initialization failed (might happen for example if
-     * we are not able to handle the remote payloads by ourselves; anyway
-     * relaying could be still available in this case). */
-    bool initStream(PlayoutType playout_type, AmSdp &local_sdp, AmSdp &remote_sdp);
+     * CodecError is tolerable here (we can't handle the remote payloads
+     * ourselves, relaying may still work); TransportError leaves the stream
+     * without a usable connection. */
+    AmRtpStream::InitResult initStream(PlayoutType playout_type, AmSdp &local_sdp, AmSdp &remote_sdp);
 
     void     setInput(AmAudio *_in) { in = _in; }
     void     setOutput(AmAudio *_in) { out = _in; }
@@ -416,7 +416,7 @@ class AmB2BMedia : public AmMediaSession
 
     /** post-SDP applier: state transitions + per-pair relay setup + audio init/wiring in one walk.
      *  updateAudioPair inits/syncs an audio pair; updateRelayPair wires a non-audio relay pair. */
-    void updateStreamsUnsafe(bool a_leg, RelayController *ctrl, bool sdp_offer_owner);
+    bool updateStreamsUnsafe(bool a_leg, RelayController *ctrl, bool sdp_offer_owner, string &error);
     void updateAudioPair(StreamPair & pair, bool a_leg, RelayController *ctrl, const string &connection_address,
                          const SdpMedia &m, bool &needs_processing);
     void updateRelayPair(StreamPair & pair, bool a_leg, const string &connection_address, const SdpMedia &m);
@@ -449,7 +449,7 @@ class AmB2BMedia : public AmMediaSession
     /** finalise pair states once both legs have SDP collected */
     void applyStateTransitions();
 
-    /** initialises pair streams */
+    /** initialises pair streams; throws string on a transport-level failure */
     void initPairStream(StreamPair & pair);
     /** syncs pair cross-leg wiring (DTMF sink, relay stream, stereo recorders) */
     void syncPairWiring(StreamPair & pair);
@@ -530,10 +530,12 @@ class AmB2BMedia : public AmMediaSession
     const AmSdp &getLocalSdp(bool a_leg);
     const AmSdp &getRemoteSdp(bool a_leg);
 
-    /** Update media session with local & remote SDP. */
-    void createUpdateStreams(bool a_leg, const AmSdp &local_sdp, const AmSdp &remote_sdp, RelayController *ctrl,
-                             bool sdp_offer_owner);
-    void updateStreams(bool a_leg, RelayController *ctrl, bool sdp_offer_owner);
+    /** Update media session with local & remote SDP.
+     *  Returns false with the reason in error when a stream is left without usable media
+     *  (transport init or relay destination failure); the caller owns the call teardown. */
+    bool createUpdateStreams(bool a_leg, const AmSdp &local_sdp, const AmSdp &remote_sdp, RelayController *ctrl,
+                             bool sdp_offer_owner, string &error);
+    bool updateStreams(bool a_leg, RelayController *ctrl, bool sdp_offer_owner, string &error);
 
     /** Detach the session from every leg it occupies (role-independent) and stop
      * processing if both legs are gone.

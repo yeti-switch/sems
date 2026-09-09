@@ -82,7 +82,7 @@ class FaxSession : public AmSession {
 
     AmSdp *getLocalSdp() { return &local; }
 
-    int init()
+    AmRtpStream::InitResult init()
     {
         setInOut(audio, audio);
         return activeStream()->init(local, *remote, true, false);
@@ -157,8 +157,8 @@ TEST_F(FaxTest, SingleT38Test)
 
         sessionA.setRemoteSdp(sessionB.getLocalSdp());
         sessionB.setRemoteSdp(sessionA.getLocalSdp());
-        EXPECT_EQ(sessionA.init(), 0);
-        EXPECT_EQ(sessionB.init(), 0);
+        EXPECT_EQ(sessionA.init(), AmRtpStream::InitResult::Ok);
+        EXPECT_EQ(sessionB.init(), AmRtpStream::InitResult::Ok);
         sessionA.start();
         sessionB.start();
         sessionA.wait_started();
@@ -211,8 +211,8 @@ TEST_F(FaxTest, IceT38Test)
 
         sessionA.setRemoteSdp(sessionB.getLocalSdp());
         sessionB.setRemoteSdp(sessionA.getLocalSdp());
-        EXPECT_EQ(sessionA.init(), 0);
-        EXPECT_EQ(sessionB.init(), 0);
+        EXPECT_EQ(sessionA.init(), AmRtpStream::InitResult::Ok);
+        EXPECT_EQ(sessionB.init(), AmRtpStream::InitResult::Ok);
         sessionA.start();
         sessionB.start();
         sessionA.wait_started();
@@ -265,8 +265,8 @@ TEST_F(FaxTest, DISABLED_DTLST38Test)
 
         sessionA.setRemoteSdp(sessionB.getLocalSdp());
         sessionB.setRemoteSdp(sessionA.getLocalSdp());
-        EXPECT_EQ(sessionA.init(), 0);
-        EXPECT_EQ(sessionB.init(), 0);
+        EXPECT_EQ(sessionA.init(), AmRtpStream::InitResult::Ok);
+        EXPECT_EQ(sessionB.init(), AmRtpStream::InitResult::Ok);
         sessionA.start();
         sessionB.start();
         sessionA.wait_started();
@@ -313,8 +313,8 @@ TEST_F(FaxTest, SingleT30Test)
 
         sessionA.setRemoteSdp(sessionB.getLocalSdp());
         sessionB.setRemoteSdp(sessionA.getLocalSdp());
-        GTEST_ASSERT_EQ(sessionA.init(), 0);
-        GTEST_ASSERT_EQ(sessionB.init(), 0);
+        GTEST_ASSERT_EQ(sessionA.init(), AmRtpStream::InitResult::Ok);
+        GTEST_ASSERT_EQ(sessionB.init(), AmRtpStream::InitResult::Ok);
         sessionA.start();
         sessionB.start();
         sessionA.wait_started();
@@ -359,8 +359,8 @@ TEST_F(FaxTest, AudioToT38Test)
 
         sessionA.setRemoteSdp(sessionB.getLocalSdp());
         sessionB.setRemoteSdp(sessionA.getLocalSdp());
-        GTEST_ASSERT_EQ(sessionA.init(), 0);
-        GTEST_ASSERT_EQ(sessionB.init(), 0);
+        GTEST_ASSERT_EQ(sessionA.init(), AmRtpStream::InitResult::Ok);
+        GTEST_ASSERT_EQ(sessionB.init(), AmRtpStream::InitResult::Ok);
 
         // re-INVITE to T.38 on a NEW m= line: disable the audio slot, add a fax stream
         sessionA.RTPStream()->setDisabled(true);
@@ -389,8 +389,8 @@ TEST_F(FaxTest, AudioToT38Test)
 
         sessionA.setRemoteSdp(sessionB.getLocalSdp());
         sessionB.setRemoteSdp(sessionA.getLocalSdp());
-        EXPECT_EQ(sessionA.init(), 0);
-        EXPECT_EQ(sessionB.init(), 0);
+        EXPECT_EQ(sessionA.init(), AmRtpStream::InitResult::Ok);
+        EXPECT_EQ(sessionB.init(), AmRtpStream::InitResult::Ok);
 
         sessionA.start();
         sessionB.start();
@@ -436,8 +436,8 @@ TEST_F(FaxTest, ReinviteT38Test)
 
         sessionA.setRemoteSdp(sessionB.getLocalSdp());
         sessionB.setRemoteSdp(sessionA.getLocalSdp());
-        GTEST_ASSERT_EQ(sessionA.init(), 0);
-        GTEST_ASSERT_EQ(sessionB.init(), 0);
+        GTEST_ASSERT_EQ(sessionA.init(), AmRtpStream::InitResult::Ok);
+        GTEST_ASSERT_EQ(sessionB.init(), AmRtpStream::InitResult::Ok);
 
         // re-INVITE to T.38 on the same m= line (same slot, same port): only the transport type changes
         sessionB.setMediaType(MT_IMAGE);
@@ -452,8 +452,8 @@ TEST_F(FaxTest, ReinviteT38Test)
 
         sessionA.setRemoteSdp(sessionB.getLocalSdp());
         sessionB.setRemoteSdp(sessionA.getLocalSdp());
-        GTEST_ASSERT_EQ(sessionA.init(), 0);
-        GTEST_ASSERT_EQ(sessionB.init(), 0);
+        GTEST_ASSERT_EQ(sessionA.init(), AmRtpStream::InitResult::Ok);
+        GTEST_ASSERT_EQ(sessionB.init(), AmRtpStream::InitResult::Ok);
 
         sessionA.start();
         sessionB.start();
@@ -501,8 +501,8 @@ TEST_F(FaxTest, IceReinviteT38Test)
 
         sessionA.setRemoteSdp(sessionB.getLocalSdp());
         sessionB.setRemoteSdp(sessionA.getLocalSdp());
-        GTEST_ASSERT_EQ(sessionA.init(), 0);
-        GTEST_ASSERT_EQ(sessionB.init(), 0);
+        GTEST_ASSERT_EQ(sessionA.init(), AmRtpStream::InitResult::Ok);
+        GTEST_ASSERT_EQ(sessionB.init(), AmRtpStream::InitResult::Ok);
 
         // re-INVITE to T.38 on the same m= line (same slot, same port): only the transport type changes
         sessionB.setMediaType(MT_IMAGE);
@@ -517,8 +517,8 @@ TEST_F(FaxTest, IceReinviteT38Test)
 
         sessionA.setRemoteSdp(sessionB.getLocalSdp());
         sessionB.setRemoteSdp(sessionA.getLocalSdp());
-        GTEST_ASSERT_EQ(sessionA.init(), 0);
-        GTEST_ASSERT_EQ(sessionB.init(), 0);
+        GTEST_ASSERT_EQ(sessionA.init(), AmRtpStream::InitResult::Ok);
+        GTEST_ASSERT_EQ(sessionB.init(), AmRtpStream::InitResult::Ok);
 
         sessionA.start();
         sessionB.start();

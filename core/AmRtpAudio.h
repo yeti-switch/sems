@@ -161,7 +161,7 @@ class AmRtpAudio : public AmRtpStream, public AmAudio, public AmPLCBuffer {
 
     unsigned int bytes2samples(unsigned int) const;
 
-    int init(const AmSdp &local, const AmSdp &remote, bool sdp_offer_owner, bool force_passive_mode) override;
+    InitResult init(const AmSdp &local, const AmSdp &remote, bool sdp_offer_owner, bool force_passive_mode) override;
 
     int ping(unsigned long long ts) override;
 

@@ -1335,7 +1335,8 @@ int AmSession::onSdpCompleted(const AmSdp &local_sdp, const AmSdp &remote_sdp, b
     //   - check if the stream coresponding to the media ID
     //     should be created or updated
     //
-    int ret = 0;
+    int    ret = 0;
+    string init_error;
 
     try {
         AmAudioLockGuard audio_guard(this);
@@ -1343,20 +1344,26 @@ int AmSession::onSdpCompleted(const AmSdp &local_sdp, const AmSdp &remote_sdp, b
         forEachRtpStream([&](AmRtpAudio *stream, MediaType, TransProt) {
             if (!stream || stream->isDisabled())
                 return; // empty/disabled slot: no media to initialize
-            if (stream->init(local_sdp, remote_sdp, sdp_offer_owner, AmConfig.force_symmetric_rtp) < 0)
-                ret = -1;
+            if (stream->init(local_sdp, remote_sdp, sdp_offer_owner, AmConfig.force_symmetric_rtp) !=
+                AmRtpStream::InitResult::Ok)
+            {
+                ret        = -1;
+                init_error = stream->init_error;
+            }
             stream->setStereoRecorders(getStereoRecorders(), nullptr);
         });
     } catch (const string &s) {
         ERROR("Error while initializing RTP stream: '%s'", s.c_str());
-        ret = -1;
+        ret        = -1;
+        init_error = s;
     } catch (...) {
         ERROR("Error while initializing RTP stream (unknown exception in AmRTPStream::init)");
-        ret = -1;
+        ret        = -1;
+        init_error = "unknown exception";
     }
 
     if (ret == -1)
-        onInitStreamFailed();
+        onInitStreamFailed(init_error);
 
     if (!isProcessingMedia()) {
         setInbandDetector(AmConfig.default_dtmf_detector);
@@ -1373,6 +1380,13 @@ void AmSession::onEarlySessionStart()
 void AmSession::onSessionStart()
 {
     startMediaProcessing();
+}
+
+void AmSession::onInitStreamFailed(const string &reason)
+{
+    DBG("RTP stream initialization failed: %s. stopping Session", reason.c_str());
+    dlg->bye();
+    setStopped();
 }
 
 void AmSession::onRtpTimeout()

@@ -711,7 +711,11 @@ int AmB2BSession::onSdpCompleted(const AmSdp &local_sdp, const AmSdp &remote_sdp
         } else {
             DBG("media_session->createUpdateStreams(a_leg, local_sdp, remote_sdp, this); aleg = %d, this = %p", a_leg,
                 this);
-            media_session->createUpdateStreams(a_leg, local_sdp, remote_sdp, this, sdp_offer_owner);
+            string error;
+            if (!media_session->createUpdateStreams(a_leg, local_sdp, remote_sdp, this, sdp_offer_owner, error)) {
+                onInitStreamFailed(error);
+                return -1;
+            }
         }
     }
 
@@ -770,6 +774,14 @@ void AmB2BSession::terminateOtherLeg()
 {
     if (!other_id.empty())
         relayEvent(new B2BEvent(B2BTerminateLeg));
+}
+
+void AmB2BSession::onInitStreamFailed(const string &reason)
+{
+    DBG("RTP stream initialization failed, ending other leg");
+
+    terminateOtherLeg();
+    AmSession::onInitStreamFailed(reason);
 }
 
 void AmB2BSession::onRtpTimeout()

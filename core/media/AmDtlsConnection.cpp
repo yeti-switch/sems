@@ -312,7 +312,7 @@ void RtpSecureContext::initContext(const string &host, int port, shared_ptr<dtls
         inc_ref(pending_handshake_timer);
     } catch (Botan::Exception &exc) {
         dtls_channel = 0;
-        throw string("unforseen error in dtls:%s", exc.what());
+        throw string("unforseen error in dtls: ") + exc.what();
     }
 }
 

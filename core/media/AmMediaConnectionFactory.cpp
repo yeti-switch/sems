@@ -38,30 +38,19 @@ int AmMediaConnectionFactory::store_srtp_cred(uint16_t srtp_profile, const strin
 AmStreamConnection *AmMediaConnectionFactory::createStunConnection(const string &raddr, int rport,
                                                                    unsigned int lpriority, unsigned int priority)
 {
-    try {
-        AmStunConnection *conn = new AmStunConnection(transport, raddr, rport, lpriority, priority);
-        conn->set_credentials(ice_cred.luser, ice_cred.lpassword, ice_cred.ruser, ice_cred.rpassword);
-        return conn;
-    } catch (string &error) {
-        CLASS_ERROR("STUN connection error: %s", error.c_str());
-    }
-    return nullptr;
+    AmStunConnection *conn = new AmStunConnection(transport, raddr, rport, lpriority, priority);
+    conn->set_credentials(ice_cred.luser, ice_cred.lpassword, ice_cred.ruser, ice_cred.rpassword);
+    return conn;
 }
 
 AmStreamConnection *AmMediaConnectionFactory::createDtlsConnection(const string &raddr, int rport, DtlsContext *context)
 {
-    try {
-        AmDtlsConnection *conn = new AmDtlsConnection(transport, raddr, rport, context);
-        context->setCurrentConnection(conn);
-        if (!context->isInited()) {
-            transport->getEndpoint()->initDtls(transport->getTransportType(), context->is_client);
-        }
-        return conn;
-    } catch (string &error) {
-        CLASS_ERROR("DTLS connection error: %s", error.c_str());
+    AmDtlsConnection *conn = new AmDtlsConnection(transport, raddr, rport, context);
+    context->setCurrentConnection(conn);
+    if (!context->isInited()) {
+        transport->getEndpoint()->initDtls(transport->getTransportType(), context->is_client);
     }
-
-    return nullptr;
+    return conn;
 }
 
 AmStreamConnection *AmMediaConnectionFactory::createSrtpConnection(const string &raddr, int rport)
@@ -74,21 +63,15 @@ AmStreamConnection *AmMediaConnectionFactory::createSrtpConnection(const string 
                                                                    const string           &local_key,
                                                                    const srtp_master_keys &remote_keys, bool rtcp)
 {
-    try {
-        AmSrtpConnection *conn = new AmSrtpConnection(
-            transport, raddr, rport, rtcp ? AmStreamConnection::RTCP_CONN : AmStreamConnection::RTP_CONN);
-        conn->use_keys(static_cast<srtp_profile_t>(srtp_profile), local_key, remote_keys);
+    AmSrtpConnection *conn = new AmSrtpConnection(transport, raddr, rport,
+                                                  rtcp ? AmStreamConnection::RTCP_CONN : AmStreamConnection::RTP_CONN);
+    conn->use_keys(static_cast<srtp_profile_t>(srtp_profile), local_key, remote_keys);
 
-        if (conn->isMute()) {
-            transport->getEndpoint()->setMute(true);
-        }
-
-        return conn;
-    } catch (string &error) {
-        CLASS_ERROR("SRTP connection error: %s", error.c_str());
+    if (conn->isMute()) {
+        transport->getEndpoint()->setMute(true);
     }
 
-    return nullptr;
+    return conn;
 }
 
 AmStreamConnection *AmMediaConnectionFactory::createSrtcpConnection(const string &raddr, int rport)
@@ -98,68 +81,31 @@ AmStreamConnection *AmMediaConnectionFactory::createSrtcpConnection(const string
 
 AmStreamConnection *AmMediaConnectionFactory::createZrtpConnection(const string &raddr, int rport, zrtpContext *context)
 {
-    try {
-        return new AmZRTPConnection(transport, raddr, rport, context);
-    } catch (string &error) {
-        CLASS_ERROR("ZRTP connection error: %s", error.c_str());
-    }
-
-    return nullptr;
+    return new AmZRTPConnection(transport, raddr, rport, context);
 }
 
 AmStreamConnection *AmMediaConnectionFactory::createRtpConnection(const string &raddr, int rport)
 {
-    try {
-        return new AmRtpConnection(transport, raddr, rport);
-        ;
-    } catch (string &error) {
-        CLASS_ERROR("RTP connection error: %s", error.c_str());
-    }
-
-    return nullptr;
+    return new AmRtpConnection(transport, raddr, rport);
 }
 
 AmStreamConnection *AmMediaConnectionFactory::createRtcpConnection(const string &raddr, int rport)
 {
-    try {
-        return new AmRtcpConnection(transport, raddr, rport);
-    } catch (string &error) {
-        CLASS_ERROR("RTCP connection error: %s", error.c_str());
-    }
-
-    return nullptr;
+    return new AmRtcpConnection(transport, raddr, rport);
 }
 
 AmStreamConnection *AmMediaConnectionFactory::createRawConnection(const string &raddr, int rport)
 {
-    try {
-        return new AmRawConnection(transport, raddr, rport);
-    } catch (string &error) {
-        CLASS_ERROR("RAW connection error: %s", error.c_str());
-    }
-
-    return nullptr;
+    return new AmRawConnection(transport, raddr, rport);
 }
 
 AmStreamConnection *AmMediaConnectionFactory::createUdptlConnection(const string &raddr, int rport)
 {
-    try {
-        return new UDPTLConnection(transport, raddr, rport);
-    } catch (string &error) {
-        CLASS_ERROR("UDPTL connection error: %s", error.c_str());
-    }
-
-    return nullptr;
+    return new UDPTLConnection(transport, raddr, rport);
 }
 
 AmStreamConnection *AmMediaConnectionFactory::createDtlsUdptlConnection(const string &raddr, int rport,
                                                                         AmStreamConnection *dtls)
 {
-    try {
-        return new DTLSUDPTLConnection(transport, raddr, rport, dtls);
-    } catch (string &error) {
-        CLASS_ERROR("DTLS_UDPTL connection error: %s", error.c_str());
-    }
-
-    return nullptr;
+    return new DTLSUDPTLConnection(transport, raddr, rport, dtls);
 }

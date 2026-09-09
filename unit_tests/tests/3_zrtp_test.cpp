@@ -64,7 +64,7 @@ class ZRTPSession : public AmSession, public ZrtpContextSubscriber {
 
     AmSdp *getLocalSdp() { return &local; }
 
-    int init()
+    AmRtpStream::InitResult init()
     {
         setInOut(&audio, &audio);
         return RTPStream()->init(local, *remote, true, false);
@@ -140,8 +140,8 @@ TEST_F(ZRTPTest, SingleTest)
 
         sessionA.setRemoteSdp(sessionB.getLocalSdp());
         sessionB.setRemoteSdp(sessionA.getLocalSdp());
-        GTEST_ASSERT_EQ(sessionA.init(), 0);
-        GTEST_ASSERT_EQ(sessionB.init(), 0);
+        GTEST_ASSERT_EQ(sessionA.init(), AmRtpStream::InitResult::Ok);
+        GTEST_ASSERT_EQ(sessionB.init(), AmRtpStream::InitResult::Ok);
         sessionA.start();
         sessionB.start();
         sessionA.wait_started();

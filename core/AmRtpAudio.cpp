@@ -393,18 +393,19 @@ void AmRtpAudio::update_user_ts(unsigned long long system_ts)
     tx_user_ts = system_ts * (static_cast<unsigned long long>(rtp_fmt->getTSRate()) / 100) / (WALLCLOCK_RATE / 100);
 }
 
-int AmRtpAudio::init(const AmSdp &local, const AmSdp &remote, bool sdp_offer_owner, bool force_passive_mode)
+AmRtpStream::InitResult AmRtpAudio::init(const AmSdp &local, const AmSdp &remote, bool sdp_offer_owner,
+                                         bool force_passive_mode)
 {
     DBG("AmRtpAudio::init(...)");
-    if (AmRtpStream::init(local, remote, sdp_offer_owner, force_passive_mode)) {
-        return -1;
-    }
+    if (auto res = AmRtpStream::init(local, remote, sdp_offer_owner, force_passive_mode); res != InitResult::Ok)
+        return res;
 
     if (local.media[sdp_media_index].type == MT_AUDIO) {
         PayloadMappingTable::iterator pl_it = pl_map.find(static_cast<PayloadMappingTable::key_type>(payload));
         if ((pl_it == pl_map.end()) || (pl_it->second.remote_pt < 0)) {
             DBG("no default payload has been set");
-            return -1;
+            init_error = "no default payload";
+            return InitResult::CodecError;
         }
 
         const SdpMedia &remote_media = remote.media[sdp_media_index];
@@ -439,7 +440,7 @@ int AmRtpAudio::init(const AmSdp &local, const AmSdp &remote, bool sdp_offer_own
         getEndpoint()->setSymmetricRtpEndless(session->getRtpEndlessSymmetricRtp());
     }
 
-    return 0;
+    return InitResult::Ok;
 }
 
 int AmRtpAudio::ping(unsigned long long ts)

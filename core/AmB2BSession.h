@@ -253,6 +253,7 @@ class AmB2BSession : public AmSession, protected RelayController {
 
     void onRemoteDisappeared(const AmSipReply &reply) override;
 
+    void onInitStreamFailed(const string &reason) override;
     void onRtpTimeout() override;
     void onRtpSendingError() override;
     void onSessionTimeout() override;

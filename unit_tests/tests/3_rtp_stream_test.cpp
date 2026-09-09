@@ -76,13 +76,17 @@ class TestSession : public AmSession {
 
     AmSdp *getLocalSdp() { return &local; }
 
-    int init()
+    AmRtpStream::InitResult init()
     {
         setInOut(&audio, &audio);
         if (AmSessionContainer::instance()->addSession(getLocalTag(), this) != AmSessionContainer::Inserted)
-            return EXIT_FAILURE;
+            return AmRtpStream::InitResult::TransportError;
         return RTPStream()->init(local, *remote, true, false);
     }
+
+    // stream init only, session is not registered in the container
+    AmRtpStream::InitResult initStream() { return RTPStream()->init(local, *remote, true, false); }
+    const string           &initError() { return RTPStream()->init_error; }
 
     virtual void onStart() override
     {
@@ -141,8 +145,8 @@ TEST_F(RTPStream, SingleStreams)
         TestSession sessionA(ip, OFFER), sessionB(ip, ANSWER);
         sessionA.setRemoteSdp(sessionB.getLocalSdp());
         sessionB.setRemoteSdp(sessionA.getLocalSdp());
-        EXPECT_EQ(sessionA.init(), 0);
-        EXPECT_EQ(sessionB.init(), 0);
+        EXPECT_EQ(sessionA.init(), AmRtpStream::InitResult::Ok);
+        EXPECT_EQ(sessionB.init(), AmRtpStream::InitResult::Ok);
         sessionA.start();
         sessionB.start();
         sessionA.wait_started();
@@ -163,6 +167,31 @@ TEST_F(RTPStream, SingleStreams)
 }
 
 
+TEST_F(RTPStream, AnswerAddrFamilyMismatch)
+{
+    unsigned int idx = AmConfig.sip_if_names[test_config::instance()->signalling_interface];
+    string       ip;
+    if (AmConfig.sip_ifs[idx].proto_info.size())
+        ip = AmConfig.sip_ifs[idx].proto_info[0]->getIP();
+    ASSERT_FALSE(ip.empty());
+    ip.insert(0, "sip:");
+
+    TestSession sessionA(ip, OFFER), sessionB(ip, ANSWER);
+    sessionB.setRemoteSdp(sessionA.getLocalSdp());
+
+    AmSdp answer         = *sessionB.getLocalSdp();
+    answer.conn.address  = "::1";
+    answer.conn.addrType = AT_V6;
+    for (auto &m : answer.media) {
+        m.conn.address  = "::1";
+        m.conn.addrType = AT_V6;
+    }
+    sessionA.setRemoteSdp(&answer);
+
+    EXPECT_EQ(sessionA.initStream(), AmRtpStream::InitResult::TransportError);
+    EXPECT_FALSE(sessionA.initError().empty());
+}
+
 TEST_F(RTPStream, DISABLED_StressTest)
 {
     string error;
@@ -182,8 +211,8 @@ TEST_F(RTPStream, DISABLED_StressTest)
             TestSession *sessionB = new (&session[1 + i * 2]) TestSession(ip, ANSWER);
             sessionA->setRemoteSdp(sessionB->getLocalSdp());
             sessionB->setRemoteSdp(sessionA->getLocalSdp());
-            EXPECT_EQ(sessionA->init(), 0);
-            EXPECT_EQ(sessionB->init(), 0);
+            EXPECT_EQ(sessionA->init(), AmRtpStream::InitResult::Ok);
+            EXPECT_EQ(sessionB->init(), AmRtpStream::InitResult::Ok);
             sessionA->start();
             sessionB->start();
             sessionA->wait_started();

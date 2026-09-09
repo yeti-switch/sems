@@ -281,7 +281,8 @@ void AmRtpStream::getSdpAnswer(const SdpMedia &offer, SdpMedia &answer)
     }
 }
 
-int AmRtpStream::init(const AmSdp &local, const AmSdp &remote, bool sdp_offer_owner, bool force_passive_mode)
+AmRtpStream::InitResult AmRtpStream::init(const AmSdp &local, const AmSdp &remote, bool sdp_offer_owner,
+                                          bool force_passive_mode)
 {
     init_error.clear();
     if ((sdp_media_index < 0) || ((unsigned)sdp_media_index >= local.media.size()) ||
@@ -289,7 +290,7 @@ int AmRtpStream::init(const AmSdp &local, const AmSdp &remote, bool sdp_offer_ow
     {
         CLASS_ERROR("Media index %i is invalid, either within local or remote SDP (or both)", sdp_media_index);
         init_error = "Media index is invalid";
-        return -1;
+        return InitResult::TransportError;
     }
 
 
@@ -408,13 +409,13 @@ int AmRtpStream::init(const AmSdp &local, const AmSdp &remote, bool sdp_offer_ow
         if (remote.conn.address.empty() && remote_media.conn.address.empty()) {
             CLASS_WARN("no c= line given globally or in m= section in remote SDP");
             init_error = "no remote address";
-            return -1;
+            return InitResult::TransportError;
         }
 
         if (local_media.payloads.empty()) {
             CLASS_DBG("local_media.payloads.empty()");
             init_error = "no payloads";
-            return -1;
+            return InitResult::CodecError;
         }
 
         // find telephone-event intersections
@@ -472,7 +473,7 @@ int AmRtpStream::init(const AmSdp &local, const AmSdp &remote, bool sdp_offer_ow
         if (payload < 0) {
             CLASS_DBG("could not set a default payload");
             init_error = "could not set a default payload";
-            return -1;
+            return InitResult::CodecError;
         }
         CLASS_DBG("default payload selected = %i", payload);
         last_payload = payload;
@@ -517,7 +518,7 @@ int AmRtpStream::init(const AmSdp &local, const AmSdp &remote, bool sdp_offer_ow
 
     // transport-level setup (DTLS/SRTP/ICE/ZRTP/UDPTL/RTP state) lives in the endpoint
     if (getEndpoint()->init(local, remote, sdp_media_index, sdp_offer_owner, force_passive_mode, init_error) < 0)
-        return -1;
+        return InitResult::TransportError;
 
     bool connection_is_muted = getEndpoint()->isConnectionMuted();
     bool relay_is_muted      = getEndpoint()->isRelayMuted();
@@ -551,7 +552,7 @@ int AmRtpStream::init(const AmSdp &local, const AmSdp &remote, bool sdp_offer_ow
 
     active = false; // mark as nothing received yet
 
-    return 0;
+    return InitResult::Ok;
 }
 
 // returns

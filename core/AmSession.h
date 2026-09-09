@@ -725,8 +725,9 @@ class AmSession : public virtual AmObject,
     /** This callback is called on final exception in processEventsCatchExceptions() */
     virtual bool onException(int code, const string &reason) noexcept { return false; }
 
-    /** This callback is called on failed inited rtp stream */
-    virtual void onInitStreamFailed() {}
+    /** This callback is called on failed rtp stream initialization after SDP negotiation.
+     *  Default: terminate the session (a leg without media is not a call). */
+    virtual void onInitStreamFailed(const string &reason);
 
     /** This callback is called if RTP timeout encountered */
     virtual void onRtpTimeout();

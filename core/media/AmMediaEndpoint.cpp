@@ -542,13 +542,20 @@ void AmMediaEndpoint::applyIceParams(SdpMedia &sdp_media)
     }
 }
 
+// entry points below are called from non-session threads (rtp receiver, stun processor, media processor):
+// connection creation errors are logged here, nobody above can handle them
+
 void AmMediaEndpoint::allowStunConnection(AmMediaTransport *t, sockaddr_storage *remote_addr, int priority)
 {
-    iterateTransports([&](auto tr) {
-        if (t->getTransportType() != tr->getTransportType())
-            return;
-        tr->allowStunConnection(remote_addr, priority);
-    });
+    try {
+        iterateTransports([&](auto tr) {
+            if (t->getTransportType() != tr->getTransportType())
+                return;
+            tr->allowStunConnection(remote_addr, priority);
+        });
+    } catch (const string &error) {
+        CLASS_ERROR("allowStunConnection: %s", error.c_str());
+    }
     setCurrentTransport(getIceContext(t->getTransportType())->getCurrentTransport());
     setMute(cur_rtp_trans->isMute(AmStreamConnection::RAW_CONN));
 }
@@ -558,11 +565,15 @@ void AmMediaEndpoint::allowStunPair(AmMediaTransport *t, sockaddr_storage *remot
     onLeavePassiveMode();
     onRtpEndpointLearned();
 
-    iterateTransports([&](auto tr) {
-        if (t->getTransportType() != tr->getTransportType())
-            return;
-        tr->allowStunPair(remote_addr);
-    });
+    try {
+        iterateTransports([&](auto tr) {
+            if (t->getTransportType() != tr->getTransportType())
+                return;
+            tr->allowStunPair(remote_addr);
+        });
+    } catch (const string &error) {
+        CLASS_ERROR("allowStunPair: %s", error.c_str());
+    }
     setCurrentTransport(t);
 }
 
@@ -578,7 +589,11 @@ void AmMediaEndpoint::dtlsSessionActivated(AmMediaTransport *t, uint16_t srtp_pr
     string l_key(local_key.size(), 0), r_key(remote_key.size(), 0);
     memcpy((void *)l_key.c_str(), local_key.data(), local_key.size());
     memcpy((void *)r_key.c_str(), remote_key.data(), remote_key.size());
-    onSrtpKeysAvailable(t->getTransportType(), srtp_profile, l_key, r_key);
+    try {
+        onSrtpKeysAvailable(t->getTransportType(), srtp_profile, l_key, r_key);
+    } catch (const string &error) {
+        CLASS_ERROR("dtlsSessionActivated: %s", error.c_str());
+    }
 }
 
 void AmMediaEndpoint::onIceRoleConflict()
@@ -648,7 +663,11 @@ void AmMediaEndpoint::zrtpSessionActivated(srtp_profile_t srtp_profile, const ve
     string l_key(local_key.size(), 0), r_key(remote_key.size(), 0);
     memcpy((void *)l_key.c_str(), local_key.data(), local_key.size());
     memcpy((void *)r_key.c_str(), remote_key.data(), remote_key.size());
-    onSrtpKeysAvailable(RTP_TRANSPORT, srtp_profile, l_key, r_key);
+    try {
+        onSrtpKeysAvailable(RTP_TRANSPORT, srtp_profile, l_key, r_key);
+    } catch (const string &error) {
+        CLASS_ERROR("zrtpSessionActivated: %s", error.c_str());
+    }
 }
 
 void AmMediaEndpoint::initZrtp()
