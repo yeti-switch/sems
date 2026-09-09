@@ -202,9 +202,9 @@ class StreamData {
 
     /** initialize given stream for transcoding & regular audio processing
      *
-     * CodecError is tolerable here (we can't handle the remote payloads
-     * ourselves, relaying may still work); TransportError leaves the stream
-     * without a usable connection. */
+     * NoStream (slot not attached to a leg yet) and CodecError (we can't handle
+     * the remote payloads ourselves, relaying may still work) are tolerable;
+     * TransportError leaves the stream without a usable connection. */
     AmRtpStream::InitResult initStream(PlayoutType playout_type, AmSdp &local_sdp, AmSdp &remote_sdp);
 
     void     setInput(AmAudio *_in) { in = _in; }

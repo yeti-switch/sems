@@ -274,7 +274,7 @@ AmRtpStream::InitResult StreamData::initStream(PlayoutType playout_type, AmSdp &
 
     auto *stream = getStream();
     if (!stream)
-        return AmRtpStream::InitResult::TransportError;
+        return AmRtpStream::InitResult::NoStream;
 
     // The owner AmSession may be concurrently encoding/decoding this stream on a
     // media-processor thread under its audio_mut; stream->init() below frees and
