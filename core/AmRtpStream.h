@@ -600,6 +600,7 @@ class AmRtpStream : public AmObject
     enum class InitResult {
         Ok,
         NoStream,       // B2B slot without a stream attached (StreamData), nothing was initialized
+        NoMedia,        // sdp_media_index not covered by local/remote SDP (m-line not negotiated on this leg yet)
         CodecError,     // payload negotiation failed; transport untouched, relay may still work
         TransportError, // no usable transport/connection to the remote media address
     };

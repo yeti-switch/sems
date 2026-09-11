@@ -200,11 +200,7 @@ class StreamData {
     }
     void setSdpOfferOwner(bool owner) { sdp_offer_owner = owner; }
 
-    /** initialize given stream for transcoding & regular audio processing
-     *
-     * NoStream (slot not attached to a leg yet) and CodecError (we can't handle
-     * the remote payloads ourselves, relaying may still work) are tolerable;
-     * TransportError leaves the stream without a usable connection. */
+    /** initialize given stream for transcoding & regular audio processing*/
     AmRtpStream::InitResult initStream(PlayoutType playout_type, AmSdp &local_sdp, AmSdp &remote_sdp);
 
     void     setInput(AmAudio *_in) { in = _in; }

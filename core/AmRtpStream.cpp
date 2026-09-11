@@ -290,7 +290,7 @@ AmRtpStream::InitResult AmRtpStream::init(const AmSdp &local, const AmSdp &remot
     {
         CLASS_ERROR("Media index %i is invalid, either within local or remote SDP (or both)", sdp_media_index);
         init_error = "Media index is invalid";
-        return InitResult::TransportError;
+        return InitResult::NoMedia;
     }
 
 
