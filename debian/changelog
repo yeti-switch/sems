@@ -1,3 +1,9 @@
+sems (1.210.0) stable; urgency=low
+  * add Via alias support (RFC5923)
+  * trsp_worker: add transport type to connections map key
+  * media: propagate stream init failures as an error
+ -- Michael Furmur <furmur@pm.me>  Mon, 14 Sep 2026 18:03:13 +0300
+
 sems (1.209.0) stable; urgency=low
   * fix segfault on audio buffer overflow. set max media frame size to 120
   * AmB2BSession: follow offer address family in SDP answer
