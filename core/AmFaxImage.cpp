@@ -413,6 +413,7 @@ void AmFaxImage::faxComplete(bool isSuccess, const std::string &strResult, const
 FaxAudioImage::FaxAudioImage(AmEventQueue *q, const std::string &filePath, bool send, ContextLoggingHook *logger_)
     : AmFaxImage(q, filePath, send, logger_)
     , m_fax_state{ 0 }
+    , m_rx_samples(0)
 {
 }
 
@@ -464,9 +465,14 @@ int FaxAudioImage::init_tone_fax()
 int FaxAudioImage::read(unsigned int user_ts, unsigned int size)
 {
     if (m_fax_state) {
+        unsigned int frame = fmt->bytes2samples(size);
+        if (m_rx_samples < frame)
+            fax_rx_fillin(m_fax_state, frame - m_rx_samples);
+        m_rx_samples = 0;
+
         unsigned char *amp = AmAudio::samples;
         memset(amp, 0, size);
-        int ret = fax_tx(m_fax_state, (int16_t *)amp, fmt->bytes2samples(size));
+        int ret = fax_tx(m_fax_state, (int16_t *)amp, frame);
         return fmt->calcBytesToRead(ret);
     }
     return -1;
@@ -477,6 +483,7 @@ int FaxAudioImage::write(unsigned int user_ts, unsigned int size)
     if (m_fax_state) {
         unsigned char *amp = AmAudio::samples;
         /*int ret = */ fax_rx(m_fax_state, (int16_t *)amp, fmt->bytes2samples(size));
+        m_rx_samples += fmt->bytes2samples(size);
         return size;
     }
     return -1;

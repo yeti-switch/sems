@@ -423,13 +423,7 @@ AmRtpStream::InitResult AmRtpAudio::init(const AmSdp &local, const AmSdp &remote
         fec.reset(new LowcFE(static_cast<unsigned int>(getSampleRate())));
 #endif // USE_SPANDSP_PLC
 
-        if (m_playout_type == SIMPLE_PLAYOUT) {
-            playout_buffer.reset(new AmPlayoutBuffer(this, static_cast<unsigned int>(getSampleRate())));
-        } else if (m_playout_type == ADAPTIVE_PLAYOUT) {
-            playout_buffer.reset(new AmAdaptivePlayout(this, static_cast<unsigned int>(getSampleRate())));
-        } else {
-            playout_buffer.reset(new AmJbPlayout(this, static_cast<unsigned int>(getSampleRate())));
-        }
+        resetPlayoutBuffer();
     }
 
     if (session) {
@@ -620,18 +614,26 @@ void AmRtpAudio::setPlayoutType(PlayoutType type)
     AmAudioLockGuard audio_guard(session);
     m_playout_type = type;
 
-    if (type == ADAPTIVE_PLAYOUT) {
-        if (fmt.get())
-            playout_buffer.reset(new AmAdaptivePlayout(this, static_cast<unsigned int>(getSampleRate())));
+    if (fmt.get())
+        resetPlayoutBuffer();
+}
+
+void AmRtpAudio::resetPlayoutBuffer()
+{
+    auto rate = static_cast<unsigned int>(getSampleRate());
+    switch (m_playout_type) {
+    case ADAPTIVE_PLAYOUT:
+        playout_buffer.reset(new AmAdaptivePlayout(this, rate));
         DBG("Adaptive playout buffer activated");
-    } else if (type == JB_PLAYOUT) {
-        if (fmt.get())
-            playout_buffer.reset(new AmJbPlayout(this, static_cast<unsigned int>(getSampleRate())));
+        break;
+    case JB_PLAYOUT:
+        playout_buffer.reset(new AmJbPlayout(this, rate));
         DBG("Adaptive jitter buffer activated");
-    } else {
-        if (fmt.get())
-            playout_buffer.reset(new AmPlayoutBuffer(this, static_cast<unsigned int>(getSampleRate())));
+        break;
+    case SIMPLE_PLAYOUT:
+        playout_buffer.reset(new AmPlayoutBuffer(this, rate));
         DBG("Simple playout buffer activated");
+        break;
     }
 }
 

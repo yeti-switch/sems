@@ -100,6 +100,8 @@ class AmFaxImage {
 
 class FaxAudioImage : public AmAudio, public AmFaxImage {
     fax_state_t *m_fax_state;
+    /** samples fed to fax_rx() since the last read();*/
+    unsigned int m_rx_samples;
 
   public:
     FaxAudioImage(AmEventQueue *q, const std::string &filePath, bool send, ContextLoggingHook *logger_);

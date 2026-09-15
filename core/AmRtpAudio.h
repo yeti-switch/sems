@@ -166,6 +166,8 @@ class AmRtpAudio : public AmRtpStream, public AmAudio, public AmPLCBuffer {
     int ping(unsigned long long ts) override;
 
     void setPlayoutType(PlayoutType type);
+    /** (re)create playout_buffer for m_playout_type at the current sample rate */
+    void resetPlayoutBuffer();
 
 
     // AmPLCBuffer interface
