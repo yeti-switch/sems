@@ -659,9 +659,9 @@ void AmStunConnection::check_request(CStunMessageReader *reader, sockaddr_storag
     } else {
         CSocketAddress addr(r_addr);
         builder.AddXorMappedAddress(addr);
-        builder.AddMessageIntegrityShortTerm(local_password.c_str());
-        builder.AddFingerprintAttribute();
     }
+    builder.AddMessageIntegrityShortTerm(local_password.c_str());
+    builder.AddFingerprintAttribute();
 
     CRefCountedBuffer buffer;
     HRESULT           ret = builder.GetResult(&buffer);
@@ -709,14 +709,6 @@ void AmStunConnection::check_response(CStunMessageReader *reader, sockaddr_stora
         }
     }
 
-    if (valid && reader->GetErrorCode(&err_code) == S_OK) {
-        if (err_code == STUN_ERROR_ROLECONFLICT) {
-            transport->getEndpoint()->onIceRoleConflict();
-        }
-        error_str = "error response";
-        valid     = false;
-    }
-
     if (valid && !reader->HasMessageIntegrityAttribute()) {
         err_code  = STUN_ERROR_UNAUTHORIZED;
         error_str = "absent message integrity attribute";
@@ -733,12 +725,23 @@ void AmStunConnection::check_response(CStunMessageReader *reader, sockaddr_stora
         valid     = false;
     }
 
+    bool authenticated = valid;
+
+    if (valid && reader->GetErrorCode(&err_code) == S_OK) {
+        if (err_code == STUN_ERROR_ROLECONFLICT) {
+            transport->getEndpoint()->onIceRoleConflict();
+        }
+        error_str = "error response";
+        valid     = false;
+    }
+
     if (valid) {
         allow_candidate(false);
     } else if (!valid) {
         string error("invalid stun message: ");
         transport->getEndpoint()->onErrorRtpTransport(STUN_VALID_ERROR, error + error_str, transport);
-        if (err_code == STUN_ERROR_INCORRECT_TRANSID)
+        // rfc5389 10.1.3: unauthenticated response is discarded as if never received
+        if (!authenticated)
             return;
         if (err_code == STUN_ERROR_ROLECONFLICT) {
             state = PAIR_WAITING;
