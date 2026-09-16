@@ -1,3 +1,8 @@
+sems (1.211.0) stable; urgency=low
+  * fax: keep T.30 audio path free of adaptive playout
+  * AmStunConnection: add MESSAGE-INTEGRITY and FINGERPRINT to error responses
+ -- Michael Furmur <furmur@pm.me>  Wed, 16 Sep 2026 12:43:41 +0300
+
 sems (1.210.0) stable; urgency=low
   * add Via alias support (RFC5923)
   * trsp_worker: add transport type to connections map key
