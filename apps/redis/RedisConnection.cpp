@@ -68,7 +68,7 @@ int RedisConnection::add_event(int flag)
     int                op = mask ? EPOLL_CTL_MOD : EPOLL_CTL_ADD;
 
     ee.events   = static_cast<uint32_t>(mask |= flag);
-    ee.data.ptr = async_context;
+    ee.data.ptr = this;
 
     return epoll_ctl(epoll_fd, op, redis::redisGetFd(async_context), &ee);
 }
@@ -84,7 +84,7 @@ int RedisConnection::del_event(int flag)
     struct epoll_event ee = {};
 
     ee.events   = static_cast<uint32_t>(mask &= ~flag);
-    ee.data.ptr = async_context;
+    ee.data.ptr = this;
 
     return epoll_ctl(epoll_fd, mask ? EPOLL_CTL_MOD : EPOLL_CTL_DEL, redis::redisGetFd(async_context), &ee);
 }

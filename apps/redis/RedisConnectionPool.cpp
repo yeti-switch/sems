@@ -151,14 +151,15 @@ void RedisConnectionPool::run()
                 processEvents();
             } else {
                 if (!p) {
-                    CLASS_ERROR("got event on null async_context. ignore");
+                    CLASS_ERROR("got event on null connection. ignore");
                     continue;
                 }
-                if (e.events & EPOLLIN) {
-                    redis::redisAsyncHandleRead((redisAsyncContext *)p);
+                auto c = static_cast<RedisConnection *>(p);
+                if ((e.events & EPOLLIN) && c->get_async_context()) {
+                    redis::redisAsyncHandleRead(c->get_async_context());
                 }
-                if (e.events & EPOLLOUT) {
-                    redis::redisAsyncHandleWrite((redisAsyncContext *)p);
+                if ((e.events & EPOLLOUT) && c->get_async_context()) {
+                    redis::redisAsyncHandleWrite(c->get_async_context());
                 }
             }
         }
