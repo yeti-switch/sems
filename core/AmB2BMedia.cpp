@@ -1038,12 +1038,16 @@ void AmB2BMedia::createStreams(const AmSdp &sdp, bool a_leg)
     // build per-leg txs only when there ARE new m-lines to stage
     AmMediaTransaction *tx_a = nullptr, *tx_b = nullptr;
     if (in_transaction_mode && sdp.media.size() > total_before) {
-        auto ta = std::make_unique<AmMediaTransaction>(a, prev_a_leg_local_sdp);
-        auto tb = std::make_unique<AmMediaTransaction>(b, prev_b_leg_local_sdp);
-        tx_a    = ta.get();
-        tx_b    = tb.get();
-        a->setMediaTransaction(std::move(ta));
-        b->setMediaTransaction(std::move(tb));
+        if (a) {
+            auto ta = std::make_unique<AmMediaTransaction>(a, prev_a_leg_local_sdp);
+            tx_a    = ta.get();
+            a->setMediaTransaction(std::move(ta));
+        }
+        if (b) {
+            auto tb = std::make_unique<AmMediaTransaction>(b, prev_b_leg_local_sdp);
+            tx_b    = tb.get();
+            b->setMediaTransaction(std::move(tb));
+        }
     }
 
     int idx = 0;
