@@ -271,6 +271,19 @@ AmRtpAudio *AmSession::addRtpStream(AmRtpAudio *s)
     return s;
 }
 
+void AmSession::addEmptyRtpSlot(MediaType type, TransProt transport)
+{
+    // slot 0 is never empty: the primary stream is what RTPStream() callers (c= line, hold, DTMF, ...) rely on,
+    // so a rejected first m= line gets a disabled stream (port-0 line in re-offers, enabled by a later re-INVITE)
+    if (_rtp_streams.empty()) {
+        AmRtpAudio *s = addRtpStream();
+        s->setDisabled(true);
+        s->setTransport(transport); // the port-0 line in re-offers reports this transport (type derives from it)
+        return;
+    }
+    _rtp_streams.push_back({ nullptr, type, transport });
+}
+
 AmRtpAudio *AmSession::activateRtpSlot(unsigned idx)
 {
     if (idx >= _rtp_streams.size()) {
@@ -278,8 +291,10 @@ AmRtpAudio *AmSession::activateRtpSlot(unsigned idx)
         return nullptr;
     }
     auto it = std::next(_rtp_streams.begin(), idx);
-    if (it->stream)
-        return it->stream.get(); // already materialised
+    if (it->stream) { // already materialised (possibly the disabled slot-0 stream)
+        it->stream->setDisabled(false);
+        return it->stream.get();
+    }
     it->stream.reset(new AmRtpAudio(this, rtp_interface, (int)idx));
     return it->stream.get();
 }

@@ -263,7 +263,8 @@ class AmSession : public virtual AmObject,
     // build a new stream for the next m= line WITHOUT adding it (staged in a media transaction, adopted on commit).
     // idx = live slots + already-staged in media_txn.
     AmRtpAudio *createDetachedRtpStream();
-    void addEmptyRtpSlot(MediaType type, TransProt transport) { _rtp_streams.push_back({ nullptr, type, transport }); }
+    // placeholder for a rejected m= line; at position 0 it is a disabled stream instead (see the definition)
+    void addEmptyRtpSlot(MediaType type, TransProt transport);
     // if the slot at idx holds a placeholder, materialise an AmRtpAudio in place; otherwise return the existing one
     AmRtpAudio *activateRtpSlot(unsigned idx);
     void        forEachRtpStream(const std::function<void(AmRtpAudio *, MediaType, TransProt)> &fn);

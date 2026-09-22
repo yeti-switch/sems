@@ -497,10 +497,13 @@ class AmRtpStream : public AmObject
         return sdp_media_index;
     }
 
-    // RFC 3264: a disabled m= line keeps its slot at port 0 and carries no media
+    // RFC 3264: a disabled m= line keeps its slot at port 0 and carries no media.
+    // Re-enabling hands the cached transport to the endpoint (materialised now: the stream is about to be used).
     void setDisabled(bool d)
     {
         disabled = d;
+        if (!d && transport != TP_NONE)
+            sdpEndpoint()->setTransport(transport);
     }
     bool isDisabled() const
     {

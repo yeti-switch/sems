@@ -1006,6 +1006,8 @@ void AmRtpStream::setTransport(TransProt trans)
 {
     CLASS_DBG("set transport to: %d(%s)", trans, transport_p_2_str(trans).c_str());
     transport = trans; // local copy: reportable without the endpoint (e.g. for a disabled stream)
+    if (disabled)
+        return; // port-0 line: no endpoint is materialised for it; re-enabling negotiates the transport again
     sdpEndpoint()->setTransport(trans);
 }
 

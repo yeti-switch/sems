@@ -192,6 +192,58 @@ TEST_F(RTPStream, AnswerAddrFamilyMismatch)
     EXPECT_FALSE(sessionA.initError().empty());
 }
 
+TEST_F(RTPStream, AnswerAllLinesRejected)
+{
+    unsigned int idx = AmConfig.sip_if_names[test_config::instance()->signalling_interface];
+    string       ip;
+    if (AmConfig.sip_ifs[idx].proto_info.size())
+        ip = AmConfig.sip_ifs[idx].proto_info[0]->getIP();
+    ASSERT_FALSE(ip.empty());
+    ip.insert(0, "sip:");
+
+    struct BareSession : AmSession {
+        BareSession(const string &uri)
+        {
+            dlg->setRemoteUri(uri);
+            setLocalTag();
+        }
+    };
+
+    TestSession sessionA(ip, OFFER);
+    AmSdp       offer = *sessionA.getLocalSdp();
+    for (auto &m : offer.media) {
+        m.port      = 0;
+        m.transport = TP_RTPSAVP; // not the endpoint default: proves the rejected line's transport is kept
+    }
+
+    BareSession sessionB(ip);
+    AmSdp       answer;
+    ASSERT_TRUE(sessionB.getSdpAnswer(offer, answer));
+    ASSERT_EQ(answer.media.size(), 1);
+    EXPECT_EQ(answer.media[0].port, 0);
+    EXPECT_FALSE(answer.conn.address.empty());
+    ASSERT_TRUE(sessionB.hasRtpStream(0));
+    EXPECT_TRUE(sessionB.RTPStream()->isDisabled());
+
+    // our re-offer keeps the line at port 0 with the rejected line's transport
+    AmSdp reoffer;
+    ASSERT_TRUE(sessionB.getSdpOffer(reoffer));
+    ASSERT_EQ(reoffer.media.size(), 1);
+    EXPECT_EQ(reoffer.media[0].port, 0);
+    EXPECT_EQ(reoffer.media[0].transport, TP_RTPSAVP);
+
+    // enabling the slot (B2B Empty -> Active) hands the kept transport to the endpoint
+    ASSERT_NE(sessionB.activateRtpSlot(0), nullptr);
+    EXPECT_FALSE(sessionB.RTPStream()->isDisabled());
+    EXPECT_EQ(sessionB.RTPStream()->getEndpoint()->getTransport(), TP_RTPSAVP);
+
+    AmSdp answer2;
+    ASSERT_TRUE(sessionB.getSdpAnswer(*sessionA.getLocalSdp(), answer2));
+    ASSERT_EQ(answer2.media.size(), 1);
+    EXPECT_NE(answer2.media[0].port, 0);
+    EXPECT_FALSE(sessionB.RTPStream()->isDisabled());
+}
+
 TEST_F(RTPStream, DISABLED_StressTest)
 {
     string error;
