@@ -1,3 +1,7 @@
+sems (1.212.0) stable; urgency=low
+  * AmSession: fix crash in getSdpAnswer when the first m= line is rejected
+ -- Michael Furmur <furmur@pm.me>  Mon, 21 Sep 2026 16:49:54 +0300
+
 sems (1.211.1) stable; urgency=low
   * AmB2BMedia: fix crash in createStreams when one of the legs is gone
  -- Michael Furmur <furmur@pm.me>  Mon, 21 Sep 2026 16:49:54 +0300
