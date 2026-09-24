@@ -1,3 +1,7 @@
+sems (1.212.1) stable; urgency=low
+  * redis: fix crash in RedisConnectionPool::run on disconnect with pending write
+ -- Michael Furmur <furmur@pm.me>  Thu, 24 Sep 2026 13:52:00 +0300
+
 sems (1.212.0) stable; urgency=low
   * AmSession: fix crash in getSdpAnswer when the first m= line is rejected
  -- Michael Furmur <furmur@pm.me>  Mon, 21 Sep 2026 16:49:54 +0300
