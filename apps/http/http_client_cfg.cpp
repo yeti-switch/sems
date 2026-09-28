@@ -18,6 +18,8 @@ cfg_opt_t http_dest_opt[]{ CFG_STR(PARAM_AUTH_TYPE, "", CFGF_NODEFAULT),
                            CFG_STR(PARAM_AUTH_JWT_ISS, "", CFGF_NONE),
                            CFG_STR(PARAM_AUTH_ACCESS_KEY, "", CFGF_NONE),
                            CFG_STR(PARAM_AUTH_SECRET_KEY, "", CFGF_NONE),
+                           CFG_INT(PARAM_AUTH_S3_VERSION, 2, CFGF_NONE),
+                           CFG_STR(PARAM_AUTH_REGION, "", CFGF_NONE),
                            CFG_INT(PARAM_AUTH_TOKEN_LIFETIME, 3600, CFGF_NONE),
 
                            CFG_STR(PARAM_MODE_NAME, "", CFGF_NODEFAULT),

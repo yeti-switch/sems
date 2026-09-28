@@ -229,6 +229,7 @@ bool HttpCodesMap::operator()(long int code) const
 HttpDestination::HttpDestination(const string &name)
     : auth_type(AuthType_Unknown)
     , is_auth_destination(false)
+    , s3_version(2)
     , http2_tls(false)
     , min_file_size(0)
     , max_reply_size(0)
@@ -322,6 +323,21 @@ int HttpDestination::parse(const string &name, cfg_t *cfg, const DefaultValues &
             break;
         }
         case AuthType_s3:
+        {
+            access_key = cfg_getstr(cfg, PARAM_AUTH_ACCESS_KEY);
+            secret_key = cfg_getstr(cfg, PARAM_AUTH_SECRET_KEY);
+            s3_version = cfg_getint(cfg, PARAM_AUTH_S3_VERSION);
+            region     = cfg_getstr(cfg, PARAM_AUTH_REGION);
+            if (s3_version != 2 && s3_version != 4) {
+                ERROR("%s: unsupported s3 signature version: %d. expected 2 or 4", name.c_str(), s3_version);
+                return -1;
+            }
+            if (s3_version == 4 && region.empty()) {
+                ERROR("%s: 'region' is mandatory for s3 signature version 4", name.c_str());
+                return -1;
+            }
+            break;
+        }
         case AuthType_ruby_api:
         {
             access_key = cfg_getstr(cfg, PARAM_AUTH_ACCESS_KEY);
@@ -396,7 +412,7 @@ int HttpDestination::parse(const string &name, cfg_t *cfg, const DefaultValues &
     }
 
     cfg_t *saction = cfg_getsec(cfg, SECTION_ON_SUCCESS_NAME);
-    if (succ_action.parse(ACTION_REMOVE_VALUE, saction)) {
+    if (succ_action.parse(mode == Download ? ACTION_NOTHING_VALUE : ACTION_REMOVE_VALUE, saction)) {
         ERROR("can't parse post_upload action");
         return -1;
     }
@@ -543,6 +559,11 @@ void HttpDestination::dump(const string &, AmArg &ret) const
     if (!secret_key.empty()) {
         ret["secret_key"] = secret_key;
     }
+    if (auth_type == AuthType_s3) {
+        ret["version"] = s3_version;
+        if (!region.empty())
+            ret["region"] = region;
+    }
     ret["attempts_limit"]          = static_cast<int>(attempts_limit);
     ret["resend_queue_max"]        = static_cast<int>(resend_queue_max);
     ret["connection_limit"]        = static_cast<int>(resend_connection_limit);
@@ -577,6 +598,8 @@ HttpDestination::Mode HttpDestination::str2Mode(const string &mode)
         return Post;
     } else if (mode == MODE_GET_VALUE) {
         return Get;
+    } else if (mode == MODE_DOWNLOAD_VALUE) {
+        return Download;
     }
     return Unknown;
 }

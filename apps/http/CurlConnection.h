@@ -64,6 +64,6 @@ class CurlConnection {
         if (finished)
             finish_action.perform();
     }
-    bool is_failed() { return failed; }
-    void get_response(AmArg &ret);
+    bool         is_failed() { return failed; }
+    virtual void get_response(AmArg &ret);
 };

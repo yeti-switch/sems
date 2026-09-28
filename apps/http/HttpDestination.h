@@ -79,7 +79,7 @@ struct HttpDestination {
 
     string action_data;
 
-    enum Mode { Unknown, Put, Post, Get } mode;
+    enum Mode { Unknown, Put, Post, Get, Download } mode;
     string mode_str;
 
     /** this destination is used for auth purposes */
@@ -91,7 +91,10 @@ struct HttpDestination {
     } auth_type;
     string auth_type_str;
 
-    bool    is_auth_destination;
+    // common fields
+    bool is_auth_destination;
+
+    // firebase_oauth2
     string  key_file;
     string  key_data;
     string  access_token;
@@ -100,8 +103,14 @@ struct HttpDestination {
     int     token_lifetime;
     timeval token_created_at;
     int     expires;
-    string  access_key;
-    string  secret_key;
+
+    // s3, ruby_api_auth
+    string access_key;
+    string secret_key;
+
+    // s3
+    int    s3_version; // signature version: 2 or 4
+    string region;     // signature v4 only
 
     bool           http2_tls;
     string         auth_required; /** this destination requires the specified authentication */

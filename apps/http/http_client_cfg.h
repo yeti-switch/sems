@@ -24,6 +24,8 @@
 #define PARAM_AUTH_TOKEN_LIFETIME "token_lifetime"
 #define PARAM_AUTH_ACCESS_KEY     "access_key"
 #define PARAM_AUTH_SECRET_KEY     "secret_key"
+#define PARAM_AUTH_S3_VERSION     "version"
+#define PARAM_AUTH_REGION         "region"
 
 #define PARAM_MODE_NAME           "mode"
 #define PARAM_AUTH_NAME           "auth"
@@ -43,9 +45,10 @@
 #define PARAM_MIN_FILE_SIZE_NAME  "min_file_size"
 #define PARAM_MAX_REPLY_SIZE_NAME "max_reply_size"
 
-#define MODE_PUT_VALUE  "put"
-#define MODE_POST_VALUE "post"
-#define MODE_GET_VALUE  "get"
+#define MODE_PUT_VALUE      "put"
+#define MODE_POST_VALUE     "post"
+#define MODE_GET_VALUE      "get"
+#define MODE_DOWNLOAD_VALUE "download"
 
 #define ACTION_REMOVE_VALUE  "remove"
 #define ACTION_NOTHING_VALUE "nothing"

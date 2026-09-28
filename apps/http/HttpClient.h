@@ -118,6 +118,7 @@ class HttpClient : public AmThread,
     void on_post_request(HttpPostEvent *u);
     void on_multpart_form_request(HttpPostMultipartFormEvent *u);
     void on_get_request(HttpGetEvent *e);
+    void on_download_request(HttpDownloadEvent *e);
     void on_init_connection_error(const string &conn_id);
     void on_multi_request(HttpMultiEvent *e);
     void on_trigger_sync_context(const HttpTriggerSyncContext &e);
@@ -128,11 +129,14 @@ class HttpClient : public AmThread,
     void authorization(HttpDestination &d, HttpEvent *u) const;
     void authorization_firebase_oauth2(HttpDestination &d, HttpEvent *u, const HttpDestination &auth) const;
     void authorization_s3(HttpDestination &d, HttpEvent *u, const HttpDestination &auth) const;
+    void authorization_s3_v4(HttpEvent *u, const HttpDestination &auth, const string &method, const string &full_url,
+                             const string &payload_hash) const;
     void authorization_ruby_api(HttpDestination &d, HttpEvent *u, const HttpDestination &auth) const;
 
     rpc_handler       showStats;
     async_rpc_handler postRequest;
     async_rpc_handler getRequest;
+    async_rpc_handler downloadRequest;
     async_rpc_handler multiRequest;
     rpc_handler       authDump;
     rpc_handler       dstDump;

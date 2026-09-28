@@ -8,7 +8,7 @@
 #define HTTP_EVENT_QUEUE "http"
 
 struct HttpEvent : public AmEvent {
-    enum Type { Unknown = -1, Upload = 0, Post, MultiPartForm, Get, Multi, TriggerSyncContext };
+    enum Type { Unknown = -1, Upload = 0, Post, MultiPartForm, Get, Multi, TriggerSyncContext, Download };
 
     map<string, string> url_placeholders;
     map<string, string> headers;
@@ -70,6 +70,8 @@ struct HttpEvent : public AmEvent {
             return Upload;
         if (str == "multipart")
             return MultiPartForm;
+        if (str == "download")
+            return Download;
         return Unknown;
     }
 
@@ -250,6 +252,47 @@ struct HttpGetResponseEvent : public AmEvent {
         , token(token)
         , data(data.c_str(), data.size())
         , mime_type(mimetype)
+    {
+    }
+};
+
+struct HttpDownloadEvent : public HttpEvent {
+    string destination_name;
+    string file_path;
+    string dst_dir;
+
+    HttpDownloadEvent(const string &destination_name, const string &file_path, const string &dst_dir, string token,
+                      const string &session_id = string())
+        : HttpEvent(Download, session_id, token)
+        , destination_name(destination_name)
+        , file_path(file_path)
+        , dst_dir(dst_dir)
+    {
+    }
+
+    HttpDownloadEvent(const HttpDownloadEvent &src)
+        : HttpEvent(src)
+        , destination_name(src.destination_name)
+        , file_path(src.file_path)
+        , dst_dir(src.dst_dir)
+    {
+    }
+
+    HttpEvent *http_clone() const override { return new HttpDownloadEvent(*this); }
+};
+
+struct HttpDownloadResponseEvent : public AmEvent {
+    long int code;
+    string   token;
+    string   file_path;
+    string   error;
+
+    HttpDownloadResponseEvent(long int code, const string &file_path, const string &error, string token = string())
+        : AmEvent(E_PLUGIN)
+        , code(code)
+        , token(token)
+        , file_path(file_path)
+        , error(error)
     {
     }
 };

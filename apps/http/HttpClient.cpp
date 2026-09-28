@@ -11,8 +11,10 @@
 #include "HttpUploadConnection.h"
 #include "HttpPostConnection.h"
 #include "HttpGetConnection.h"
+#include "HttpDownloadConnection.h"
 #include "HttpMultipartFormConnection.h"
 
+#include <algorithm>
 #include <vector>
 #include "http_client_cfg.h"
 using std::vector;
@@ -30,15 +32,20 @@ using std::vector;
 #define SYNC_CONTEXTS_TIMEOUT_INVERVAL 60 // seconds
 #define AUTH_TIMER_INVERVAL            2000000
 
-static std::optional<string> get_url_resource(const string &url);
-static string                get_rfc5322_date_str();
-static string                get_http_gmt_date_str();
-static string                compute_hmac_sha1(const string &msg, const string &key);
-static string                compute_hmac_sha256(const string &msg, const string &key);
-static string                compute_sha256_base64(const string &msg);
-static std::optional<string> compute_file_sha256_base64(const string &file_path);
+static std::optional<string>                        get_url_resource(const string &url);
+static string                                       get_rfc5322_date_str();
+static string                                       get_http_gmt_date_str();
+static string                                       compute_hmac_sha1(const string &msg, const string &key);
+static string                                       compute_hmac_sha256(const string &msg, const string &key);
+static string                                       compute_sha256_base64(const string &msg);
+static std::optional<string>                        compute_file_sha256_base64(const string &file_path);
+static std::optional<Botan::secure_vector<uint8_t>> compute_file_sha256(const string &file_path);
+static string                                       sha256_hex(const string &msg);
+static Botan::secure_vector<uint8_t> hmac_sha256_raw(const Botan::secure_vector<uint8_t> &key, const string &msg);
+static string                        aws_uri_encode(const string &str);
+static string                        aws_uri_encode_path(const string &path);
 
-enum RpcMethodId { MethodShowDnsCache, MethodGetRequest, MethodPostRequest, MethodMultiRequest };
+enum RpcMethodId { MethodShowDnsCache, MethodGetRequest, MethodPostRequest, MethodMultiRequest, MethodDownloadRequest };
 
 struct ReloadEvent : public AmEvent {
     string config;
@@ -336,6 +343,8 @@ void HttpClient::init_rpc_tree()
     auto &req = reg_leaf(root, "request");
     reg_method(req, "post", "post request", "", &HttpClient::postRequest, this);
     reg_method(req, "get", "get request", "", &HttpClient::getRequest, this);
+    reg_method(req, "download", "download request", "<destination> <file_path> <dst_dir>", &HttpClient::downloadRequest,
+               this);
     reg_method(req, "multi", "multi request", "", &HttpClient::multiRequest, this);
     auto &certificates = reg_leaf(req, "certificates");
     reg_method(certificates, "reload", "reload certificates", "", &HttpClient::certReload, this);
@@ -368,6 +377,19 @@ bool HttpClient::getRequest(const string &connection_id, const AmArg &request_id
         throw(AmDynInvoke::Exception(-2, "wrong destination"));
 
     postEvent(new JsonRpcRequestEvent(connection_id, request_id, false, MethodGetRequest, params));
+    return true;
+}
+
+bool HttpClient::downloadRequest(const string &connection_id, const AmArg &request_id, const AmArg &params)
+{
+    params.assertArrayFmt("sss");
+    auto destination = destinations.find(params.get(0).asCStr());
+    if (destination == destinations.end())
+        throw(AmDynInvoke::Exception(-1, "unknown destination"));
+    if (destination->second->mode != HttpDestination::Download)
+        throw(AmDynInvoke::Exception(-2, "wrong destination"));
+
+    postEvent(new JsonRpcRequestEvent(connection_id, request_id, false, MethodDownloadRequest, params));
     return true;
 }
 
@@ -599,6 +621,16 @@ void HttpClient::process_jsonrpc_request(JsonRpcRequestEvent &request)
         rpc_requests.emplace(event.sync_ctx_id, request);
         process_http_event(&event);
     } break;
+    case MethodDownloadRequest:
+    {
+        HttpDownloadEvent event(request.params.get(0).asCStr(), // destination
+                                request.params.get(1).asCStr(), // file_path
+                                request.params.get(2).asCStr(), // dst_dir
+                                string());                      // token
+        event.sync_ctx_id = AmSession::getNewId();
+        rpc_requests.emplace(event.sync_ctx_id, request);
+        process_http_event(&event);
+    } break;
     case MethodPostRequest:
     {
         HttpPostEvent event(request.params.get(0).asCStr(), // destination
@@ -646,6 +678,11 @@ void HttpClient::process_http_event(AmEvent *ev)
     {
         if (HttpMultiEvent *e = dynamic_cast<HttpMultiEvent *>(ev))
             on_multi_request(e);
+    } break;
+    case HttpEvent::Download:
+    {
+        if (HttpDownloadEvent *e = dynamic_cast<HttpDownloadEvent *>(ev))
+            on_download_request(e);
     } break;
     default: WARN("unknown event received. event_id:%d", ev->event_id);
     }
@@ -900,7 +937,7 @@ void HttpClient::authorization_firebase_oauth2(HttpDestination &d, HttpEvent *u,
     if (auth.access_token.empty())
         return;
 
-    u->headers.emplace("Authorization", "Bearer " + auth.access_token);
+    u->headers["Authorization"] = "Bearer " + auth.access_token;
 }
 
 void HttpClient::authorization_s3(HttpDestination &d, HttpEvent *u, const HttpDestination &auth) const
@@ -908,35 +945,148 @@ void HttpClient::authorization_s3(HttpDestination &d, HttpEvent *u, const HttpDe
     if (auth.access_key.empty() || auth.secret_key.empty())
         return;
 
+    string method;
+    string full_url;
+
     if (auto upload_event = dynamic_cast<HttpUploadEvent *>(u)) {
         if (upload_event->file_name.empty()) {
             upload_event->file_name = filename_from_fullpath(upload_event->file_path);
         }
-
-        auto resource = get_url_resource(d.url[upload_event->failover_idx] + '/' + upload_event->file_name);
-        if (!resource)
-            return;
-
-        string date(get_rfc5322_date_str());
-
-        string sig_str;
-        sig_str.reserve(256);
-
-        sig_str += "PUT\n\n";
-        sig_str += d.content_type;
-        sig_str += '\n';
-        sig_str += date;
-        sig_str += '\n';
-        sig_str += *resource;
-
-        // if failover happens renew headers (e.g. 'resource' or 'date' can be changed)
-        upload_event->headers.erase("Authorization");
-        upload_event->headers.erase("Date");
-
-        upload_event->headers.emplace("Authorization",
-                                      "AWS " + auth.access_key + ':' + compute_hmac_sha1(sig_str, auth.secret_key));
-        upload_event->headers.emplace("Date", date);
+        method   = "PUT";
+        full_url = d.url[u->failover_idx] + '/' + upload_event->file_name;
+    } else if (auto download_event = dynamic_cast<HttpDownloadEvent *>(u)) {
+        method   = "GET";
+        full_url = HttpDownloadConnection::get_url(d, *download_event);
+    } else {
+        return;
     }
+
+    if (auth.s3_version == 4) {
+        string payload_hash;
+        if (auto upload_event = dynamic_cast<HttpUploadEvent *>(u)) {
+            auto hash = compute_file_sha256(upload_event->file_path);
+            if (!hash)
+                return;
+            payload_hash = Botan::hex_encode(*hash, false);
+        } else {
+            payload_hash = sha256_hex(string());
+        }
+        authorization_s3_v4(u, auth, method, full_url, payload_hash);
+        return;
+    }
+
+    auto resource = get_url_resource(full_url);
+    if (!resource)
+        return;
+
+    string date(get_rfc5322_date_str());
+
+    string sig_str;
+    sig_str.reserve(256);
+
+    sig_str += method;
+    sig_str += "\n\n";
+    sig_str += d.content_type;
+    sig_str += '\n';
+    sig_str += date;
+    sig_str += '\n';
+    sig_str += *resource;
+
+    u->headers["Authorization"] = "AWS " + auth.access_key + ':' + compute_hmac_sha1(sig_str, auth.secret_key);
+    u->headers["Date"]          = date;
+}
+
+/* AWS Signature Version 4, signed headers: host, x-amz-content-sha256, x-amz-date
+ * canonical request uses lower-case header names as the algorithm requires */
+void HttpClient::authorization_s3_v4(HttpEvent *u, const HttpDestination &auth, const string &method,
+                                     const string &full_url, const string &payload_hash) const
+{
+    CURLU *h = curl_url();
+    if (CURLUE_OK != curl_url_set(h, CURLUPART_URL, full_url.c_str(), 0)) {
+        ERROR("can't parse url for s3 v4 signature: %s", full_url.c_str());
+        curl_url_cleanup(h);
+        return;
+    }
+
+    auto url_part = [h](CURLUPart part, unsigned int flags = 0) {
+        char  *p = nullptr;
+        string ret;
+        if (CURLUE_OK == curl_url_get(h, part, &p, flags)) {
+            ret = p;
+            curl_free(p);
+        }
+        return ret;
+    };
+
+    string host = url_part(CURLUPART_HOST);
+    string port = url_part(CURLUPART_PORT);
+    // default port for protocols if not specified
+    if (!port.empty() && port != (url_part(CURLUPART_SCHEME) == "https" ? "443" : "80"))
+        host += ':' + port;
+    string path  = url_part(CURLUPART_PATH);
+    string query = url_part(CURLUPART_QUERY);
+    curl_url_cleanup(h);
+
+    if (path.empty())
+        path = "/";
+
+    string canonical_query;
+    if (!query.empty()) {
+        vector<string> params = explode(query, "&");
+        vector<string> encoded;
+        for (auto &param : params) {
+            auto eq = param.find('=');
+            if (eq == string::npos)
+                encoded.push_back(aws_uri_encode(param) + '=');
+            else
+                encoded.push_back(aws_uri_encode(param.substr(0, eq)) + '=' + aws_uri_encode(param.substr(eq + 1)));
+        }
+        std::sort(encoded.begin(), encoded.end());
+        for (auto &e : encoded) {
+            if (!canonical_query.empty())
+                canonical_query += '&';
+            canonical_query += e;
+        }
+    }
+
+    time_t    t = std::time(nullptr);
+    struct tm tt;
+    gmtime_r(&t, &tt);
+    char amz_date[32], date_scope[16];
+    strftime(amz_date, sizeof amz_date, "%Y%m%dT%H%M%SZ", &tt);
+    strftime(date_scope, sizeof date_scope, "%Y%m%d", &tt);
+
+    static const string signed_headers = "host;x-amz-content-sha256;x-amz-date";
+
+    string canonical_request;
+    canonical_request.reserve(512);
+    canonical_request += method + '\n';
+    canonical_request += aws_uri_encode_path(path) + '\n';
+    canonical_request += canonical_query + '\n';
+    canonical_request += "host:" + host + '\n';
+    canonical_request += "x-amz-content-sha256:" + payload_hash + '\n';
+    canonical_request += "x-amz-date:" + string(amz_date) + '\n';
+    canonical_request += '\n';
+    canonical_request += signed_headers + '\n';
+    canonical_request += payload_hash;
+
+    string scope = string(date_scope) + '/' + auth.region + "/s3/aws4_request";
+
+    string string_to_sign =
+        "AWS4-HMAC-SHA256\n" + string(amz_date) + '\n' + scope + '\n' + sha256_hex(canonical_request);
+
+    string                        secret = "AWS4" + auth.secret_key;
+    Botan::secure_vector<uint8_t> k_date =
+        hmac_sha256_raw(Botan::secure_vector<uint8_t>(secret.begin(), secret.end()), date_scope);
+    Botan::secure_vector<uint8_t> k_region  = hmac_sha256_raw(k_date, auth.region);
+    Botan::secure_vector<uint8_t> k_service = hmac_sha256_raw(k_region, "s3");
+    Botan::secure_vector<uint8_t> k_signing = hmac_sha256_raw(k_service, "aws4_request");
+    string                        signature = Botan::hex_encode(hmac_sha256_raw(k_signing, string_to_sign), false);
+
+    u->headers["Authorization"] = "AWS4-HMAC-SHA256 Credential=" + auth.access_key + '/' + scope +
+                                  ", SignedHeaders=" + signed_headers + ", Signature=" + signature;
+    u->headers["X-Amz-Date"]           = amz_date;
+    u->headers["X-Amz-Content-Sha256"] = payload_hash;
 }
 
 void HttpClient::authorization_ruby_api(HttpDestination &d, HttpEvent *u, const HttpDestination &auth) const
@@ -992,16 +1142,13 @@ void HttpClient::authorization_ruby_api(HttpDestination &d, HttpEvent *u, const 
     sig_str += ',';
     sig_str += date;
 
-    // if failover happens renew headers (e.g. 'resource', 'date' or content hash can be changed)
-    u->headers.erase("Authorization");
-    u->headers.erase("Date");
-    u->headers.erase("X-Authorization-Content-SHA256");
-
-    u->headers.emplace("Authorization",
-                       "APIAuth-HMAC-SHA256 " + auth.access_key + ':' + compute_hmac_sha256(sig_str, auth.secret_key));
-    u->headers.emplace("Date", date);
+    u->headers["Authorization"] =
+        "APIAuth-HMAC-SHA256 " + auth.access_key + ':' + compute_hmac_sha256(sig_str, auth.secret_key);
+    u->headers["Date"] = date;
     if (!content_hash.empty())
-        u->headers.emplace("X-Authorization-Content-SHA256", content_hash);
+        u->headers["X-Authorization-Content-SHA256"] = content_hash;
+    else
+        u->headers.erase("X-Authorization-Content-SHA256");
 }
 
 void HttpClient::on_post_request(HttpPostEvent *u)
@@ -1160,6 +1307,49 @@ void HttpClient::on_get_request(HttpGetEvent *e)
     HttpGetConnection *c = new HttpGetConnection(d, *e, e->sync_ctx_id, epoll_fd);
     if (c->init(hosts, curl_multi)) {
         ERROR("[%s/%s] http get connection intialization error", e->session_id.data(), e->sync_ctx_id.data());
+        e->attempt ? d->resend_count_connection->dec() : d->count_connection->dec();
+        on_init_connection_error(e->sync_ctx_id);
+        delete c;
+    }
+}
+
+void HttpClient::on_download_request(HttpDownloadEvent *e)
+{
+    auto destination = destinations.find(e->destination_name);
+    if (destination == destinations.end()) {
+        ERROR("event with unknown destination '%s' from session %s. ignore it", e->destination_name.c_str(),
+              e->session_id.c_str());
+        HttpDownloadConnection::post_error_event(*e, "unknown destination");
+        return;
+    }
+
+    auto &d = destination->second;
+    if (d->mode != HttpDestination::Download) {
+        ERROR("wrong destination '%s' mode for download request from session %s. 'download' mode expected. ignore it",
+              e->destination_name.c_str(), e->session_id.c_str());
+        HttpDownloadConnection::post_error_event(*e, "wrong destination mode");
+        return;
+    }
+
+    if (HttpClient::events_log_level >= 0) {
+        _LOG(HttpClient::events_log_level, "[%s] http download request: %s => %s [%i/%i] token: %s",
+             e->session_id.data(), HttpDownloadConnection::get_url(*d, *e).c_str(), e->dst_dir.c_str(), e->failover_idx,
+             e->attempt, e->token.c_str());
+    }
+
+    if (!e->attempt && d->count_connection->get() >= d->connection_limit) {
+        if (HttpClient::events_log_level >= 0) {
+            _LOG(HttpClient::events_log_level, "[%s] http download request marked as postponed", e->session_id.data());
+        }
+        d->addEvent(new HttpDownloadEvent(*e));
+        return;
+    }
+
+    authorization(*d, e);
+
+    HttpDownloadConnection *c = new HttpDownloadConnection(d, *e, e->sync_ctx_id);
+    if (c->init(hosts, curl_multi)) {
+        ERROR("[%s] http download connection intialization error", e->session_id.data());
         e->attempt ? d->resend_count_connection->dec() : d->count_connection->dec();
         on_init_connection_error(e->sync_ctx_id);
         delete c;
@@ -1445,7 +1635,7 @@ static string compute_sha256_base64(const string &msg)
     return Botan::base64_encode(hash->final());
 }
 
-static std::optional<string> compute_file_sha256_base64(const string &file_path)
+static std::optional<Botan::secure_vector<uint8_t>> compute_file_sha256(const string &file_path)
 {
     FILE *fd = fopen(file_path.c_str(), "rb");
     if (!fd) {
@@ -1467,5 +1657,52 @@ static std::optional<string> compute_file_sha256_base64(const string &file_path)
         return std::nullopt;
     }
 
-    return Botan::base64_encode(hash->final());
+    return hash->final();
+}
+
+static std::optional<string> compute_file_sha256_base64(const string &file_path)
+{
+    auto hash = compute_file_sha256(file_path);
+    if (!hash)
+        return std::nullopt;
+    return Botan::base64_encode(*hash);
+}
+
+static string sha256_hex(const string &msg)
+{
+    auto hash = Botan::HashFunction::create_or_throw("SHA-256");
+    hash->update(reinterpret_cast<const uint8_t *>(msg.data()), msg.size());
+    return Botan::hex_encode(hash->final(), false);
+}
+
+static Botan::secure_vector<uint8_t> hmac_sha256_raw(const Botan::secure_vector<uint8_t> &key, const string &msg)
+{
+    auto hmac = Botan::MessageAuthenticationCode::create_or_throw("HMAC(SHA-256)");
+    hmac->set_key(key);
+    hmac->update(msg);
+    return hmac->final();
+}
+
+/* curl_easy_escape keeps exactly the AWS unreserved set: A-Z a-z 0-9 - _ . ~ */
+static string aws_uri_encode(const string &str)
+{
+    char  *escaped = curl_easy_escape(nullptr, str.data(), str.size());
+    string ret(escaped ? escaped : "");
+    curl_free(escaped);
+    return ret;
+}
+
+static string aws_uri_encode_path(const string &path)
+{
+    string ret;
+    ret.reserve(path.size());
+    for (size_t pos = 0;;) {
+        size_t slash = path.find('/', pos);
+        ret += aws_uri_encode(path.substr(pos, slash == string::npos ? string::npos : slash - pos));
+        if (slash == string::npos)
+            break;
+        ret += '/';
+        pos = slash + 1;
+    }
+    return ret;
 }
