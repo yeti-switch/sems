@@ -1,3 +1,7 @@
+sems (1.213.1) stable; urgency=low
+  * fix libsems1.shlibs
+ -- Michael Furmur <furmur@pm.me>  Mon, 28 Sep 2026 20:56:24 +0300
+
 sems (1.213.0) stable; urgency=low
   * http_client: files download support
     * new destinaton type 'download'
