@@ -1,3 +1,12 @@
+sems (1.213.0) stable; urgency=low
+  * http_client: files download support
+    * new destinaton type 'download'
+    * new events HttpDownloadEvent,HttpDownloadResponseEvent
+  * http_client: add s3v4 auth.
+    * new option 'version' (default: 2) for auth destinations
+    * new option 'region' (default: empty) for auth destinations
+ -- Michael Furmur <furmur@pm.me>  Mon, 28 Sep 2026 15:14:49 +0300
+
 sems (1.212.1) stable; urgency=low
   * redis: fix crash in RedisConnectionPool::run on disconnect with pending write
  -- Michael Furmur <furmur@pm.me>  Thu, 24 Sep 2026 13:52:00 +0300
