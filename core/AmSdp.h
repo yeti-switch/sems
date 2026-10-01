@@ -506,6 +506,7 @@ class AmSdp {
     string                    uri;         // u=
     SdpConnection             conn;        // c=
     bool                      use_ice;
+    bool                      ice_lite; // a=ice-lite (RFC 8445 6.1.1): remote is lite, we must be controlling
     string                    ice_pwd;
     string                    ice_ufrag;
     bool                      use_bundle; // a=group:BUNDLE present (RFC 9143)

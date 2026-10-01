@@ -418,6 +418,7 @@ AmSdp::AmSdp()
     , sessionName()
     , conn()
     , use_ice(false)
+    , ice_lite(false)
     , use_bundle(false)
     , setup(S_UNDEFINED)
     , send(true)
@@ -435,6 +436,7 @@ AmSdp::AmSdp(const AmSdp &p_sdp_msg)
     , sessionName(p_sdp_msg.sessionName)
     , conn(p_sdp_msg.conn)
     , use_ice(p_sdp_msg.use_ice)
+    , ice_lite(p_sdp_msg.ice_lite)
     , use_bundle(p_sdp_msg.use_bundle)
     , setup(p_sdp_msg.setup)
     , attributes(p_sdp_msg.attributes)
@@ -622,6 +624,9 @@ void AmSdp::print(string &body) const
     }
 
     out_buf += "t=0 0\r\n";
+
+    if (ice_lite)
+        out_buf += "a=ice-lite\r\n";
 
     // a=group: lines (BUNDLE, RFC 9143) - only when bundle is in use
     if (use_bundle) {
@@ -838,7 +843,8 @@ bool AmSdp::operator==(const AmSdp &other) const
     }
 
     return version == other.version && origin == other.origin && sessionName == other.sessionName && uri == other.uri &&
-           conn == other.conn && use_bundle == other.use_bundle && groups == other.groups && extmaps == other.extmaps;
+           conn == other.conn && ice_lite == other.ice_lite && use_bundle == other.use_bundle &&
+           groups == other.groups && extmaps == other.extmaps;
 }
 
 void AmSdp::clear()
@@ -852,6 +858,7 @@ void AmSdp::clear()
     groups.clear();
     extmaps.clear();
     use_bundle = false;
+    ice_lite   = false;
     media.clear();
     l_origin = SdpOrigin();
     send     = true;
@@ -1357,6 +1364,10 @@ static void parse_session_attr(AmSdp *sdp_msg, char *s, char **next)
         } else if (a.attribute == sendrecv) {
             sdp_msg->send = true;
             sdp_msg->recv = true;
+        } else if (a.attribute == "ice-lite") {
+            sdp_msg->ice_lite = true;
+            DBG("SDP: got ice-lite session attribute");
+            return;
         }
 
         // add mode attributes to the unparsed ones for back-compatibility

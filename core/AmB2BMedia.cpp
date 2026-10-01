@@ -1103,6 +1103,9 @@ void AmB2BMedia::replaceConnectionAddress(AmSdp &parser_sdp, bool a_leg, Address
 
     createStreams(parser_sdp, a_leg);
 
+    // media params below are replaced with our own, we are a full ICE agent
+    parser_sdp.ice_lite = false;
+
     string replaced_ports;
 
     // streams and parser_sdp.media are 1:1 by index;
