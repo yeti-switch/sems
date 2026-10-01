@@ -962,6 +962,12 @@ void SipRegistrar::process_register_request_event(SipRegistrarRegisterRequestEve
         start_pos = hdr_end;
     }
 
+    // strip invalid UTF-8 from values which are stored as is and later serialized to JSON
+    for (string *v : { &contact, &instance, &user_agent, &path }) {
+        if (fixup_utf8_inplace(*v))
+            DBG("invalid utf8 bytes were stripped from registration data: \"%s\"", v->c_str());
+    }
+
     // bind
     auto *user_data      = new RedisRequestUserData(event.session_id, *req, event.registration_id);
     auto  interface_name = get_interface_name(req->local_if);
