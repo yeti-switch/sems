@@ -1,3 +1,7 @@
+sems (1.214.1) stable; urgency=low
+  * registrar: strip invalid UTF-8 from registration data before storing
+ -- Michael Furmur <furmur@pm.me>  Fri, 02 Oct 2026 21:20:14 +0300
+
 sems (1.214.0) stable; urgency=low
   * media: take controlling ICE role against a=ice-lite peer
  -- Michael Furmur <furmur@pm.me>  Thu, 01 Oct 2026 23:21:50 +0300
