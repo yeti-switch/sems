@@ -31,7 +31,9 @@ for i,c in ipairs(redis.call('SMEMBERS', auth_id)) do
     local hash_data = redis.call('HMGET',contact_key, 'conn_id')
     local conn_id = tonumber(hash_data[1])
 
-    if (conn_id > 0 and conn_id == conid) then
+    if not conn_id then
+        redis.call('SREM', auth_id, c)
+    elseif (conn_id > 0 and conn_id == conid) then
         redis.call('SREM', auth_id, c)
         redis.call('DEL', contact_key)
     end

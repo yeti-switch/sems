@@ -1600,7 +1600,7 @@ void SipRegistrar::rpc_bind_(AmObject *user_data, int user_type_id, const AmArg 
     const string path            = arg.size() > 3 ? arg2str(arg[3]) : "";
     const string user_agent      = arg.size() > 4 ? arg2str(arg[4]) : "";
     string       interface_name  = arg.size() > 5 ? arg2str(arg[5]) : 0;
-    const string headers         = arg.size() > 6 ? arg2str(arg[6]) : "";
+    const string headers         = arg.size() > 6 ? arg2str(arg[6]) : "{}";
 
     string hash;
     require_script(write_conn->script(REGISTER_SCRIPT), hash, [user_data] {
@@ -1621,7 +1621,8 @@ void SipRegistrar::rpc_bind_(AmObject *user_data, int user_type_id, const AmArg 
                            user_agent.c_str(),
                            path.c_str(),
                            headers,
-                           bindings_max };
+                           bindings_max,
+                           one_contact_per_aor };
 
     post_request(write_conn->id, args, user_data, user_type_id,
                  [] { throw AmSession::Exception(500, "failed to post bind request"); });
