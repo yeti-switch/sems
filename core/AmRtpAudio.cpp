@@ -45,13 +45,14 @@ AmAudioRtpFormat::~AmAudioRtpFormat() {}
 
 int AmAudioRtpFormat::setCurrentPayload(Payload pl, int frame_size_in)
 {
-    if (this->codec_id != pl.codec_id) {
-        codec_id        = pl.codec_id;
-        channels        = 1;
-        rate            = pl.clock_rate;
-        advertized_rate = pl.advertised_clock_rate;
-        frame_time      = frame_size_in;
-        frame_size      = frame_size_in * this->rate / 1000;
+    if (this->codec_id != pl.codec_id || sdp_format_parameters != pl.format_parameters) {
+        codec_id              = pl.codec_id;
+        sdp_format_parameters = pl.format_parameters;
+        channels              = 1;
+        rate                  = pl.clock_rate;
+        advertized_rate       = pl.advertised_clock_rate;
+        frame_time            = frame_size_in;
+        frame_size            = frame_size_in * this->rate / 1000;
 
         DBG("AmAudioRtpFormat::setCurrentPayload: codec_id: %d, rates:%d/%d, frame_time/size: %d/%d, sdp: %s", codec_id,
             rate, advertized_rate, frame_time, frame_size, sdp_format_parameters.c_str());

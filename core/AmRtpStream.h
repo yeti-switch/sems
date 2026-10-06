@@ -151,6 +151,7 @@ struct Payload {
     unsigned int  clock_rate;
     unsigned int  advertised_clock_rate; // differs for G722
     int           codec_id;
+    string        format_parameters; // fmtp: remote's, local as fallback
 };
 
 /**

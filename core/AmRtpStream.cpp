@@ -356,6 +356,7 @@ AmRtpStream::InitResult AmRtpStream::init(const AmSdp &local, const AmSdp &remot
             p_it->codec_id              = a_pl->codec_id;
             p_it->clock_rate            = a_pl->sample_rate;
             p_it->advertised_clock_rate = sdp_it->clock_rate;
+            p_it->format_parameters     = sdp_it->sdp_format_parameters;
 
             pl_map[sdp_it->payload_type].index     = i;
             pl_map[sdp_it->payload_type].remote_pt = -1;
@@ -401,6 +402,8 @@ AmRtpStream::InitResult AmRtpStream::init(const AmSdp &local, const AmSdp &remot
             // initialize remote_pt if not already there
             if (pmt_it != pl_map.end() && (pmt_it->second.remote_pt < 0)) {
                 pmt_it->second.remote_pt = sdp_it->payload_type;
+                if (!sdp_it->sdp_format_parameters.empty())
+                    payloads[pmt_it->second.index].format_parameters = sdp_it->sdp_format_parameters;
             }
             ++sdp_it;
         } // while(sdp_it != remote_media.payloads.end())
