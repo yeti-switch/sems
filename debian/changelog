@@ -1,3 +1,7 @@
+sems (1.214.2) stable; urgency=low
+  * registrar: fixed lua scripts errors: sip_registrar: error: ERR user_script:34: attempt to compare number with nil
+ -- Michael Furmur <furmur@pm.me>  Tue, 06 Oct 2026 13:04:50 +0300
+
 sems (1.214.1) stable; urgency=low
   * registrar: strip invalid UTF-8 from registration data before storing
  -- Michael Furmur <furmur@pm.me>  Fri, 02 Oct 2026 21:20:14 +0300
