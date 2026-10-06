@@ -1,3 +1,8 @@
+sems (1.215.0) stable; urgency=low
+  * AmRtpAudio: save SDP fmtp params to Payload
+  * amr: parse octet-align,mode-set fmtp params. fix RFC 4867 payload packing
+ -- Michael Furmur <furmur@pm.me>  Tue, 06 Oct 2026 18:14:30 +0300
+
 sems (1.214.2) stable; urgency=low
   * registrar: fixed lua scripts errors: sip_registrar: error: ERR user_script:34: attempt to compare number with nil
  -- Michael Furmur <furmur@pm.me>  Tue, 06 Oct 2026 13:04:50 +0300
