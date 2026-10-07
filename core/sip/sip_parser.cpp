@@ -794,21 +794,25 @@ int parse_http_msg(sip_msg *msg, const char *&err_msg)
         return MALFORMED_SIP_MSG;
     }
 
-    if (!msg->connection || !msg->upgrade || !msg->sec_ws_version) {
-        if (!msg->connection) {
-            err_msg = "missing Connection header field";
-        } else if (!msg->upgrade) {
-            err_msg = "missing upgrade header field";
-        } else if (!msg->sec_ws_version) {
-            err_msg = "missing sec_websocket_version header field";
-        }
-
+    if (!msg->connection) {
+        err_msg = "missing Connection header field";
         return INCOMPLETE_SIP_MSG;
     }
 
-    if (msg->type == HTTP_REQUEST && !msg->sec_ws_key) {
-        err_msg = "missing sec_websocket_key header field";
+    if (!msg->upgrade) {
+        err_msg = "missing upgrade header field";
         return INCOMPLETE_SIP_MSG;
+    }
+
+    if (msg->type == HTTP_REQUEST) {
+        if (!msg->sec_ws_version) {
+            err_msg = "missing sec_websocket_version header field";
+            return INCOMPLETE_SIP_MSG;
+        }
+        if (!msg->sec_ws_key) {
+            err_msg = "missing sec_websocket_key header field";
+            return INCOMPLETE_SIP_MSG;
+        }
     }
 
     if (msg->type == HTTP_REPLY && !msg->sec_ws_accept) {
