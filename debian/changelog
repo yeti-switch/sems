@@ -1,3 +1,10 @@
+sems (1.215.1) stable; urgency=low
+  * uac_auth: getChallenge: use configured qops on non-number flag in args
+  * AmMimeBody: strip quotes from CT boundary parameter to match RFC2046 behavior
+  * sip_parser: parse_http_msg: fix hdr names in error msgs
+  * websockets: do not require Sec-WebSocket-Version in 101 Switching Protocols reply
+ -- Michael Furmur <furmur@pm.me>  Thu, 08 Oct 2026 01:17:02 +0300
+
 sems (1.215.0) stable; urgency=low
   * AmRtpAudio: save SDP fmtp params to Payload
   * amr: parse octet-align,mode-set fmtp params. fix RFC 4867 payload packing
