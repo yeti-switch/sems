@@ -315,6 +315,10 @@ int AmContentType::Param::parseType()
                 DBG("Content-Type boundary parameter is missing a value");
                 return -1;
             }
+
+            // https://www.rfc-editor.org/info/rfc2045/#section-5.1
+            value = trim(value, "\"");
+
             type = Param::BOUNDARY;
         } else
             type = Param::OTHER;
