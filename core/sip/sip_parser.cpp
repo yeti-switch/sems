@@ -800,23 +800,23 @@ int parse_http_msg(sip_msg *msg, const char *&err_msg)
     }
 
     if (!msg->upgrade) {
-        err_msg = "missing upgrade header field";
+        err_msg = "missing Upgrade header field";
         return INCOMPLETE_SIP_MSG;
     }
 
     if (msg->type == HTTP_REQUEST) {
         if (!msg->sec_ws_version) {
-            err_msg = "missing sec_websocket_version header field";
+            err_msg = "missing Sec-WebSocket-Version header field";
             return INCOMPLETE_SIP_MSG;
         }
         if (!msg->sec_ws_key) {
-            err_msg = "missing sec_websocket_key header field";
+            err_msg = "missing Sec-WebSocket-Key header field";
             return INCOMPLETE_SIP_MSG;
         }
     }
 
     if (msg->type == HTTP_REPLY && !msg->sec_ws_accept) {
-        err_msg = "missing sec_websocket_accept header field";
+        err_msg = "missing Sec-WebSocket-Accept header field";
         return INCOMPLETE_SIP_MSG;
     }
 
