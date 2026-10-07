@@ -167,7 +167,8 @@ void UACAuthFactory::invoke(const string &method, const AmArg &args, AmArg &ret)
                                      ret);
     } else if (method == "getChallenge") {
         // params: realm flags [algorithms]
-        int flags = args.size() > 1 ? args.get(1).asInt() : UACAuth::getAllowedQops();
+        int flags =
+            (args.size() > 1 && args.get(1).isNumber()) ? args.get(1).asNumber<int>() : UACAuth::getAllowedQops();
         if (args.size() > 2 && isArgCStr(args.get(2))) {
             ret = UACAuth::getChallengeHeader(args.get(0).asCStr(), args.get(2).asCStr(), flags);
         } else if (args.size() > 2 && isArgArray(args.get(2))) {
