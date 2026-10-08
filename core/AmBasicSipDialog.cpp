@@ -44,10 +44,10 @@ static SIP_info::SIP_type str2transport(cstring &s)
         return SIP_info::TCP;
     else if (cmp_cond(tls))
         return SIP_info::TLS;
-    else if (cmp_cond(ws))
-        return SIP_info::WS;
     else if (cmp_cond(wss))
         return SIP_info::WSS;
+    else if (cmp_cond(ws))
+        return SIP_info::WS;
     return SIP_info::UNDEFINED;
 #undef cmp_cond
 }
