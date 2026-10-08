@@ -1031,7 +1031,7 @@ bool _SipCtrlInterface::sip_msg2am_request(
         case sip_header::H_OTHER:
         case sip_header::H_EXPIRES:
         case sip_header::H_REQUIRE: addHeader(req.hdrs, *h); break;
-        case sip_header::H_VIA:     req.vias += c2stlstr(h->name) + ": " + c2stlstr(h->value) + CRLF; break;
+        case sip_header::H_VIA:     req.vias.emplace_back(c2stlstr(h->value)); break;
         case sip_header::H_MAX_FORWARDS:
             if (!str2int(c2stlstr(h->value), req.max_forwards) || (req.max_forwards < 0) || (req.max_forwards > 255)) {
                 callback(msg, 400, "Incorrect Max-Forwards");

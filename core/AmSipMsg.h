@@ -132,10 +132,10 @@ class AmSipRequest : public _AmSipMsgInDlg {
     string       rack_method;
     unsigned int rack_cseq;
 
-    string vias;
-    string via1;
-    string via_branch;
-    bool   first_hop;
+    vector<string> vias; // Via values in message order
+    string         via1;
+    string         via_branch;
+    bool           first_hop;
 
     int max_forwards;
 
@@ -176,6 +176,10 @@ void addHeader(AmSipHeaderMap &hdrs, const sip_header &h);
 
 /** serialize to "Name: value CRLF ..." */
 string headers2string(const AmSipHeaderMap &hdrs);
+
+/** parse "Name: value CRLF ..." with sip parser and add entries to hdrs
+ *  @return false on malformed input (nothing is added then) */
+bool parseHeadersString(const string &hdrs_str, AmSipHeaderMap &hdrs);
 
 /** get the value of key @param name from PARAM_HDR header in hdrs */
 string get_session_param(const AmSipHeaderMap &hdrs, const string &name);

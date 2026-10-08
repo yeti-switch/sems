@@ -168,6 +168,23 @@ string headers2string(const AmSipHeaderMap &hdrs)
     return ret;
 }
 
+bool parseHeadersString(const string &hdrs_str, AmSipHeaderMap &hdrs)
+{
+    if (hdrs_str.empty())
+        return true;
+
+    string             s = hdrs_str;
+    list<sip_header *> parsed;
+    char              *c   = s.data();
+    int                err = parse_headers(parsed, &c, c + s.size());
+    if (!err) {
+        for (const auto *h : parsed)
+            addHeader(hdrs, *h);
+    }
+    free_headers(parsed);
+    return !err;
+}
+
 /** get the value of key @param name from \ref PARAM_HDR header in hdrs */
 string get_session_param(const AmSipHeaderMap &hdrs, const string &name)
 {

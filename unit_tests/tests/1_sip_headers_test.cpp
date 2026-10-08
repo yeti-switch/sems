@@ -137,3 +137,19 @@ TEST(SipHeaders, addHeader_folds_line_breaks)
                                cstring("I know you're there,\r\n\t  pick up\n the phone")));
     ASSERT_EQ(getHeader(hdrs, "Subject"), "I know you're there, pick up the phone");
 }
+
+TEST(SipHeaders, parseHeadersString)
+{
+    AmSipHeaderMap hdrs;
+    ASSERT_TRUE(parseHeadersString("Supported: 100rel\r\nk: timer\r\nX-Empty:\r\nAllow: INVITE", hdrs));
+    ASSERT_EQ(getHeader(hdrs, "Supported"), "100rel, timer");
+    ASSERT_EQ(getHeader(hdrs, "Allow"), "INVITE");
+    ASSERT_FALSE(hasHeader(hdrs, "X-Empty"));
+    ASSERT_EQ(hdrs.size(), 3);
+
+    ASSERT_TRUE(parseHeadersString("", hdrs));
+    ASSERT_EQ(hdrs.size(), 3);
+
+    ASSERT_FALSE(parseHeadersString("no colon here", hdrs));
+    ASSERT_EQ(hdrs.size(), 3);
+}
