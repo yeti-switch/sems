@@ -26,7 +26,7 @@ class SipSingleProbe : public AmBasicSipEventHandler, public DialogControl, publ
     timep            last_send_time;
     timep            postponed_next_attempt;
     string           tag;
-    string           options_hdrs;
+    AmSipHeaderMap   options_hdrs;
     int              options_flags;
     bool             active_dialog;
     bool             postponed;

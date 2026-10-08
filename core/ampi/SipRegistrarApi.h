@@ -43,11 +43,11 @@ struct SipRegistrarRegisterRequestEvent : public SipRegistrarEvent {
 };
 
 struct SipRegistrarRegisterResponseEvent : public AmEvent {
-    int         code;
-    std::string reason;
-    std::string hdrs;
+    int            code;
+    std::string    reason;
+    AmSipHeaderMap hdrs;
 
-    SipRegistrarRegisterResponseEvent(int code, const std::string &reason, const std::string &hdrs = string())
+    SipRegistrarRegisterResponseEvent(int code, const std::string &reason, const AmSipHeaderMap &hdrs = {})
         : AmEvent(SipRegistrarEvent::RegisterRequest)
         , code(code)
         , reason(reason)

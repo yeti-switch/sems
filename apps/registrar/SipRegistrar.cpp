@@ -866,23 +866,9 @@ void SipRegistrar::process_register_request_event(SipRegistrarRegisterRequestEve
 
     if (!expires_found) {
         // try to find Expires header as failover
-        size_t start_pos = 0;
-        while (start_pos < req->hdrs.length()) {
-            size_t name_end, val_begin, val_end, hdr_end;
-            int    res;
-            if ((res = skip_header(req->hdrs, start_pos, name_end, val_begin, val_end, hdr_end)) != 0) {
-                break;
-            }
-            if (0 ==
-                strncasecmp(req->hdrs.c_str() + start_pos, expires_param_header_name.c_str(), name_end - start_pos))
-            {
-                /*DBG("matched Expires header: %.*s",
-                    static_cast<int>(hdr_end-start_pos), req.hdrs.c_str()+start_pos);*/
-                expires       = req->hdrs.substr(val_begin, val_end - val_begin);
-                expires_found = true;
-                break;
-            }
-            start_pos = hdr_end;
+        if (auto it = req->hdrs.find(expires_param_header_name); it != req->hdrs.end()) {
+            expires       = it->second;
+            expires_found = true;
         }
     }
 
@@ -897,7 +883,9 @@ void SipRegistrar::process_register_request_event(SipRegistrarRegisterRequestEve
         // check min/max expires
         if (expires_min && expires_int && expires_int < 3600 && expires_int < expires_min) {
             DBG("expires %d is lower than allowed min: %d. reply with 423", expires_int, expires_min);
-            static string min_expires_header = SIP_HDR_COL("Min-Expires") + int2str(expires_min) + CRLF;
+            static const AmSipHeaderMap min_expires_header{
+                { "Min-Expires", int2str(expires_min) }
+            };
             post_register_response(event.session_id, req, 423, "Interval Too Brief", min_expires_header);
             return;
         }
@@ -932,34 +920,24 @@ void SipRegistrar::process_register_request_event(SipRegistrarRegisterRequestEve
     AmArg  hdrs_arg;
     string path;
     string user_agent;
-    size_t start_pos = 0;
 
     hdrs_arg.assertStruct();
 
-    while (start_pos < req->hdrs.length()) {
-        size_t name_end, val_begin, val_end, hdr_end;
-        int    res;
-        if ((res = skip_header(req->hdrs, start_pos, name_end, val_begin, val_end, hdr_end)) != 0) {
-            break;
-        }
-
-        string hdr_name = req->hdrs.substr(start_pos, name_end - start_pos);
-
-        if (0 == strncasecmp(hdr_name.c_str(), SIP_HDR_PATH, hdr_name.size())) {
+    for (const auto &[name, value] : req->hdrs) {
+        if (0 == strcasecmp(name.c_str(), SIP_HDR_PATH)) {
             if (!path.empty())
                 path += ",";
-            path += req->hdrs.substr(val_begin, val_end - val_begin);
-        } else if (0 == strncasecmp(hdr_name.c_str(), SIP_HDR_USER_AGENT, hdr_name.size())) {
-            user_agent = req->hdrs.substr(val_begin, val_end - val_begin);
+            path += value;
+        } else if (0 == strcasecmp(name.c_str(), SIP_HDR_USER_AGENT)) {
+            user_agent = value;
         } else {
+            string hdr_name = name;
             std::transform(hdr_name.begin(), hdr_name.end(), hdr_name.begin(), normalize_header_name);
             for (auto &header : headers) {
                 if (hdr_name == header)
-                    hdrs_arg[header] = req->hdrs.substr(val_begin, val_end - val_begin);
+                    hdrs_arg[header] = value;
             }
         }
-
-        start_pos = hdr_end;
     }
 
     // strip invalid UTF-8 from values which are stored as is and later serialized to JSON
@@ -1074,7 +1052,6 @@ void SipRegistrar::process_redis_reply_register_event(RedisReply &event)
         return;
     }
 
-    static string contact_hdr          = SIP_HDR_COLSP(SIP_HDR_CONTACT);
     static string expires_param_prefix = ";expires=";
 
     DBG("data: %s", AmArg::print(event.data).c_str());
@@ -1114,8 +1091,8 @@ void SipRegistrar::process_redis_reply_register_event(RedisReply &event)
         return;
     }
 
-    string hdrs;
-    int    n = static_cast<int>(event.data.size());
+    AmSipHeaderMap hdrs;
+    int            n = static_cast<int>(event.data.size());
     for (int i = 0; i < n; i++) {
         AmArg &d = event.data[i];
         if (!isArgArray(d) || d.size() < 8) {
@@ -1146,15 +1123,10 @@ void SipRegistrar::process_redis_reply_register_event(RedisReply &event)
             continue;
         }
 
-        hdrs += contact_hdr + c.print();
-        hdrs += expires_param_prefix + longlong2str(expires_arg.asLongLong());
-        hdrs += CRLF;
+        hdrs.emplace(SIP_HDR_CONTACT, c.print() + expires_param_prefix + longlong2str(expires_arg.asLongLong()));
 
-        if (add_x_auth_id_hdr && !auth_id.empty()) {
-            static string auth_id_hdr = SIP_HDR_COLSP("X-Auth-id");
-            hdrs += auth_id_hdr + auth_id;
-            hdrs += CRLF;
-        }
+        if (add_x_auth_id_hdr && !auth_id.empty())
+            hdrs.emplace("X-Auth-id", auth_id);
     }
 
     // reply 'success'
@@ -1454,7 +1426,7 @@ void SipRegistrar::process_sip_reply(const AmSipReplyEvent &event)
 }
 
 void SipRegistrar::post_register_response(const string &session_id, const AmSipRequest *req, int code,
-                                          const string &reason, const string &hdrs)
+                                          const string &reason, const AmSipHeaderMap &hdrs)
 {
     if (session_id.empty()) {
         if (req)

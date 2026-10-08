@@ -4,6 +4,7 @@
 #include "AmUriParser.h"
 #include "AmUtils.h"
 #include "AmSession.h"
+#include "sip/parse_header.h"
 #include "sip/parse_via.h"
 #include "sip/parse_uri.h"
 #include "sip/parse_route.h"
@@ -256,10 +257,24 @@ bool SipSingleProbe::initFromAmArg(const AmArg &a)
 
     // process contact_uri and append hdrs
     options_flags = SIP_FLAGS_NOCONTACT;
+    options_hdrs.clear();
     if (!contact_uri.empty()) {
-        options_hdrs = SIP_HDR_COLSP(SIP_HDR_CONTACT) "<" + contact_uri + ">" + CRLF;
+        options_hdrs.emplace(SIP_HDR_CONTACT, "<" + contact_uri + ">");
     }
-    options_hdrs += preprocess_append_headers();
+    if (string s = preprocess_append_headers(); !s.empty()) {
+        list<sip_header *> parsed;
+        char              *c   = s.data();
+        int                err = parse_headers(parsed, &c, c + s.size());
+        if (err) {
+            ERROR("prober %i: failed to parse append_headers '%s'", id, append_headers.data());
+        } else {
+            for (const auto *h : parsed)
+                addHeader(options_hdrs, *h);
+        }
+        free_headers(parsed);
+        if (err)
+            return false;
+    }
 
     auto half_ms = std::chrono::duration_cast<std::chrono::milliseconds>(interval).count() / 2;
     recheck_time = std::chrono::system_clock::now() + std::chrono::milliseconds(get_random() % (half_ms + 1));

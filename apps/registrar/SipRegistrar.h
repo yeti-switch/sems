@@ -170,7 +170,7 @@ class SipRegistrar : public AmThread,
     int  init();
     int  onLoad();
     void post_register_response(const string &session_id, const AmSipRequest *req, int code, const string &reason,
-                                const string &hdrs = "");
+                                const AmSipHeaderMap &hdrs = {});
     void post_resolve_response(const string &session_id, const Aors &aors = Aors());
     void process_register_request_event(SipRegistrarRegisterRequestEvent &event);
     void process_resolve_request_event(SipRegistrarResolveRequestEvent &event);

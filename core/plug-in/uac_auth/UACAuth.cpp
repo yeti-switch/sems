@@ -582,18 +582,15 @@ bool UACAuth::onSipReply(const AmSipRequest &, const AmSipReply &reply, AmBasicS
 
         DBG("result: %s", result.data());
 
-        string hdrs = ri->second.hdrs;
-        // strip other auth headers
+        AmSipHeaderMap hdrs = ri->second.hdrs;
+        // replace other auth headers
         if (proxy_auth) {
             removeHeader(hdrs, SIP_HDR_PROXY_AUTHORIZATION);
+            hdrs.emplace(SIP_HDR_PROXY_AUTHORIZATION, result);
         } else {
             removeHeader(hdrs, SIP_HDR_AUTHORIZATION);
+            hdrs.emplace(SIP_HDR_AUTHORIZATION, result);
         }
-
-        if (hdrs == "\r\n" || hdrs == "\r" || hdrs == "\n")
-            hdrs = result;
-        else
-            hdrs.insert(hdrs.begin(), result.begin(), result.end());
 
         if (dlg->getStatus() < AmSipDialog::Connected && ri->second.method != SIP_METH_BYE) {
             // reset remote tag so remote party
@@ -613,13 +610,9 @@ bool UACAuth::onSipReply(const AmSipRequest &, const AmSipReply &reply, AmBasicS
             }
         }
 
-        int    flags = SIP_FLAGS_VERBATIM | SIP_FLAGS_NOAUTH;
-        size_t skip  = 0, pos1, pos2, hdr_start;
-        if (findHeader(hdrs, SIP_HDR_CONTACT, skip, pos1, pos2, hdr_start) ||
-            findHeader(hdrs, "m", skip, pos1, pos2, hdr_start))
-        {
+        int flags = SIP_FLAGS_VERBATIM | SIP_FLAGS_NOAUTH;
+        if (hasHeader(hdrs, SIP_HDR_CONTACT))
             flags |= SIP_FLAGS_NOCONTACT;
-        }
 
         reply.tt.lock_bucket();
         const sip_trans *t            = reply.tt.get_trans();
@@ -660,11 +653,7 @@ bool UACAuth::onSendRequest(AmSipRequest &req, int &flags)
     if (!(flags & SIP_FLAGS_NOAUTH) && !challenge.nonce.empty() &&
         do_auth(challenge, challenge_code, req.method, dlg->getRemoteUri(), &req.body, result))
     {
-        // add headers
-        if (req.hdrs == "\r\n" || req.hdrs == "\r" || req.hdrs == "\n")
-            req.hdrs = result;
-        else
-            req.hdrs.insert(req.hdrs.begin(), result.begin(), result.end());
+        req.hdrs.emplace(challenge_code == 401 ? SIP_HDR_AUTHORIZATION : SIP_HDR_PROXY_AUTHORIZATION, result);
 
         nonce_reuse = true;
     } else {
@@ -802,19 +791,17 @@ bool UACAuth::do_auth(const UACAuthDigestChallenge &challenge, const unsigned in
     hash->uac_calc_response(ha1, ha2, challenge, cnonce, qop_value, int2hex(nonce_count), response);
     DBG("calculated response = %s", response.c_str());
 
-    // compile auth response
-    result = ((code == 401) ? SIP_HDR_COLSP(SIP_HDR_AUTHORIZATION) : SIP_HDR_COLSP(SIP_HDR_PROXY_AUTHORIZATION));
-
-    result += "Digest username=\"" + credential->user +
-              "\", "
-              "realm=\"" +
-              challenge.realm +
-              "\", "
-              "nonce=\"" +
-              challenge.nonce +
-              "\", "
-              "uri=\"" +
-              uri + "\", ";
+    // compile auth response (header value only)
+    result = "Digest username=\"" + credential->user +
+             "\", "
+             "realm=\"" +
+             challenge.realm +
+             "\", "
+             "nonce=\"" +
+             challenge.nonce +
+             "\", "
+             "uri=\"" +
+             uri + "\", ";
 
     if (challenge.opaque.length())
         result += "opaque=\"" + challenge.opaque + "\", ";
@@ -828,7 +815,7 @@ bool UACAuth::do_auth(const UACAuthDigestChallenge &challenge, const unsigned in
                   "nc=" +
                   int2hex(nonce_count, true) + ", ";
 
-    result += "response=\"" + response + "\", algorithm=" + hash->algorithmName() + CRLF;
+    result += "response=\"" + response + "\", algorithm=" + hash->algorithmName();
 
     DBG("Auth req hdr: '%s'", result.c_str());
 

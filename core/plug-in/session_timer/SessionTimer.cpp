@@ -189,13 +189,12 @@ bool SessionTimer::onSendRequest(AmSipRequest &req, int &flags)
     removeHeader(req.hdrs, SIP_HDR_SESSION_EXPIRES);
     removeHeader(req.hdrs, SIP_HDR_MIN_SE);
     if (req.to_tag.empty()) {
-        req.hdrs += SIP_HDR_COLSP(SIP_HDR_SESSION_EXPIRES) + int2str(session_interval) + CRLF +
-                    SIP_HDR_COLSP(SIP_HDR_MIN_SE) + int2str(min_se) + CRLF;
+        req.hdrs.emplace(SIP_HDR_SESSION_EXPIRES, int2str(session_interval));
     } else {
-        req.hdrs += SIP_HDR_COLSP(SIP_HDR_SESSION_EXPIRES) + int2str(session_interval) +
-                    ";refresher=" + (session_refresher == refresh_local ? "uac" : "uas") + CRLF +
-                    SIP_HDR_COLSP(SIP_HDR_MIN_SE) + int2str(min_se) + CRLF;
+        req.hdrs.emplace(SIP_HDR_SESSION_EXPIRES, int2str(session_interval) + ";refresher=" +
+                                                      (session_refresher == refresh_local ? "uac" : "uas"));
     }
+    req.hdrs.emplace(SIP_HDR_MIN_SE, int2str(min_se));
 
     return false;
 }
@@ -221,8 +220,8 @@ bool SessionTimer::onSendReply(const AmSipRequest &req, AmSipReply &reply, int &
     // remove (possibly existing) Session-Expires header
     removeHeader(reply.hdrs, SIP_HDR_SESSION_EXPIRES);
 
-    reply.hdrs += SIP_HDR_COLSP(SIP_HDR_SESSION_EXPIRES) + int2str(session_interval) +
-                  ";refresher=" + (session_refresher_role == UAC ? "uac" : "uas") + CRLF;
+    reply.hdrs.emplace(SIP_HDR_SESSION_EXPIRES,
+                       int2str(session_interval) + ";refresher=" + (session_refresher_role == UAC ? "uac" : "uas"));
 
     return false;
 }
@@ -260,14 +259,16 @@ bool SessionTimerFactory::checkSessionExpires(const AmSipRequest &req, AmConfigR
         return false;
     }
 
-    string session_expires = getHeader(req.hdrs, SIP_HDR_SESSION_EXPIRES, SIP_HDR_SESSION_EXPIRES_COMPACT, true);
+    string session_expires = getHeader(req.hdrs, SIP_HDR_SESSION_EXPIRES, true);
 
     if (session_expires.length()) {
         unsigned int i_se;
         if (!str2i(strip_header_params(session_expires), i_se)) {
             if (i_se < sst_cfg.getMinimumTimer()) {
                 throw AmSession::Exception(422, "Session Interval Too Small",
-                                           SIP_HDR_COLSP(SIP_HDR_MIN_SE) + int2str(sst_cfg.getMinimumTimer()) + CRLF);
+                                           {
+                                               { SIP_HDR_MIN_SE, int2str(sst_cfg.getMinimumTimer()) }
+                });
             }
         } else {
             WARN("parsing session expires '%s' failed", session_expires.c_str());
@@ -283,11 +284,10 @@ void SessionTimer::updateTimer(AmSession *s, const AmSipRequest &req)
 
     if ((req.method == SIP_METH_INVITE) || (req.method == SIP_METH_UPDATE)) {
 
-        remote_timer_aware =
-            key_in_list(getHeader(req.hdrs, SIP_HDR_SUPPORTED, SIP_HDR_SUPPORTED_COMPACT), TIMER_OPTION_TAG);
+        remote_timer_aware = key_in_list(getHeader(req.hdrs, SIP_HDR_SUPPORTED), TIMER_OPTION_TAG);
 
         // determine session interval
-        string sess_expires_hdr = getHeader(req.hdrs, SIP_HDR_SESSION_EXPIRES, SIP_HDR_SESSION_EXPIRES_COMPACT, true);
+        string sess_expires_hdr = getHeader(req.hdrs, SIP_HDR_SESSION_EXPIRES, true);
 
         bool         rem_has_sess_expires = false;
         unsigned int rem_sess_expires     = 0;
@@ -366,7 +366,7 @@ void SessionTimer::updateTimer(AmSession *s, const AmSipReply &reply)
         return;
 
     // determine session interval
-    string sess_expires_hdr = getHeader(reply.hdrs, SIP_HDR_SESSION_EXPIRES, SIP_HDR_SESSION_EXPIRES_COMPACT, true);
+    string sess_expires_hdr = getHeader(reply.hdrs, SIP_HDR_SESSION_EXPIRES, true);
 
     session_refresher      = refresh_local;
     session_refresher_role = UAC;

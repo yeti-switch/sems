@@ -15,7 +15,7 @@ void RegistrarTestClient::process(AmEvent *event)
         if (auto e = dynamic_cast<SipRegistrarRegisterResponseEvent *>(event)) {
             register_reply_code   = e->code;
             register_reply_reason = e->reason;
-            register_reply_hdrs   = e->hdrs;
+            register_reply_hdrs   = headers2string(e->hdrs);
             reply_available.set(true);
             register_reply_available.set(true);
             return;

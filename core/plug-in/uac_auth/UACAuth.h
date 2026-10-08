@@ -81,13 +81,13 @@ class UACAuthFactory : public AmSessionEventHandlerFactory,
 
 /** \brief contains necessary information for UAC auth of a SIP request */
 struct SIPRequestInfo {
-    string     method;
-    AmMimeBody body;
-    string     hdrs;
-    int        flags;
+    string         method;
+    AmMimeBody     body;
+    AmSipHeaderMap hdrs;
+    int            flags;
     // AmOfferAnswer::OAState oa_state;
 
-    SIPRequestInfo(const string &method, const AmMimeBody *body, const string &hdrs, int flags)
+    SIPRequestInfo(const string &method, const AmMimeBody *body, const AmSipHeaderMap &hdrs, int flags)
         : method(method)
         , hdrs(hdrs)
         , flags(flags)
