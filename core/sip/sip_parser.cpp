@@ -518,109 +518,116 @@ static int parse_first_line(sip_msg *msg, char **c, char *end)
     return UNEXPECTED_EOT;
 }
 
+int sip_msg_add_header(sip_msg *msg, sip_header *hdr, const char *&err_msg)
+{
+    int err = 0;
+    switch (hdr->type) {
+
+    case sip_header::H_CALL_ID:
+        if (msg->callid) {
+            err     = MALFORMED_SIP_MSG;
+            err_msg = "duplicated Call-ID header";
+        }
+        msg->callid = hdr;
+        break;
+
+    case sip_header::H_MAX_FORWARDS:
+        if (msg->max_forwards) {
+            err     = MALFORMED_SIP_MSG;
+            err_msg = "duplicated Max-Forwards header";
+        }
+        msg->max_forwards = hdr;
+        break;
+
+    case sip_header::H_CONTACT: msg->contacts.push_back(hdr); break;
+
+    case sip_header::H_CONTENT_LENGTH:
+        if (msg->content_length) {
+            err     = MALFORMED_SIP_MSG;
+            err_msg = "duplicated Content-Length header";
+        }
+        msg->content_length = hdr;
+        break;
+
+    case sip_header::H_CONTENT_TYPE: msg->content_type = hdr; break;
+
+    case sip_header::H_FROM:
+        if (msg->from) {
+            err     = MALFORMED_SIP_MSG;
+            err_msg = "duplicated From header";
+        }
+        msg->from = hdr;
+        break;
+
+    case sip_header::H_TO:
+        if (msg->to) {
+            err     = MALFORMED_SIP_MSG;
+            err_msg = "duplicated To header";
+        }
+        msg->to = hdr;
+        break;
+
+    case sip_header::H_VIA:
+        if (!msg->via1)
+            msg->via1 = hdr;
+        msg->vias.push_back(hdr);
+        break;
+
+        // case sip_header::H_RSEQ:
+        // 	msg->rseq = hdr;
+        // 	break;
+
+    case sip_header::H_RACK:
+        if (msg->type == SIP_REQUEST && msg->u.request->method == sip_request::PRACK) {
+            msg->rack = hdr;
+        }
+        break;
+
+    case sip_header::H_CSEQ:
+        if (msg->cseq) {
+            err     = MALFORMED_SIP_MSG;
+            err_msg = "duplicated CSeq header";
+        }
+        msg->cseq = hdr;
+        break;
+
+    case sip_header::H_ROUTE:           msg->route.push_back(hdr); break;
+
+    case sip_header::H_RECORD_ROUTE:    msg->record_route.push_back(hdr); break;
+
+    case sip_header::H_CONNECTION:      msg->connection = hdr; break;
+
+    case sip_header::H_UPGRADE:         msg->upgrade = hdr; break;
+
+    case sip_header::H_ORIGIN:          msg->origin = hdr; break;
+
+    case sip_header::H_SEC_WS_VERSION:  msg->sec_ws_version = hdr; break;
+
+    case sip_header::H_SEC_WS_KEY:      msg->sec_ws_key = hdr; break;
+
+    case sip_header::H_SEC_WS_EXT:      msg->sec_ws_ext = hdr; break;
+
+    case sip_header::H_SEC_WS_PROTOCOL: msg->sec_ws_protocol = hdr; break;
+
+    case sip_header::H_SEC_WS_ACCEPT:   msg->sec_ws_accept = hdr; break;
+
+    case sip_header::H_EXPIRES:         msg->expires = hdr; break;
+    } // switch(hdr->type)
+
+    msg->hdrs.push_back(hdr);
+    return err;
+}
+
 int parse_headers(sip_msg *msg, char **c, char *end, const char *&err_msg)
 {
     list<sip_header *> hdrs;
     int                err = parse_headers(hdrs, c, end);
     if (!err) {
         for (auto hdr : hdrs) {
-            switch (hdr->type) {
-
-            case sip_header::H_CALL_ID:
-                if (msg->callid) {
-                    err     = MALFORMED_SIP_MSG;
-                    err_msg = "duplicated Call-ID header";
-                }
-                msg->callid = hdr;
-                break;
-
-            case sip_header::H_MAX_FORWARDS:
-                if (msg->max_forwards) {
-                    err     = MALFORMED_SIP_MSG;
-                    err_msg = "duplicated Max-Forwards header";
-                }
-                msg->max_forwards = hdr;
-                break;
-
-            case sip_header::H_CONTACT: msg->contacts.push_back(hdr); break;
-
-            case sip_header::H_CONTENT_LENGTH:
-                if (msg->content_length) {
-                    err     = MALFORMED_SIP_MSG;
-                    err_msg = "duplicated Content-Length header";
-                }
-                msg->content_length = hdr;
-                break;
-
-            case sip_header::H_CONTENT_TYPE: msg->content_type = hdr; break;
-
-            case sip_header::H_FROM:
-                if (msg->from) {
-                    err     = MALFORMED_SIP_MSG;
-                    err_msg = "duplicated From header";
-                }
-                msg->from = hdr;
-                break;
-
-            case sip_header::H_TO:
-                if (msg->to) {
-                    err     = MALFORMED_SIP_MSG;
-                    err_msg = "duplicated To header";
-                }
-                msg->to = hdr;
-                break;
-
-            case sip_header::H_VIA:
-                if (!msg->via1)
-                    msg->via1 = hdr;
-                msg->vias.push_back(hdr);
-                break;
-
-                // case sip_header::H_RSEQ:
-                // 	msg->rseq = hdr;
-                // 	break;
-
-            case sip_header::H_RACK:
-                if (msg->type == SIP_REQUEST && msg->u.request->method == sip_request::PRACK) {
-                    msg->rack = hdr;
-                }
-                break;
-
-            case sip_header::H_CSEQ:
-                if (msg->cseq) {
-                    err     = MALFORMED_SIP_MSG;
-                    err_msg = "duplicated CSeq header";
-                }
-                msg->cseq = hdr;
-                break;
-
-            case sip_header::H_ROUTE:           msg->route.push_back(hdr); break;
-
-            case sip_header::H_RECORD_ROUTE:    msg->record_route.push_back(hdr); break;
-
-            case sip_header::H_CONNECTION:      msg->connection = hdr; break;
-
-            case sip_header::H_UPGRADE:         msg->upgrade = hdr; break;
-
-            case sip_header::H_ORIGIN:          msg->origin = hdr; break;
-
-            case sip_header::H_SEC_WS_VERSION:  msg->sec_ws_version = hdr; break;
-
-            case sip_header::H_SEC_WS_KEY:      msg->sec_ws_key = hdr; break;
-
-            case sip_header::H_SEC_WS_EXT:      msg->sec_ws_ext = hdr; break;
-
-            case sip_header::H_SEC_WS_PROTOCOL: msg->sec_ws_protocol = hdr; break;
-
-            case sip_header::H_SEC_WS_ACCEPT:   msg->sec_ws_accept = hdr; break;
-
-            case sip_header::H_EXPIRES:         msg->expires = hdr; break;
-            } // switch(hdr->type)
-
-            msg->hdrs.push_back(hdr);
+            err = sip_msg_add_header(msg, hdr, err_msg);
             if (err)
                 break;
-        } // for(auto hdr: hdrs)
+        }
     }
 
     return err;

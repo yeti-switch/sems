@@ -165,6 +165,8 @@ struct sip_msg {
 
 int parse_method(int *method, const char *beg, int len);
 int parse_headers(sip_msg *msg, char **c, char *end, const char *&err_msg);
+
+int sip_msg_add_header(sip_msg *msg, sip_header *hdr, const char *&err_msg);
 int parse_sip_msg(sip_msg *msg, const char *&err_msg);
 int parse_http_msg(sip_msg *msg, const char *&err_msg);
 

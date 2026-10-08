@@ -682,6 +682,18 @@ int _SipCtrlInterface::cancel(trans_ticket *tt, const string &dialog_id, unsigne
                                            stl2cstr(dlg_route_set));
 }
 
+/** outgoing: hdrs map entries -> sip_msg. cstrings point into the map, msg must not outlive it */
+static int add_headers(sip_msg *msg, const AmSipHeaderMap &hdrs, const char *&err_msg)
+{
+    for (const auto &[name, value] : hdrs) {
+        auto *h = new sip_header(0, stl2cstr(name), stl2cstr(value));
+        parse_header_type(h);
+        if (int err = sip_msg_add_header(msg, h, err_msg); err)
+            return err;
+    }
+    return 0;
+}
+
 int _SipCtrlInterface::send(AmSipRequest &req, const string &dialog_id, const string &next_hop, int out_interface,
                             unsigned int flags, sip_target_set *target_set_override, msg_logger *logger,
                             msg_sensor *sensor, sip_timers_override *timers_override, int redirects_allowed)
@@ -693,7 +705,7 @@ int _SipCtrlInterface::send(AmSipRequest &req, const string &dialog_id, const st
     }
 
     if (req.method == "CANCEL") {
-        return cancel(&req.tt, dialog_id, req.cseq, req.max_forwards, req.hdrs, string());
+        return cancel(&req.tt, dialog_id, req.cseq, req.max_forwards, headers2string(req.hdrs), string());
     }
 
     sip_msg *msg = new sip_msg();
@@ -759,18 +771,10 @@ int _SipCtrlInterface::send(AmSipRequest &req, const string &dialog_id, const st
     string mf = int2str(req.max_forwards);
     msg->hdrs.push_back(new sip_header(0, SIP_HDR_MAX_FORWARDS, stl2cstr(mf)));
 
-    if (!req.hdrs.empty()) {
-
-        c = (char *)req.hdrs.c_str();
-
-        err = parse_headers(msg, &c, c + req.hdrs.length(), err_msg);
-
-        if (err) {
-            ERROR("Additional headers parsing failed");
-            ERROR("Faulty headers were: <%s>", req.hdrs.c_str());
-            delete msg;
-            return -1;
-        }
+    if (add_headers(msg, req.hdrs, err_msg)) {
+        ERROR("Additional headers failed: %s", err_msg);
+        delete msg;
+        return -1;
     }
 
     string body;
@@ -888,14 +892,9 @@ int _SipCtrlInterface::send(const AmSipReply &rep, const string &dialog_id, msg_
     sip_msg     msg;
     const char *err_msg;
 
-    if (!rep.hdrs.empty()) {
-
-        char *c   = (char *)rep.hdrs.c_str();
-        int   err = parse_headers(&msg, &c, c + rep.hdrs.length(), err_msg);
-        if (err) {
-            ERROR("Malformed additional header");
-            return -1;
-        }
+    if (add_headers(&msg, rep.hdrs, err_msg)) {
+        ERROR("Additional headers failed: %s", err_msg);
+        return -1;
     }
 
     if (!rep.contact.empty()) {
@@ -1031,15 +1030,8 @@ bool _SipCtrlInterface::sip_msg2am_request(
         switch (h->type) {
         case sip_header::H_OTHER:
         case sip_header::H_EXPIRES:
-        case sip_header::H_REQUIRE:
-        {
-            string value = c2stlstr(h->value);
-            size_t rpos  = 0;
-            while ((rpos = value.find_first_of("\r\n", rpos)) != string::npos)
-                value.erase(rpos, 1);
-            req.hdrs += c2stlstr(h->name) + COLSP + value + CRLF;
-        } break;
-        case sip_header::H_VIA: req.vias += c2stlstr(h->name) + ": " + c2stlstr(h->value) + CRLF; break;
+        case sip_header::H_REQUIRE: addHeader(req.hdrs, *h); break;
+        case sip_header::H_VIA:     req.vias += c2stlstr(h->name) + ": " + c2stlstr(h->value) + CRLF; break;
         case sip_header::H_MAX_FORWARDS:
             if (!str2int(c2stlstr(h->value), req.max_forwards) || (req.max_forwards < 0) || (req.max_forwards > 255)) {
                 callback(msg, 400, "Incorrect Max-Forwards");
@@ -1138,14 +1130,7 @@ bool _SipCtrlInterface::sip_msg2am_reply(const sip_msg *msg, AmSipReply &reply)
         switch (h->type) {
         case sip_header::H_OTHER:
         case sip_header::H_EXPIRES:
-        case sip_header::H_REQUIRE:
-        {
-            string value = c2stlstr(h->value);
-            size_t rpos  = 0;
-            while ((rpos = value.find_first_of("\r\n", rpos)) != string::npos)
-                value.erase(rpos, 1);
-            reply.hdrs += c2stlstr(h->name) + COLSP + value + CRLF;
-        } break;
+        case sip_header::H_REQUIRE: addHeader(reply.hdrs, *h); break;
         case sip_header::H_RSEQ:
             if (!parse_rseq(&rseq, h->value.s, static_cast<int>(h->value.len))) {
                 ERROR("failed to parse (rcvd) '" SIP_HDR_RSEQ "' hdr.");
@@ -1203,7 +1188,7 @@ void _SipCtrlInterface::handle_sip_request(const trans_ticket &tt, sip_msg *msg)
         DBG_PARAM(req.to_tag);
         DBG3("cseq = <%i>", req.cseq);
         DBG_PARAM(req.route);
-        DBG3("hdrs = <%s>", req.hdrs.c_str());
+        DBG3("hdrs = <%s>", headers2string(req.hdrs).c_str());
         DBG3("body-ct = <%s>", req.body.getCTStr().c_str());
     }
 
@@ -1242,7 +1227,7 @@ void _SipCtrlInterface::handle_sip_reply(const trans_ticket &tt, const string &d
     DBG_PARAM(reply.to_uri);
     DBG("cseq = <%i>", reply.cseq);
     DBG_PARAM(reply.route);
-    DBG("hdrs = <%s>", reply.hdrs.c_str());
+    DBG("hdrs = <%s>", headers2string(reply.hdrs).c_str());
     DBG("body-ct = <%s>", reply.body.getCTStr().c_str());
 
     AmSipDispatcher::instance()->handleSipMsg(dialog_id, reply);
