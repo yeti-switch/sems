@@ -33,210 +33,138 @@ bool AmSipRequest::init(const sip_msg *msg, const trans_ticket *tt_)
     return _SipCtrlInterface::sip_msg2am_request(msg, callback, *this);
 }
 
-string getHeader(const string &hdrs, const string &hdr_name, bool single)
+string getHeader(const AmSipHeaderMap &hdrs, std::string_view hdr_name, bool single)
 {
     if (hdr_name.empty())
         return "";
 
-    size_t pos1;
-    size_t pos2;
-    size_t pos_s;
-    size_t skip = 0;
-    string ret  = "";
+    auto [it, end] = hdrs.equal_range(hdr_name);
+    if (it == end)
+        return "";
+    if (single)
+        return it->second;
 
-    while (findHeader(hdrs, hdr_name, skip, pos1, pos2, pos_s)) {
-        if (skip) {
-            ret.append(", ");
-        } else {
-            if (single)
-                return hdrs.substr(pos1, pos2 - pos1);
-        }
-
-        ret.append(hdrs.substr(pos1, pos2 - pos1));
-        skip = pos2 + 1;
+    string ret = it->second;
+    for (++it; it != end; ++it) {
+        ret.append(", ");
+        ret.append(it->second);
     }
     return ret;
 }
 
-string getHeader(const string &hdrs, const string &hdr_name, const string &compact_hdr_name, bool single)
+bool hasHeader(const AmSipHeaderMap &hdrs, std::string_view hdr_name)
 {
-    string res = getHeader(hdrs, hdr_name, single);
-    if (!res.length())
-        return getHeader(hdrs, compact_hdr_name, single);
-    return res;
+    return hdrs.find(hdr_name) != hdrs.end();
 }
 
-bool hasHeader(const string &hdrs, const string &hdr_name)
+bool removeHeader(AmSipHeaderMap &hdrs, std::string_view hdr_name)
 {
-    size_t skip = 0, pos1 = 0, pos2 = 0, hdr_start = 0;
-    return findHeader(hdrs, hdr_name, skip, pos1, pos2, hdr_start);
-}
-
-bool findHeader(const string &hdrs, const string &hdr_name, const size_t skip, size_t &pos1, size_t &pos2,
-                size_t &hdr_start)
-{
-    if (skip >= hdrs.length())
+    auto [it, end] = hdrs.equal_range(hdr_name);
+    if (it == end)
         return false;
-
-    unsigned int p;
-    char        *hdr      = strdup(hdr_name.c_str());
-    const char  *hdrs_c   = hdrs.c_str() + skip;
-    char        *hdr_c    = hdr;
-    const char  *hdrs_end = hdrs.c_str() + hdrs.length();
-    const char  *hdr_end  = hdr_c + hdr_name.length();
-
-    while (hdr_c != hdr_end) {
-        if ('A' <= *hdr_c && *hdr_c <= 'Z')
-            *hdr_c -= 'A' - 'a';
-        hdr_c++;
-    }
-
-    while (hdrs_c != hdrs_end) {
-        hdr_c = hdr;
-
-        while ((hdrs_c != hdrs_end) && (hdr_c != hdr_end)) {
-            char c = *hdrs_c;
-            if ('A' <= *hdrs_c && *hdrs_c <= 'Z')
-                c -= 'A' - 'a';
-            if (c != *hdr_c)
-                break;
-            hdr_c++;
-            hdrs_c++;
-        }
-
-        if (hdr_c == hdr_end) {
-            // matched whole of needle.
-            // ...all of current header?
-            const char *srccol = hdrs_c;
-            while (*srccol == ' ' || *srccol == '\t')
-                srccol++;
-            if (*srccol == ':')
-                break; // was end of current hdr
-            // current hdr just starts with hdr, continue search
-        }
-
-        while ((hdrs_c != hdrs_end) && (*hdrs_c != '\n'))
-            hdrs_c++;
-
-        if (hdrs_c != hdrs_end)
-            hdrs_c++;
-    }
-
-    if (hdr_c == hdr_end) {
-        hdr_start = hdrs_c - hdrs.c_str();
-
-        while ((hdrs_c != hdrs_end) && (*hdrs_c == ' '))
-            hdrs_c++;
-
-        if ((hdrs_c != hdrs_end) && (*hdrs_c == ':')) {
-            hdrs_c++;
-            while ((hdrs_c != hdrs_end) && (*hdrs_c == ' '))
-                hdrs_c++;
-
-            p                       = hdrs_c - hdrs.c_str();
-            string::size_type p_end = p;
-            while (p_end < hdrs.size() && hdrs[p_end] != '\r' && hdrs[p_end] != '\n') {
-                p_end++;
-            }
-
-            free(hdr);
-            // return hdrs.substr(p,p_end-p);
-            pos1 = p;
-            pos2 = p_end;
-            return true;
-        }
-    }
-
-    free(hdr);
-    //    return "";
-    return false;
+    hdrs.erase(it, end);
+    return true;
 }
 
-bool removeHeader(string &hdrs, const string &hdr_name)
+/** collect trimmed tags of all hdr_name headers and remove these headers from hdrs */
+static vector<string> takeOptionTags(AmSipHeaderMap &hdrs, const string &hdr_name)
 {
-    size_t pos1, pos2, hdr_start;
-    bool   found = false;
-    while (findHeader(hdrs, hdr_name, 0, pos1, pos2, hdr_start)) {
-        while (pos2 < hdrs.length() && (hdrs[pos2] == '\r' || hdrs[pos2] == '\n')) {
-            pos2++;
-        }
-
-        hdr_start -= hdr_name.length();
-        hdrs.erase(hdr_start, pos2 - hdr_start);
-        found = true;
-    }
-
-    return found;
+    vector<string> tags;
+    auto [first, end] = hdrs.equal_range(hdr_name);
+    for (auto it = first; it != end; ++it)
+        for (const auto &o : explode(it->second, ","))
+            tags.push_back(trim(o, " "));
+    hdrs.erase(first, end);
+    return tags;
 }
 
-void addOptionTags(string &hdrs, const string &hdr_name, const vector<string> &tags)
+/** put tags back as a single hdr_name header */
+static void putOptionTags(AmSipHeaderMap &hdrs, const string &hdr_name, const vector<string> &tags)
+{
+    if (tags.empty())
+        return;
+    string v;
+    for (const auto &t : tags) {
+        if (!v.empty())
+            v += ", ";
+        v += t;
+    }
+    hdrs.emplace(hdr_name, std::move(v));
+}
+
+void addOptionTags(AmSipHeaderMap &hdrs, const string &hdr_name, const vector<string> &tags)
 {
     for (auto it = tags.rbegin(); it != tags.rend(); ++it)
         addOptionTag(hdrs, hdr_name, *it);
 }
 
-void addOptionTag(string &hdrs, const string &hdr_name, const string &tag)
+void addOptionTag(AmSipHeaderMap &hdrs, const string &hdr_name, const string &tag)
 {
-    // see if option tag already exists
-    string options = getHeader(hdrs, hdr_name);
-    if (options.size()) {
-        std::vector<string> option_entries = explode(options, ",");
-        for (std::vector<string>::iterator it = option_entries.begin(); it != option_entries.end(); it++) {
-            if (trim(*it, " ") == tag)
-                // found - no need to add again
-                return;
-        }
+    auto tags = takeOptionTags(hdrs, hdr_name);
+    if (std::find(tags.begin(), tags.end(), tag) == tags.end())
+        tags.insert(tags.begin(), tag);
+    putOptionTags(hdrs, hdr_name, tags);
+}
 
-        // tag not found - add our tag to the (first) hdr_name header
-        size_t pos1;
-        size_t pos2;
-        size_t hdr_start;
-        if (!findHeader(hdrs, hdr_name, 0, pos1, pos2, hdr_start)) {
-            ERROR("internal error: header '%s' disappeared in-between (hdrs = '%s'!", hdr_name.c_str(), hdrs.c_str());
-            hdrs += hdr_name + COLSP + tag + CRLF;
-            return;
-        }
+void removeOptionTag(AmSipHeaderMap &hdrs, const string &hdr_name, const string &tag)
+{
+    auto tags = takeOptionTags(hdrs, hdr_name);
+    tags.erase(std::remove(tags.begin(), tags.end(), tag), tags.end());
+    putOptionTags(hdrs, hdr_name, tags);
+}
 
-        hdrs.insert(pos1, tag + ", ");
-    } else {
-        // hdr does not exist - add it
-        hdrs += hdr_name + COLSP + tag + CRLF;
+/** canonical name for compact forms which sip parser does not resolve itself.
+ *  TODO: move into sip parser (parse_header_type) so sip_header::name is canonical for everyone */
+static const char *expand_compact_name(const cstring &name)
+{
+    if (name.len != 1)
+        return nullptr;
+    switch (name.s[0] | 0x20) {
+    case 'a': return "Accept-Contact";
+    case 'b': return "Referred-By";
+    case 'd': return "Request-Disposition";
+    case 'e': return "Content-Encoding";
+    case 'j': return "Reject-Contact";
+    case 'k': return "Supported";
+    case 'n': return "Identity-Info";
+    case 'o': return "Event";
+    case 'r': return "Refer-To";
+    case 's': return "Subject";
+    case 'u': return "Allow-Events";
+    case 'x': return "Session-Expires";
+    case 'y': return "Identity";
+    default:  return nullptr;
     }
 }
 
-void removeOptionTag(string &hdrs, const string &hdr_name, const string &tag)
+void addHeader(AmSipHeaderMap &hdrs, const sip_header &h)
 {
-    string options = getHeader(hdrs, hdr_name);
+    string value = c2stlstr(h.value);
 
-    // does hdr hdr_name exist?
-    if (options.empty())
-        return;
-
-    // todo: optimize by doing inplace
-    std::vector<string> options_v = explode(options, ",");
-    string              o_hdr;
-    bool                found = false;
-    for (std::vector<string>::iterator it = options_v.begin(); it != options_v.end(); it++) {
-        if (trim(*it, " ") == tag) {
-            found = true;
-            continue;
-        }
-
-        if (it != options_v.begin())
-            o_hdr = ", ";
-
-        o_hdr += *it;
+    // RFC 3261 7.3.1: line break and leading WSP of the folded line are a single SP
+    size_t rpos = 0;
+    while ((rpos = value.find_first_of("\r\n", rpos)) != string::npos) {
+        size_t epos = value.find_first_not_of("\r\n \t", rpos);
+        value.replace(rpos, (epos == string::npos ? value.size() : epos) - rpos, " ");
+        rpos++;
     }
 
-    if (!found)
-        return;
+    if (const char *name = expand_compact_name(h.name))
+        hdrs.emplace(name, std::move(value));
+    else
+        hdrs.emplace(c2stlstr(h.name), std::move(value));
+}
 
-    removeHeader(hdrs, hdr_name);
-
-    if (o_hdr.empty())
-        return;
-
-    hdrs += hdr_name + COLSP + o_hdr + CRLF;
+string headers2string(const AmSipHeaderMap &hdrs)
+{
+    string ret;
+    for (const auto &[name, value] : hdrs) {
+        ret += name;
+        ret += ": ";
+        ret += value;
+        ret += "\r\n";
+    }
+    return ret;
 }
 
 struct format_member {
@@ -281,7 +209,7 @@ string AmSipRequest::print() const
         << format_member(int2str(cseq), "cseq") << format_member(from_tag, "l-tag") << format_member(to_tag, "r-tag")
         << format_member_brackets(route, "rtset") << format_member(contact, "m") <<
 
-        format_member_brackets(hdrs, "hdr") <<
+        format_member_brackets(headers2string(hdrs), "hdr") <<
         // TODO: find some good debug info to print here
         // format_member(content_type, "c") <<
         // format_member_brackets(body, "body") <<
@@ -318,7 +246,7 @@ string AmSipReply::print() const
         // format_member(next_hop, "nhop") <<
         format_member_brackets(route, "rtset") << format_member(contact, "m") <<
 
-        format_member_brackets(hdrs, "hdr") <<
+        format_member_brackets(headers2string(hdrs), "hdr") <<
         // TODO: find some good debug info to print here
         // format_member(content_type, "c") <<
         // format_memberB(body, "body") <<

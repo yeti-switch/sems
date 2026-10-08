@@ -4,10 +4,26 @@
 #include "AmMimeBody.h"
 
 #include <string>
+#include <string_view>
+#include <map>
+#include <algorithm>
+#include <strings.h>
 using std::string;
 
 #include "sip/trans_layer.h"
 #include "sip/msg_sensor.h"
+
+/** case-insensitive, transparent comparator for SIP header names */
+struct ci_less {
+    using is_transparent = void;
+    bool operator()(std::string_view a, std::string_view b) const
+    {
+        int r = strncasecmp(a.data(), b.data(), std::min(a.size(), b.size()));
+        return r ? r < 0 : a.size() < b.size();
+    }
+};
+
+using AmSipHeaderMap = std::multimap<string, string, ci_less>;
 
 /* enforce common naming in Req&Rpl */
 class _AmSipMsgInDlg : public AmObject {
@@ -28,7 +44,7 @@ class _AmSipMsgInDlg : public AmObject {
     string route;
     string contact;
 
-    string hdrs;
+    AmSipHeaderMap hdrs;
 
     AmMimeBody body;
 
@@ -134,30 +150,32 @@ class AmSipRequest : public _AmSipMsgInDlg {
     void   log(msg_logger *logger, msg_sensor *sensor) const;
 };
 
-string getHeader(const string &hdrs, const string &hdr_name, bool single = false);
-
-string getHeader(const string &hdrs, const string &hdr_name, const string &compact_hdr_name, bool single = false);
-
-/** find a header, starting from char skip
-    if found, value is between pos1 and pos2
-    and hdr start is the start of the header
-    @return true if found */
-bool findHeader(const string &hdrs, const string &hdr_name, const size_t skip, size_t &pos1, size_t &pos2,
-                size_t &hdr_start);
+/** @return first value of hdr_name if single, else all values joined with ", " */
+string getHeader(const AmSipHeaderMap &hdrs, std::string_view hdr_name, bool single = false);
 
 /** @return whether header hdr_name is in hdrs */
-bool hasHeader(const string &hdrs, const string &hdr_name);
+bool hasHeader(const AmSipHeaderMap &hdrs, std::string_view hdr_name);
 
-bool removeHeader(string &hdrs, const string &hdr_name);
+/** remove all occurences of hdr_name
+    @return true if something was removed */
+bool removeHeader(AmSipHeaderMap &hdrs, std::string_view hdr_name);
 
 /** add an option tag @param tag to list @param hdr_name */
-void addOptionTag(string &hdrs, const string &hdr_name, const string &tag);
+void addOptionTag(AmSipHeaderMap &hdrs, const string &hdr_name, const string &tag);
 
 /** add an option tags @param tags to list @param hdr_name */
-void addOptionTags(string &hdrs, const string &hdr_name, const vector<string> &tags);
+void addOptionTags(AmSipHeaderMap &hdrs, const string &hdr_name, const vector<string> &tags);
 
 /** remove an option tag @param tag from list @param hdr_name */
-void removeOptionTag(string &hdrs, const string &hdr_name, const string &tag);
+void removeOptionTag(AmSipHeaderMap &hdrs, const string &hdr_name, const string &tag);
+
+struct sip_header;
+
+/** add parsed header to hdrs. folded lines are joined, compact names expanded */
+void addHeader(AmSipHeaderMap &hdrs, const sip_header &h);
+
+/** serialize to "Name: value CRLF ..." */
+string headers2string(const AmSipHeaderMap &hdrs);
 
 #endif /* __AMSIPMSG_H__ */
 
