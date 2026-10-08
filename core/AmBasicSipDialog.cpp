@@ -421,7 +421,7 @@ bool AmBasicSipDialog::onRxReqSanity(const AmSipRequest &req)
     // Sanity checks
     if (!remote_tag.empty() && !req.from_tag.empty() && (req.from_tag != remote_tag)) {
         DBG("remote_tag = '%s'; req.from_tag = '%s'", remote_tag.c_str(), req.from_tag.c_str());
-        reply_error(req, 481, SIP_REPLY_NOT_EXIST, string(), logger);
+        reply_error(req, 481, SIP_REPLY_NOT_EXIST, {}, logger);
         return false;
     }
 
@@ -431,7 +431,9 @@ bool AmBasicSipDialog::onRxReqSanity(const AmSipRequest &req)
             if (!AmConfig.ignore_notify_lower_cseq) {
                 // clever trick to not break subscription dialog usage
                 // for implementations which follow 3265 instead of 5057
-                string hdrs = SIP_HDR_COLSP(SIP_HDR_RETRY_AFTER) "0" CRLF;
+                AmSipHeaderMap hdrs{
+                    { SIP_HDR_RETRY_AFTER, "0" }
+                };
 
                 DBG("remote cseq is lower than previous ones - refusing request. "
                     "method = %s, call-id = '%s'\n",
@@ -445,7 +447,7 @@ bool AmBasicSipDialog::onRxReqSanity(const AmSipRequest &req)
                 "method = %s, call-id = '%s'\n",
                 req.method.c_str(), callid.c_str());
             // see 12.2.2
-            reply_error(req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR, string(), logger);
+            reply_error(req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR, {}, logger);
             return false;
         }
     }
@@ -745,7 +747,7 @@ void AmBasicSipDialog::onRequestSendFailed(const AmSipRequest &req)
 }
 
 int AmBasicSipDialog::reply(const AmSipRequest &req, unsigned int code, const string &reason, const AmMimeBody *body,
-                            const string &hdrs, int flags)
+                            const AmSipHeaderMap &hdrs, int flags)
 {
     TransMap::const_iterator t_it = uas_trans.find(req.cseq);
     if (t_it == uas_trans.end()) {
@@ -776,7 +778,8 @@ int AmBasicSipDialog::reply(const AmSipRequest &req, unsigned int code, const st
         return -1;
     }
 
-    inplaceHeadersErase(reply.hdrs, hdrs2remove);
+    for (const char **h = hdrs2remove; *h; h++)
+        removeHeader(reply.hdrs, *h);
     AmLcConfig::instance().addSignatureHdr(reply);
 
     if ((code > 100 && code < 300) && !(flags & SIP_FLAGS_NOCONTACT)) {
@@ -805,8 +808,8 @@ int AmBasicSipDialog::reply(const AmSipRequest &req, unsigned int code, const st
 
 
 /* static */
-int AmBasicSipDialog::reply_error(const AmSipRequest &req, unsigned int code, const string &reason, const string &hdrs,
-                                  msg_logger *logger, msg_sensor *sensor)
+int AmBasicSipDialog::reply_error(const AmSipRequest &req, unsigned int code, const string &reason,
+                                  const AmSipHeaderMap &hdrs, msg_logger *logger, msg_sensor *sensor)
 {
     AmSipReply reply;
 
@@ -816,7 +819,8 @@ int AmBasicSipDialog::reply_error(const AmSipRequest &req, unsigned int code, co
     reply.hdrs   = hdrs;
     reply.to_tag = AmSession::getNewId();
 
-    inplaceHeadersErase(reply.hdrs, hdrs2remove);
+    for (const char **h = hdrs2remove; *h; h++)
+        removeHeader(reply.hdrs, *h);
     AmLcConfig::instance().addSignatureHdr(reply);
 
     // add transcoder statistics into reply headers
@@ -832,7 +836,7 @@ int AmBasicSipDialog::reply_error(const AmSipRequest &req, unsigned int code, co
     return ret;
 }
 
-int AmBasicSipDialog::sendRequest(const string &method, const AmMimeBody *body, const string &hdrs, int flags,
+int AmBasicSipDialog::sendRequest(const string &method, const AmMimeBody *body, const AmSipHeaderMap &hdrs, int flags,
                                   sip_timers_override *timers_override, sip_target_set *target_set_override,
                                   unsigned int redirects_allowed)
 {
@@ -885,7 +889,8 @@ int AmBasicSipDialog::sendRequest(const string &method, const AmMimeBody *body, 
         req.contact = getContactHdr();
     }
 
-    inplaceHeadersErase(req.hdrs, hdrs2remove);
+    for (const char **h = hdrs2remove; *h; h++)
+        removeHeader(req.hdrs, *h);
     AmLcConfig::instance().addSignatureHdr(req);
 
     int send_flags = 0;

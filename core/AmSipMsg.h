@@ -177,6 +177,12 @@ void addHeader(AmSipHeaderMap &hdrs, const sip_header &h);
 /** serialize to "Name: value CRLF ..." */
 string headers2string(const AmSipHeaderMap &hdrs);
 
+/** get the value of key @param name from PARAM_HDR header in hdrs */
+string get_session_param(const AmSipHeaderMap &hdrs, const string &name);
+
+/** parse the PARAM_HDR header and extracts the parameters into a map */
+void parse_app_params(const AmSipHeaderMap &hdrs, std::map<string, string> &app_params);
+
 #endif /* __AMSIPMSG_H__ */
 
 

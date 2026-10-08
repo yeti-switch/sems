@@ -417,12 +417,12 @@ class AmBasicSipDialog : public AmObject {
 
     /** @return 0 on success */
     virtual int reply(const AmSipRequest &req, unsigned int code, const string &reason, const AmMimeBody *body = NULL,
-                      const string &hdrs = "", int flags = 0);
+                      const AmSipHeaderMap &hdrs = {}, int flags = 0);
 
     /** @return 0 on success */
-    virtual int sendRequest(const string &method, const AmMimeBody *body = NULL, const string &hdrs = "", int flags = 0,
-                            sip_timers_override *timers_override = NULL, sip_target_set *target_set_override = NULL,
-                            unsigned int redirects_allowed = -1);
+    virtual int sendRequest(const string &method, const AmMimeBody *body = NULL, const AmSipHeaderMap &hdrs = {},
+                            int flags = 0, sip_timers_override *timers_override = NULL,
+                            sip_target_set *target_set_override = NULL, unsigned int redirects_allowed = -1);
 
     /**
      * Terminates pending UAS/UAC transactions
@@ -443,8 +443,8 @@ class AmBasicSipDialog : public AmObject {
      * (see uas_trans), this method cannot mark the request
      * as replied, thus leaving it in the pending state forever.
      */
-    static int reply_error(const AmSipRequest &req, unsigned int code, const string &reason, const string &hdrs = "",
-                           msg_logger *logger = NULL, msg_sensor *sensor = NULL);
+    static int reply_error(const AmSipRequest &req, unsigned int code, const string &reason,
+                           const AmSipHeaderMap &hdrs = {}, msg_logger *logger = NULL, msg_sensor *sensor = NULL);
 
     /* dump transaction information (DBG) */
     void dump();

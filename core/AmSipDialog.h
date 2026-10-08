@@ -134,31 +134,32 @@ class AmSipDialog : public AmBasicSipDialog {
     // 		  int flags = 0);
 
     /** @return 0 on success */
-    int send_200_ack(unsigned int inv_cseq, const AmMimeBody *body = NULL, const string &hdrs = "", int flags = 0);
+    int send_200_ack(unsigned int inv_cseq, const AmMimeBody *body = NULL, const AmSipHeaderMap &hdrs = {},
+                     int flags = 0);
 
     /** @return 0 on success */
-    int bye(const string &hdrs = "", int flags = 0, bool final = false);
+    int bye(const AmSipHeaderMap &hdrs = {}, int flags = 0, bool final = false);
 
     /** @return 0 on success */
-    int cancel(bool final = false, const string &hdrs = "");
+    int cancel(bool final = false, const AmSipHeaderMap &hdrs = {});
 
     /** @return 0 on success */
-    int prack(const AmSipReply &reply1xx, const AmMimeBody *body, const string &hdrs);
+    int prack(const AmSipReply &reply1xx, const AmMimeBody *body, const AmSipHeaderMap &hdrs);
 
     /** @return 0 on success */
-    int update(const AmMimeBody *body, const string &hdrs);
+    int update(const AmMimeBody *body, const AmSipHeaderMap &hdrs);
 
     /** @return 0 on success */
-    int reinvite(const string &hdrs, const AmMimeBody *body, int flags = 0);
+    int reinvite(const AmSipHeaderMap &hdrs, const AmMimeBody *body, int flags = 0);
 
     /** @return 0 on success */
-    int invite(const string &hdrs, const AmMimeBody *body);
+    int invite(const AmSipHeaderMap &hdrs, const AmMimeBody *body);
 
     /** @return 0 on success */
     int refer(const string &refer_to, int expires = -1, const string &referred_by = "");
 
     /** @return 0 on success */
-    int info(const string &hdrs, const AmMimeBody *body);
+    int info(const AmSipHeaderMap &hdrs, const AmMimeBody *body);
 
     /** @return 0 on success */
     int transfer(const string &target);

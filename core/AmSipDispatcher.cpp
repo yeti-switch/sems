@@ -123,7 +123,7 @@ void AmSipDispatcher::handleSipMsg(AmSipRequest &req)
                 return;
             } catch (AmSession::Exception &e) {
                 AmSipDialog::reply_error(req, e.code, e.reason, e.hdrs);
-                ERROR("%i %s %s", e.code, e.reason.c_str(), e.hdrs.c_str());
+                ERROR("%i %s %s", e.code, e.reason.c_str(), headers2string(e.hdrs).c_str());
                 return;
             }
         }

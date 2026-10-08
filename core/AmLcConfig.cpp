@@ -2437,20 +2437,21 @@ void AmLcConfig::applySignature(const char *signature, bool override)
         is_default_signature = false;
     }
 
+    signature_value      = signature;
     signature_header_uac = string(SIP_HDR_COLSP(SIP_HDR_USER_AGENT)) + signature + CRLF;
     signature_header_uas = string(SIP_HDR_COLSP(SIP_HDR_SERVER)) + signature + CRLF;
 }
 
 void AmLcConfig::addSignatureHdr(AmSipRequest &req) const
 {
-    if (!signature_header_uac.empty())
-        req.hdrs += signature_header_uac;
+    if (!signature_value.empty())
+        req.hdrs.emplace(SIP_HDR_USER_AGENT, signature_value);
 }
 
 void AmLcConfig::addSignatureHdr(AmSipReply &reply) const
 {
-    if (!signature_header_uas.empty())
-        reply.hdrs += signature_header_uas;
+    if (!signature_value.empty())
+        reply.hdrs.emplace(SIP_HDR_SERVER, signature_value);
 }
 
 int AmLcConfig::addUacSignature(char *buf) const

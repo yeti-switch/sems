@@ -226,6 +226,7 @@ class AmLcConfig {
     cfg_t *m_cfg;
 
     bool        is_default_signature;
+    std::string signature_value;
     std::string signature_header_uac;
     std::string signature_header_uas;
 };

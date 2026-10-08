@@ -253,7 +253,7 @@ class AmSession : public virtual AmObject,
     SessionRefreshMethod refresh_method;
 
     /** update selected session refresh method from remote capabilities */
-    void updateRefreshMethod(const string &headers);
+    void updateRefreshMethod(const AmSipHeaderMap &headers);
 
     // media_idx selects the stream serving that m= line; the primary (0) is created lazily on first use
     AmRtpAudio *RTPStream(unsigned media_idx = 0, bool allow_staged = false);
@@ -286,10 +286,10 @@ class AmSession : public virtual AmObject,
      * Session (creation) should be aborted and replied with code/reason.
      */
     struct Exception {
-        int    code;
-        string reason;
-        string hdrs;
-        Exception(int c, string r, string h = "")
+        int            code;
+        string         reason;
+        AmSipHeaderMap hdrs;
+        Exception(int c, string r, AmSipHeaderMap h = {})
             : code(c)
             , reason(r)
             , hdrs(h)
@@ -516,13 +516,13 @@ class AmSession : public virtual AmObject,
     virtual bool refresh(int flags = 0);
 
     /** send an UPDATE in the session */
-    virtual int sendUpdate(const AmMimeBody *body, const string &hdrs);
+    virtual int sendUpdate(const AmMimeBody *body, const AmSipHeaderMap &hdrs);
 
     /** send a Re-INVITE (if connected) */
-    virtual int sendReinvite(bool updateSDP = true, const string &headers = "", int flags = 0);
+    virtual int sendReinvite(bool updateSDP = true, const AmSipHeaderMap &headers = {}, int flags = 0);
 
     /** send an INVITE */
-    virtual int sendInvite(const string &headers = "");
+    virtual int sendInvite(const AmSipHeaderMap &headers = {});
 
     /** called to determine whether to send INVITE
      *  in the newly created UAC session automatically
@@ -658,7 +658,7 @@ class AmSession : public virtual AmObject,
      * onOutgoingInvite will be called if an INVITE
      * is sent in the session.
      */
-    virtual void onOutgoingInvite(const string &headers) {}
+    virtual void onOutgoingInvite(const AmSipHeaderMap &headers) {}
 
     /**
      * onCancel will be called if a CANCEL for a running

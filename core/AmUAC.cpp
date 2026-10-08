@@ -31,7 +31,7 @@
 #include "AmSessionContainer.h"
 
 string AmUAC::dialout(const string &user, const string &app_name, const string &r_uri, const string &from,
-                      const string &from_uri, const string &to, const string &local_tag, const string &hdrs,
+                      const string &from_uri, const string &to, const string &local_tag, const AmSipHeaderMap &hdrs,
                       AmArg *session_params)
 {
 

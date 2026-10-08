@@ -307,7 +307,7 @@ void SipSingleProbe::onSipReply(const AmSipRequest &req, const AmSipReply &reply
     last_reply_reason = reply.reason;
     last_reply_delay =
         std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - last_send_time);
-    last_reply_contact = !reply.contact.empty() ? reply.contact : getHeader(reply.hdrs, "Contact", "m", false);
+    last_reply_contact = !reply.contact.empty() ? reply.contact : getHeader(reply.hdrs, SIP_HDR_CONTACT);
     last_error_reason.clear();
 }
 

@@ -31,25 +31,19 @@
 #include "SipCtrlInterface.h"
 #include "AmB2BMedia.h" // just because of statistics
 
-static void addTranscoderStats(string &hdrs)
+static void addTranscoderStats(AmSipHeaderMap &hdrs)
 {
     // add transcoder statistics into request/reply headers
     if (!AmConfig.transcoder_out_stats_hdr.empty()) {
         string usage;
         B2BMediaStatistics::instance()->reportCodecWriteUsage(usage);
-
-        hdrs += AmConfig.transcoder_out_stats_hdr + ": ";
-        hdrs += usage;
-        hdrs += CRLF;
+        hdrs.emplace(AmConfig.transcoder_out_stats_hdr, std::move(usage));
     }
 
     if (!AmConfig.transcoder_in_stats_hdr.empty()) {
         string usage;
         B2BMediaStatistics::instance()->reportCodecReadUsage(usage);
-
-        hdrs += AmConfig.transcoder_in_stats_hdr + ": ";
-        hdrs += usage;
-        hdrs += CRLF;
+        hdrs.emplace(AmConfig.transcoder_in_stats_hdr, std::move(usage));
     }
 }
 
@@ -81,7 +75,7 @@ bool AmSipDialog::onRxReqSanity(const AmSipRequest &req)
 
     if (req.method == SIP_METH_CANCEL) {
         if (uas_trans.find(req.cseq) == uas_trans.end()) {
-            reply_error(req, 481, SIP_REPLY_NOT_EXIST, string(), logger);
+            reply_error(req, 481, SIP_REPLY_NOT_EXIST, {}, logger);
             return false;
         }
 
@@ -106,7 +100,10 @@ bool AmSipDialog::onRxReqSanity(const AmSipRequest &req)
         // check for pending UAS transactions
         if (pending) {
             reply_error(req, 491, SIP_REPLY_PENDING,
-                        SIP_HDR_COLSP(SIP_HDR_RETRY_AFTER) + int2str(get_random() % 10) + CRLF, logger);
+                        {
+                            { SIP_HDR_RETRY_AFTER, int2str(get_random() % 10) }
+            },
+                        logger);
             return false;
         }
 
@@ -119,7 +116,10 @@ bool AmSipDialog::onRxReqSanity(const AmSipRequest &req)
             case AmOfferAnswer::OA_OfferSent:
             case AmOfferAnswer::OA_OfferRecved:
                 reply_error(req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR,
-                            SIP_HDR_COLSP(SIP_HDR_RETRY_AFTER) + int2str(get_random() % 10) + CRLF, logger);
+                            {
+                                { SIP_HDR_RETRY_AFTER, int2str(get_random() % 10) }
+                },
+                            logger);
                 return false;
             default: break;
             }
@@ -548,7 +548,7 @@ AmSipRequest *AmSipDialog::getUASPendingInv()
     return nullptr;
 }
 
-int AmSipDialog::bye(const string &hdrs, int flags, bool final)
+int AmSipDialog::bye(const AmSipHeaderMap &hdrs, int flags, bool final)
 {
     switch (status) {
     case Disconnecting:
@@ -636,7 +636,7 @@ int AmSipDialog::bye(const string &hdrs, int flags, bool final)
     } // switch(status)
 }
 
-int AmSipDialog::reinvite(const string &hdrs, const AmMimeBody *body, int flags)
+int AmSipDialog::reinvite(const AmSipHeaderMap &hdrs, const AmMimeBody *body, int flags)
 {
     if (getStatus() == Connected) {
         return sendRequest(SIP_METH_INVITE, body, hdrs, flags);
@@ -649,7 +649,7 @@ int AmSipDialog::reinvite(const string &hdrs, const AmMimeBody *body, int flags)
     return -1;
 }
 
-int AmSipDialog::invite(const string &hdrs, const AmMimeBody *body)
+int AmSipDialog::invite(const AmSipHeaderMap &hdrs, const AmMimeBody *body)
 {
     if (getStatus() == Disconnected) {
         int res = sendRequest(SIP_METH_INVITE, body, hdrs);
@@ -665,7 +665,7 @@ int AmSipDialog::invite(const string &hdrs, const AmMimeBody *body)
     return -1;
 }
 
-int AmSipDialog::update(const AmMimeBody *body, const string &hdrs)
+int AmSipDialog::update(const AmMimeBody *body, const AmSipHeaderMap &hdrs)
 {
     switch (getStatus()) {
     case Connected: // if Connected, we should send a re-INVITE instead...
@@ -688,11 +688,13 @@ int AmSipDialog::update(const AmMimeBody *body, const string &hdrs)
 int AmSipDialog::refer(const string &refer_to, int expires, const string &referred_by)
 {
     if (getStatus() == Connected) {
-        string hdrs = SIP_HDR_COLSP(SIP_HDR_REFER_TO) + refer_to + CRLF;
+        AmSipHeaderMap hdrs{
+            { SIP_HDR_REFER_TO, refer_to }
+        };
         if (expires >= 0)
-            hdrs += SIP_HDR_COLSP(SIP_HDR_EXPIRES) + int2str(expires) + CRLF;
+            hdrs.emplace(SIP_HDR_EXPIRES, int2str(expires));
         if (!referred_by.empty())
-            hdrs += SIP_HDR_COLSP(SIP_HDR_REFERRED_BY) + referred_by + CRLF;
+            hdrs.emplace(SIP_HDR_REFERRED_BY, referred_by);
         return sendRequest("REFER", NULL, hdrs);
     } else {
         DBG("refer(): we are not Connected."
@@ -703,7 +705,7 @@ int AmSipDialog::refer(const string &refer_to, int expires, const string &referr
     }
 }
 
-int AmSipDialog::info(const string &hdrs, const AmMimeBody *body)
+int AmSipDialog::info(const AmSipHeaderMap &hdrs, const AmMimeBody *body)
 {
     if (getStatus() == Connected) {
         return sendRequest("INFO", body, hdrs);
@@ -722,8 +724,8 @@ int AmSipDialog::transfer(const string &target)
 
         setStatus(Disconnecting);
 
-        string      hdrs = "";
-        AmSipDialog tmp_d(*this);
+        AmSipHeaderMap hdrs;
+        AmSipDialog    tmp_d(*this);
         tmp_d.route = "";
         // TODO!!!
         // tmp_d.contact_uri = SIP_HDR_COLSP(SIP_HDR_CONTACT)
@@ -732,9 +734,7 @@ int AmSipDialog::transfer(const string &target)
 
         string r_set;
         if (!route.empty()) {
-            hdrs = PARAM_HDR ": "
-                             "Transfer-RR=\"" +
-                   route + "\"" + CRLF;
+            hdrs.emplace(PARAM_HDR, "Transfer-RR=\"" + route + "\"");
         }
 
         int ret = tmp_d.sendRequest("REFER", NULL, hdrs);
@@ -752,7 +752,7 @@ int AmSipDialog::transfer(const string &target)
     return 0;
 }
 
-int AmSipDialog::prack(const AmSipReply &reply1xx, const AmMimeBody *body, const string &hdrs)
+int AmSipDialog::prack(const AmSipReply &reply1xx, const AmMimeBody *body, const AmSipHeaderMap &hdrs)
 {
     switch (getStatus()) {
     case Trying:
@@ -765,13 +765,13 @@ int AmSipDialog::prack(const AmSipReply &reply1xx, const AmMimeBody *body, const
     default:            ERROR("BUG: unexpected dialog state '%d'.", status); return -1;
     }
 
-    string h = hdrs + SIP_HDR_COLSP(SIP_HDR_RACK) + int2str(reply1xx.rseq) + " " + int2str(reply1xx.cseq) + " " +
-               reply1xx.cseq_method + CRLF;
+    AmSipHeaderMap h(hdrs);
+    h.emplace(SIP_HDR_RACK, int2str(reply1xx.rseq) + " " + int2str(reply1xx.cseq) + " " + reply1xx.cseq_method);
 
     return sendRequest(SIP_METH_PRACK, body, h);
 }
 
-int AmSipDialog::cancel(bool final, const string &hdrs)
+int AmSipDialog::cancel(bool final, const AmSipHeaderMap &hdrs)
 {
     for (TransMap::reverse_iterator t = uac_trans.rbegin(); t != uac_trans.rend(); t++) {
         if (t->second.method == SIP_METH_INVITE) {
@@ -779,14 +779,13 @@ int AmSipDialog::cancel(bool final, const string &hdrs)
             switch (getStatus()) {
             case Trying:
                 cancel_pending = true;
-                if (hdrs.length())
-                    t->second.hdrs += hdrs;
+                t->second.hdrs.insert(hdrs.begin(), hdrs.end());
                 return 0;
             case Cancelling: ERROR("INVITE transaction has already been cancelled"); return -1;
             default:
                 setStatus(Cancelling);
                 return SipCtrlInterface::cancel(&t->second.tt, local_tag, t->first, AmConfig.max_forwards,
-                                                t->second.hdrs + hdrs, getRoute(true));
+                                                headers2string(t->second.hdrs) + headers2string(hdrs), getRoute(true));
             } // switch(getStatus())
         }
     }
@@ -801,7 +800,7 @@ int AmSipDialog::drop()
     return 1;
 }
 
-int AmSipDialog::send_200_ack(unsigned int inv_cseq, const AmMimeBody *body, const string &hdrs, int flags)
+int AmSipDialog::send_200_ack(unsigned int inv_cseq, const AmMimeBody *body, const AmSipHeaderMap &hdrs, int flags)
 {
     // TODO: implement missing pieces from RFC 3261:
     // "The ACK MUST contain the same credentials as the INVITE.  If

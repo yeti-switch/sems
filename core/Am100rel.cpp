@@ -33,7 +33,7 @@ int Am100rel::onRequestIn(const AmSipRequest &req)
         switch (uas_state) {
         case REL100_SUPPORTED: /* if support is on, enforce if asked by UAC */
         case REL100_SUPPORTED_NOT_ANNOUNCED:
-            if (key_in_list(getHeader(req.hdrs, SIP_HDR_SUPPORTED, SIP_HDR_SUPPORTED_COMPACT), SIP_EXT_100REL) ||
+            if (key_in_list(getHeader(req.hdrs, SIP_HDR_SUPPORTED), SIP_EXT_100REL) ||
                 key_in_list(getHeader(req.hdrs, SIP_HDR_REQUIRE), SIP_EXT_100REL))
             {
                 uas_state = REL100_REQUIRE;
@@ -41,14 +41,17 @@ int Am100rel::onRequestIn(const AmSipRequest &req)
             }
             break;
         case REL100_REQUIRE: /* if support is required, reject if UAC doesn't */
-            if (!(key_in_list(getHeader(req.hdrs, SIP_HDR_SUPPORTED, SIP_HDR_SUPPORTED_COMPACT), SIP_EXT_100REL) ||
+            if (!(key_in_list(getHeader(req.hdrs, SIP_HDR_SUPPORTED), SIP_EXT_100REL) ||
                   key_in_list(getHeader(req.hdrs, SIP_HDR_REQUIRE), SIP_EXT_100REL)))
             {
                 ERROR("'" SIP_EXT_100REL "' extension required, but not advertised"
                       " by peer. callid: %s",
                       req.callid.c_str());
                 AmBasicSipDialog::reply_error(req, 421, SIP_REPLY_EXTENSION_REQUIRED,
-                                              SIP_HDR_COLSP(SIP_HDR_REQUIRE) SIP_EXT_100REL CRLF, dlg->getMsgLogger());
+                                              {
+                                                  { SIP_HDR_REQUIRE, SIP_EXT_100REL }
+                },
+                                              dlg->getMsgLogger());
                 if (hdl)
                     hdl->onFailure();
                 return 0; // has been replied
@@ -58,7 +61,9 @@ int Am100rel::onRequestIn(const AmSipRequest &req)
             // TODO: shouldn't this be part of a more general check in SEMS?
             if (key_in_list(getHeader(req.hdrs, SIP_HDR_REQUIRE), SIP_EXT_100REL)) {
                 AmBasicSipDialog::reply_error(req, 420, SIP_REPLY_BAD_EXTENSION,
-                                              SIP_HDR_COLSP(SIP_HDR_UNSUPPORTED) SIP_EXT_100REL CRLF,
+                                              {
+                                                  { SIP_HDR_UNSUPPORTED, SIP_EXT_100REL }
+                },
                                               dlg->getMsgLogger());
                 if (hdl)
                     hdl->onFailure();
@@ -213,7 +218,7 @@ void Am100rel::onReplyOut(AmSipReply &reply)
                     }
                     rseq++;
                 }
-                reply.hdrs += SIP_HDR_COLSP(SIP_HDR_RSEQ) + int2str(rseq) + CRLF;
+                reply.hdrs.emplace(SIP_HDR_RSEQ, int2str(rseq));
                 break;
             default: break;
             } // switch (reliable_1xx)

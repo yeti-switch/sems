@@ -102,22 +102,16 @@ void AmSessionFactory::onOoDRequest(const AmSipRequest &req, const string &)
 
 void AmSessionFactory::replyOptions(const AmSipRequest &req)
 {
-    string hdrs;
+    AmSipHeaderMap hdrs;
     if (!AmConfig.options_transcoder_in_stats_hdr.empty()) {
         string usage;
         B2BMediaStatistics::instance()->reportCodecReadUsage(usage);
-
-        hdrs += AmConfig.options_transcoder_in_stats_hdr + ": ";
-        hdrs += usage;
-        hdrs += CRLF;
+        hdrs.emplace(AmConfig.options_transcoder_in_stats_hdr, std::move(usage));
     }
     if (!AmConfig.options_transcoder_out_stats_hdr.empty()) {
         string usage;
         B2BMediaStatistics::instance()->reportCodecWriteUsage(usage);
-
-        hdrs += AmConfig.options_transcoder_out_stats_hdr + ": ";
-        hdrs += usage;
-        hdrs += CRLF;
+        hdrs.emplace(AmConfig.options_transcoder_out_stats_hdr, std::move(usage));
     }
 
     if (!AmConfig.options_supported_hdr_value.empty()) {

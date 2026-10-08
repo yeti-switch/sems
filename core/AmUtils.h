@@ -328,12 +328,6 @@ string get_header_keyvalue_single(const string &param_hdr, const string &name);
 /** get the value of key @param short_name or @param name or from the list param_hdr*/
 string get_header_keyvalue(const string &param_hdr, const string &short_name, const string &name);
 
-/** get the value of key @param name from P-Iptel-Param header in hdrs */
-string get_session_param(const string &hdrs, const string &name);
-
-/** parse the P-App-Param header and extracts the parameters into a map */
-void parse_app_params(const string &hdrs, std::map<string, string> &app_params);
-
 /** support for thread-safe pseudo-random numbers  - init function */
 void init_random();
 /** support for thread-safe pseudo-random numbers  - make a random number function */

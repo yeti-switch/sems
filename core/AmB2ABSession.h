@@ -79,15 +79,15 @@ struct B2ABConnectEarlyAudioEvent : public B2ABEvent {
 
 /** \brief trigger connecting the callee leg in B2AB session */
 struct B2ABConnectLegEvent : public B2ABEvent {
-    string remote_party;
-    string remote_uri;
-    string local_party;
-    string local_uri;
-    string callgroup;
-    string headers;
+    string         remote_party;
+    string         remote_uri;
+    string         local_party;
+    string         local_uri;
+    string         callgroup;
+    AmSipHeaderMap headers;
 
     B2ABConnectLegEvent(const string &remote_party, const string &remote_uri, const string &local_party,
-                        const string &local_uri, const string &callgroup, const string &headers = "")
+                        const string &local_uri, const string &callgroup, const AmSipHeaderMap &headers = {})
         : B2ABEvent(B2ABConnectLeg)
         , remote_party(remote_party)
         , remote_uri(remote_uri)
@@ -206,7 +206,7 @@ class AmB2ABCallerSession : public AmB2ABSession {
     CalleeStatus getCalleeStatus() { return callee_status; }
 
     void connectCallee(const string &remote_party, const string &remote_uri, const string &local_party,
-                       const string &local_uri, const string &headers = "");
+                       const string &local_uri, const AmSipHeaderMap &headers = {});
 
     // @see AmB2ABSession
     void terminateOtherLeg();

@@ -229,7 +229,7 @@ void AmSession::restoreMedia(const AmSdp &prev_local_sdp, bool send_reinvite)
     sdp.print(body_str);
     AmMimeBody body;
     body.parse(SIP_APPLICATION_SDP, (const unsigned char *)body_str.data(), body_str.size());
-    dlg->reinvite("", &body, SIP_FLAGS_VERBATIM);
+    dlg->reinvite({}, &body, SIP_FLAGS_VERBATIM);
 }
 
 AmRtpAudio *AmSession::RTPStream(unsigned media_idx, bool allow_staged)
@@ -630,7 +630,7 @@ bool AmSession::processingCycle(EventStats *stats)
 
         if ((dlg_status != AmSipDialog::Disconnected) && (dlg_status != AmSipDialog::Cancelling) && !no_reply) {
             DBG("app did not send BYE - do that for the app");
-            if (dlg->bye("", SIP_FLAGS_VERBATIM, true) != 0) {
+            if (dlg->bye({}, SIP_FLAGS_VERBATIM, true) != 0) {
                 processing_status = SESSION_ENDED_DISCONNECTED;
                 // BYE sending failed - don't wait for dlg status to go disconnected
                 return false;
@@ -1443,7 +1443,7 @@ void AmSession::onSessionTimeout()
     setStopped();
 }
 
-void AmSession::updateRefreshMethod(const string &headers)
+void AmSession::updateRefreshMethod(const AmSipHeaderMap &headers)
 {
     if (refresh_method == REFRESH_UPDATE_FB_REINV) {
         if (key_in_list(getHeader(headers, SIP_HDR_ALLOW), SIP_METH_UPDATE)) {
@@ -1461,7 +1461,7 @@ bool AmSession::refresh(int flags)
 
     if (refresh_method == REFRESH_UPDATE) {
         DBG("Refreshing session with UPDATE");
-        return sendUpdate(NULL, "") == 0;
+        return sendUpdate(NULL, {}) == 0;
     } else {
 
         if (dlg->getUACInvTransPending()) {
@@ -1470,11 +1470,11 @@ bool AmSession::refresh(int flags)
         }
 
         DBG("Refreshing session with re-INVITE");
-        return sendReinvite(true, "", flags) == 0;
+        return sendReinvite(true, {}, flags) == 0;
     }
 }
 
-int AmSession::sendUpdate(const AmMimeBody *body, const string &hdrs)
+int AmSession::sendUpdate(const AmMimeBody *body, const AmSipHeaderMap &hdrs)
 {
     return dlg->update(body, hdrs);
 }
@@ -1482,7 +1482,7 @@ int AmSession::sendUpdate(const AmMimeBody *body, const string &hdrs)
 void AmSession::onInvite1xxRel(const AmSipReply &reply)
 {
     // TODO: SDP
-    if (dlg->prack(reply, NULL, /*headers*/ "") < 0)
+    if (dlg->prack(reply, NULL, {}) < 0)
         ERROR("failed to send PRACK request in session '%s'.", sid4dbg().c_str());
 }
 
@@ -1500,7 +1500,7 @@ string AmSession::sid4dbg()
     return dbg;
 }
 
-int AmSession::sendReinvite(bool updateSDP, const string &headers, int flags)
+int AmSession::sendReinvite(bool updateSDP, const AmSipHeaderMap &headers, int flags)
 {
     if (updateSDP) {
         // Forces SDP offer/answer
@@ -1512,7 +1512,7 @@ int AmSession::sendReinvite(bool updateSDP, const string &headers, int flags)
     }
 }
 
-int AmSession::sendInvite(const string &headers)
+int AmSession::sendInvite(const AmSipHeaderMap &headers)
 {
     onOutgoingInvite(headers);
 

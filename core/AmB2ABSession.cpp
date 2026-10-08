@@ -200,7 +200,7 @@ void AmB2ABCallerSession::onB2ABEvent(B2ABEvent *ev)
 }
 
 void AmB2ABCallerSession::connectCallee(const string &remote_party, const string &remote_uri, const string &local_party,
-                                        const string &local_uri, const string &headers)
+                                        const string &local_uri, const AmSipHeaderMap &headers)
 {
     if (callee_status != None)
         terminateOtherLeg();

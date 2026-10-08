@@ -224,7 +224,7 @@ void AmB2BSession::relayError(const string &method, unsigned cseq, bool forward,
 
         if (n_reply.code == 491) {
             // add Retry-After header with random 2-10 seconds
-            n_reply.hdrs += SIP_HDR_COLSP(SIP_HDR_RETRY_AFTER) + int2str((get_random() % 8) + 2) + CRLF;
+            n_reply.hdrs.emplace(SIP_HDR_RETRY_AFTER, int2str((get_random() % 8) + 2));
         }
 
         DBG("relaying B2B SIP error reply %u %s", n_reply.code, n_reply.reason.c_str());
@@ -326,7 +326,7 @@ void AmB2BSession::onB2BEvent(B2BEvent *ev)
                 {
                     // relay with Contact in 300 - 305 redirect messages
                     AmSipReply n_reply(reply_ev->reply);
-                    n_reply.hdrs += SIP_HDR_COLSP(SIP_HDR_CONTACT) + reply_ev->reply.contact + CRLF;
+                    n_reply.hdrs.emplace(SIP_HDR_CONTACT, reply_ev->reply.contact);
 
                     if (relaySip(t_req->second, n_reply) < 0) {
                         terminateOtherLeg();
@@ -435,7 +435,7 @@ void AmB2BSession::onSipRequest(const AmSipRequest &req)
                     unsigned int mapped_id = 0;
                     if (getMappedReferID(id_int, mapped_id)) {
                         removeHeader(r_ev->req.hdrs, SIP_HDR_EVENT);
-                        r_ev->req.hdrs += SIP_HDR_COLSP(SIP_HDR_EVENT) "refer;id=" + int2str(mapped_id) + CRLF;
+                        r_ev->req.hdrs.emplace(SIP_HDR_EVENT, "refer;id=" + int2str(mapped_id));
                     }
                 }
             }
@@ -767,7 +767,7 @@ void AmB2BSession::terminateLeg()
 
     clearRtpReceiverRelay();
 
-    dlg->bye("", SIP_FLAGS_VERBATIM, true);
+    dlg->bye({}, SIP_FLAGS_VERBATIM, true);
 }
 
 void AmB2BSession::terminateOtherLeg()
@@ -900,7 +900,7 @@ int AmB2BSession::sendEstablishedReInvite()
     try {
         AmMimeBody body(established_body); // contains only SDP
         updateLocalBody(body, sip_method_invite_str, dlg->cseq);
-        return dlg->reinvite("", &body, SIP_FLAGS_VERBATIM);
+        return dlg->reinvite({}, &body, SIP_FLAGS_VERBATIM);
     } catch (const string &s) {
         ERROR("sending established SDP reinvite: %s", s.c_str());
     }
@@ -944,16 +944,16 @@ int AmB2BSession::relaySip(const AmSipRequest &req)
     if (req.method != "ACK") {
         relayed_req[dlg->cseq] = req;
 
-        const string *hdrs = &req.hdrs;
-        string        m_hdrs;
+        const AmSipHeaderMap *hdrs = &req.hdrs;
+        AmSipHeaderMap        m_hdrs;
 
         // translate RAck for PRACK
         if (req.method == SIP_METH_PRACK && req.rseq) {
             TransMap::iterator t;
             for (t = relayed_req.begin(); t != relayed_req.end(); t++) {
                 if (t->second.cseq == req.rack_cseq) {
-                    m_hdrs = req.hdrs + SIP_HDR_COLSP(SIP_HDR_RACK) + int2str(req.rseq) + " " + int2str(t->first) +
-                             " " + req.rack_method + CRLF;
+                    m_hdrs = req.hdrs;
+                    m_hdrs.emplace(SIP_HDR_RACK, int2str(req.rseq) + " " + int2str(t->first) + " " + req.rack_method);
                     hdrs = &m_hdrs;
                     break;
                 }
@@ -1011,13 +1011,14 @@ int AmB2BSession::relaySip(const AmSipRequest &req)
 
 int AmB2BSession::relaySip(const AmSipRequest &orig, const AmSipReply &reply)
 {
-    const string *hdrs = &reply.hdrs;
-    string        m_hdrs;
-    const string  method(orig.method);
+    const AmSipHeaderMap *hdrs = &reply.hdrs;
+    AmSipHeaderMap        m_hdrs;
+    const string          method(orig.method);
 
     if (reply.rseq != 0) {
-        m_hdrs = reply.hdrs + SIP_HDR_COLSP(SIP_HDR_RSEQ) + int2str(reply.rseq) + CRLF;
-        hdrs   = &m_hdrs;
+        m_hdrs = reply.hdrs;
+        m_hdrs.emplace(SIP_HDR_RSEQ, int2str(reply.rseq));
+        hdrs = &m_hdrs;
     }
 
     AmMimeBody body(reply.body);
@@ -1423,7 +1424,7 @@ void AmB2BCallerSession::connectCallee(const string &remote_party, const string 
 
 int AmB2BCallerSession::reinviteCaller(const AmSipReply &callee_reply)
 {
-    return dlg->sendRequest(SIP_METH_INVITE, &callee_reply.body, "" /* hdrs */, SIP_FLAGS_VERBATIM);
+    return dlg->sendRequest(SIP_METH_INVITE, &callee_reply.body, {}, SIP_FLAGS_VERBATIM);
 }
 
 void AmB2BCallerSession::createCalleeSession()

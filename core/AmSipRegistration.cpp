@@ -372,7 +372,9 @@ bool AmSIPRegistration::doRegistration()
     dlg.setRemoteUri(req.r_uri);
     dlg.setResolvePriority(info.resolve_priority);
 
-    string hdrs = SIP_HDR_COLSP(SIP_HDR_EXPIRES) + int2str(expires_interval) + CRLF;
+    AmSipHeaderMap hdrs{
+        { SIP_HDR_EXPIRES, int2str(expires_interval) }
+    };
 
     if (request_contact.empty()) {
         if (info.contact.empty()) {
@@ -398,7 +400,7 @@ bool AmSIPRegistration::doRegistration()
         request_contact = local_contact.nameaddr_str();
     }
 
-    hdrs += SIP_HDR_COLSP(SIP_HDR_CONTACT) + request_contact + CRLF;
+    hdrs.emplace(SIP_HDR_CONTACT, request_contact);
 
     info.attempt++;
 
@@ -430,10 +432,12 @@ bool AmSIPRegistration::doUnregister()
     dlg.setRemoteTag(req.to_tag);
     dlg.setRemoteUri(req.r_uri);
 
-    int    flags = 0;
-    string hdrs  = SIP_HDR_COLSP(SIP_HDR_EXPIRES) "0" CRLF;
+    int            flags = 0;
+    AmSipHeaderMap hdrs{
+        { SIP_HDR_EXPIRES, "0" }
+    };
     if (!request_contact.empty()) {
-        hdrs += SIP_HDR_COLSP(SIP_HDR_CONTACT) + request_contact + CRLF;
+        hdrs.emplace(SIP_HDR_CONTACT, request_contact);
         flags = SIP_FLAGS_NOCONTACT;
     }
 
@@ -548,7 +552,7 @@ void AmSIPRegistration::onSipReply(const AmSipRequest &req, const AmSipReply &re
 
         string contacts = reply.contact;
         if (contacts.empty())
-            contacts = getHeader(reply.hdrs, "Contact", "m", true);
+            contacts = getHeader(reply.hdrs, SIP_HDR_CONTACT, true);
 
         if (unregistering) {
             active     = false;

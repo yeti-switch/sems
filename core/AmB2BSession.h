@@ -123,8 +123,8 @@ struct B2BConnectEvent : public B2BEvent {
     string remote_party;
     string remote_uri;
 
-    AmMimeBody body;
-    string     hdrs;
+    AmMimeBody     body;
+    AmSipHeaderMap hdrs;
 
     bool         relayed_invite;
     unsigned int r_cseq;

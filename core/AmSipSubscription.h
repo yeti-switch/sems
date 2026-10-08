@@ -140,9 +140,9 @@ class SingleSubscription {
 
     string to_str();
 
-    string getNotifyHeaders();
-    void   sendReferNotify(AmBasicSipDialog *sip_dlg, string &body, bool terminate_sub = false,
-                           const string &reason = string());
+    AmSipHeaderMap getNotifyHeaders();
+    void           sendReferNotify(AmBasicSipDialog *sip_dlg, string &body, bool terminate_sub = false,
+                                   const string &reason = string());
 };
 
 /**

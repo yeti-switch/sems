@@ -1412,36 +1412,6 @@ string get_header_keyvalue_single(const string &param_hdr, const string &name)
         return "";
 }
 
-/** get the value of key @param name from \ref PARAM_HDR header in hdrs */
-string get_session_param(const string &hdrs, const string &name)
-{
-    string iptel_app_param = getHeader(hdrs, PARAM_HDR, true);
-    if (!iptel_app_param.length()) {
-        //      DBG("call parameters header PARAM_HDR not found "
-        // 	 "(need to configure ser's tw_append?).\n");
-        return "";
-    }
-
-    return get_header_keyvalue(iptel_app_param, name);
-}
-
-void parse_app_params(const string &hdrs, map<string, string> &app_params)
-{
-    // TODO: use real parser with quoting and optimize
-    vector<string> items = explode(getHeader(hdrs, PARAM_HDR, true), ";");
-    for (vector<string>::iterator it = items.begin(); it != items.end(); it++) {
-        vector<string> kv = explode(*it, "=");
-        if (kv.size() == 2) {
-            app_params.insert(make_pair(kv[0], kv[1]));
-        } else {
-            if (kv.size() == 1) {
-                app_params.insert(make_pair(*it, string()));
-            }
-        }
-    }
-}
-
-
 // support for thread-safe pseudo-random numbers
 static unsigned int _s_rand = 0;
 static AmMutex      _s_rand_mut;

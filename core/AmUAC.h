@@ -40,7 +40,7 @@ class AmUAC {
   public:
     static string dialout(const string &user, const string &app_name, const string &r_uri, const string &from,
                           const string &from_uri, const string &to, const string &local_tag = "",
-                          const string &hdrs = "", AmArg *session_params = NULL);
+                          const AmSipHeaderMap &hdrs = {}, AmArg *session_params = NULL);
 };
 
 #endif

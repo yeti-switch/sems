@@ -100,32 +100,34 @@ bool SingleSubscription::terminated()
     return getState() == SubState_terminated;
 }
 
-string SingleSubscription::getNotifyHeaders()
+AmSipHeaderMap SingleSubscription::getNotifyHeaders()
 {
-    string hdrs;
-    // Event header
-    hdrs += SIP_HDR_COLSP(SIP_HDR_EVENT) + event + ";id=" + id + CRLF;
+    AmSipHeaderMap hdrs{
+        { SIP_HDR_EVENT, event + ";id=" + id }
+    };
     // Subscription-State header
     switch (sub_state) {
     case SubState_terminated:
-        hdrs += SIP_HDR_COLSP(SIP_HDR_SUBSCRIPTION_STATE) "terminated";
+    {
+        string state = "terminated";
         if (!terminated_reason.empty())
-            hdrs += ";reason=" + terminated_reason;
-        hdrs += CRLF;
-        break;
+            state += ";reason=" + terminated_reason;
+        hdrs.emplace(SIP_HDR_SUBSCRIPTION_STATE, std::move(state));
+    } break;
     case SubState_init:
     case SubState_notify_wait:
     case SubState_active:
-        hdrs += SIP_HDR_COLSP(SIP_HDR_SUBSCRIPTION_STATE) "active";
+    {
+        string state = "active";
         if (expires != 0) {
             auto now = AmAppTimer::instance()->unix_clock.get();
             if (expires > now) {
-                hdrs += ";expires=" + int2str(static_cast<unsigned int>(expires - now));
+                state += ";expires=" + int2str(static_cast<unsigned int>(expires - now));
             }
         }
-        hdrs += CRLF;
-        break;
-    case SubState_pending: hdrs += SIP_HDR_COLSP(SIP_HDR_SUBSCRIPTION_STATE) "pending" CRLF; break;
+        hdrs.emplace(SIP_HDR_SUBSCRIPTION_STATE, std::move(state));
+    } break;
+    case SubState_pending: hdrs.emplace(SIP_HDR_SUBSCRIPTION_STATE, "pending"); break;
     default:               break;
     }
     return hdrs;
@@ -224,7 +226,9 @@ bool SingleSubscription::onRequestIn(const AmSipRequest &req)
 
         if (pending_subscribe) {
             dlg()->reply(req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR, NULL,
-                         SIP_HDR_COLSP(SIP_HDR_RETRY_AFTER) + int2str(get_random() % 10) + CRLF);
+                         {
+                             { SIP_HDR_RETRY_AFTER, int2str(get_random() % 10) }
+            });
             return false;
         }
         pending_subscribe++;
@@ -730,20 +734,17 @@ AmSipSubscriptionDialog::AmSipSubscriptionDialog(const AmSipSubscriptionInfo &in
 
 int AmSipSubscriptionDialog::subscribe(int expires)
 {
-    string hdrs;
+    AmSipHeaderMap hdrs;
 
     if (!event.empty()) {
-        hdrs += SIP_HDR_COLSP(SIP_HDR_EVENT) + event;
-        if (!event_id.empty())
-            hdrs += ";id=" + event_id;
-        hdrs += CRLF;
+        hdrs.emplace(SIP_HDR_EVENT, event_id.empty() ? event : event + ";id=" + event_id);
     }
 
     if (!accept.empty()) {
-        hdrs += SIP_HDR_COLSP(SIP_HDR_ACCEPT) + accept + CRLF;
+        hdrs.emplace(SIP_HDR_ACCEPT, accept);
     }
     if (expires >= 0) {
-        hdrs += SIP_HDR_COLSP(SIP_HDR_EXPIRES) + int2str(expires) + CRLF;
+        hdrs.emplace(SIP_HDR_EXPIRES, int2str(expires));
     }
 
     return sendRequest(SIP_METH_SUBSCRIBE, NULL, hdrs);
