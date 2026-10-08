@@ -147,10 +147,11 @@ class UACAuth : public AmSessionEventHandler {
     virtual bool onSendRequest(AmSipRequest &req, int &flags);
     virtual bool onSendReply(const AmSipRequest &req, AmSipReply &reply, int &flags);
 
-    static void   fetchAuthentication(const AmSipRequest *req, AmArg &ret);
-    static void   checkAuthentication(const AmSipRequest *req, const vector<string> &realms, const string &user,
-                                      const string &pwd, const string &default_realm, const vector<string> &algorithms,
-                                      AmArg &ret);
+    static void fetchAuthentication(const AmSipRequest *req, AmArg &ret);
+    static void checkAuthentication(const AmSipRequest *req, const vector<string> &realms, const string &user,
+                                    const string &pwd, const string &default_realm, const vector<string> &algorithms,
+                                    AmArg &ret);
+    /** @return WWW-Authenticate value, empty on unsupported algorithm */
     static string getChallengeHeader(const string &realm, const HashCalculation &hash, int flags);
     static string getChallengeHeader(const string &realm, const string &algorithm, int flags);
 

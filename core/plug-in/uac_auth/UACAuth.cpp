@@ -42,6 +42,17 @@
 #include "sip/resolver.h"
 #include <confuse.h>
 
+/** append [WWW-Authenticate, value] pair to array of headers. empty value (unsupported algorithm) is skipped */
+static void push_challenge(AmArg &hdrs, const string &value)
+{
+    if (value.empty())
+        return;
+    AmArg pair;
+    pair.push(SIP_HDR_WWW_AUTHENTICATE);
+    pair.push(value);
+    hdrs.push(pair);
+}
+
 using std::string;
 
 
@@ -169,17 +180,17 @@ void UACAuthFactory::invoke(const string &method, const AmArg &args, AmArg &ret)
         // params: realm flags [algorithms]
         int flags =
             (args.size() > 1 && args.get(1).isNumber()) ? args.get(1).asNumber<int>() : UACAuth::getAllowedQops();
+        ret.assertArray();
         if (args.size() > 2 && isArgCStr(args.get(2))) {
-            ret = UACAuth::getChallengeHeader(args.get(0).asCStr(), args.get(2).asCStr(), flags);
+            push_challenge(ret, UACAuth::getChallengeHeader(args.get(0).asCStr(), args.get(2).asCStr(), flags));
         } else if (args.size() > 2 && isArgArray(args.get(2))) {
-            string challenge;
             for (auto i = 0u; i < args.get(2).size(); i++) {
                 if (isArgCStr(args.get(2).get(i)))
-                    challenge += UACAuth::getChallengeHeader(args.get(0).asCStr(), args.get(2).get(i).asCStr(), flags);
+                    push_challenge(
+                        ret, UACAuth::getChallengeHeader(args.get(0).asCStr(), args.get(2).get(i).asCStr(), flags));
             }
-            ret = challenge;
         } else {
-            ret = UACAuth::getChallengeHeader(args.get(0).asCStr(), DEFAULT_ALGORITHM, flags);
+            push_challenge(ret, UACAuth::getChallengeHeader(args.get(0).asCStr(), DEFAULT_ALGORITHM, flags));
         }
     } else if (method == "checkAuthHA1") {
         // params: Request realm user pwd [algorithms]
@@ -870,7 +881,8 @@ void UACAuth::checkAuthentication(const AmSipRequest *req, const vector<string> 
         DBG("letting pass %s request without authentication", req->method.c_str());
         ret.push(200);
         ret.push("OK");
-        ret.push("");
+        ret.push(AmArg());
+        ret.back().assertArray();
         return;
     }
 
@@ -1016,25 +1028,26 @@ void UACAuth::checkAuthentication(const AmSipRequest *req, const vector<string> 
     }
 
 auth_end:
+    AmArg challenge;
+    challenge.assertArray();
     if (authenticated) {
         ret.push(200);
         ret.push("OK");
-        ret.push("");
+        ret.push(challenge);
     } else {
         ret.push(401);
         ret.push("Unauthorized");
-        string      challenge;
         const auto &challenge_realm =
             (!r_realm.empty() && internal_code != UACAuthRealmMismatch) ? r_realm : default_realm;
         if (hash) {
             // return single challenge
-            challenge += getChallengeHeader(challenge_realm, *hash, getAllowedQops());
+            push_challenge(challenge, getChallengeHeader(challenge_realm, *hash, getAllowedQops()));
         } else {
             // return headers for all allowed hashes
             for (const auto &[supported_hash_name, supported_hash] : hashes) {
                 if (std::find(algorithms.begin(), algorithms.end(), supported_hash_name) == algorithms.end())
                     continue;
-                challenge += getChallengeHeader(challenge_realm, *supported_hash, getAllowedQops());
+                push_challenge(challenge, getChallengeHeader(challenge_realm, *supported_hash, getAllowedQops()));
             }
         }
         ret.push(challenge);
@@ -1060,23 +1073,12 @@ string UACAuth::getChallengeHeader(const string &realm, const HashCalculation &h
     }
 
     if (use_qop) {
-        return SIP_HDR_COLSP(SIP_HDR_WWW_AUTHENTICATE) "Digest "
-                                                       "realm=\"" +
-               realm +
-               "\", "
-               "qop=\"" +
-               qop_str_value +
-               "\", "
-               "nonce=\"" +
-               hash.calcNonce(server_nonce_secret) + "\", algorithm=" + hash.algorithmName() + "\r\n";
+        return "Digest realm=\"" + realm + "\", qop=\"" + qop_str_value + "\", nonce=\"" +
+               hash.calcNonce(server_nonce_secret) + "\", algorithm=" + hash.algorithmName();
     }
 
-    return SIP_HDR_COLSP(SIP_HDR_WWW_AUTHENTICATE) "Digest "
-                                                   "realm=\"" +
-           realm +
-           "\", "
-           "nonce=\"" +
-           hash.calcNonce(server_nonce_secret) + "\", algorithm=" + hash.algorithmName() + "\r\n";
+    return "Digest realm=\"" + realm + "\", nonce=\"" + hash.calcNonce(server_nonce_secret) +
+           "\", algorithm=" + hash.algorithmName();
 }
 
 string UACAuth::getChallengeHeader(const string &realm, const string &algorithm, int flags)
@@ -1107,7 +1109,8 @@ void UACAuth::checkAuthenticationByHA1(const AmSipRequest *req, const string &re
         DBG("letting pass %s request without authentication", req->method.c_str());
         ret.push(200);
         ret.push("OK");
-        ret.push("");
+        ret.push(AmArg());
+        ret.back().assertArray();
         return;
     }
 
@@ -1229,26 +1232,22 @@ void UACAuth::checkAuthenticationByHA1(const AmSipRequest *req, const string &re
     }
 
 auth_end:
+    AmArg challenge;
+    challenge.assertArray();
     if (authenticated) {
         ret.push(200);
         ret.push("OK");
-        ret.push("");
+        ret.push(challenge);
     } else {
         ret.push(401);
         ret.push("Unauthorized");
-        string challenge;
         for (auto &hash : hashes) {
             if ((!r_algorithm.empty() && hash.second->algorithmName() != r_algorithm) ||
                 (r_algorithm.empty() &&
                  std::find(algorithms.begin(), algorithms.end(), hash.second->algorithmName()) == algorithms.end()))
                 continue;
-            challenge += SIP_HDR_COLSP(SIP_HDR_WWW_AUTHENTICATE) "Digest "
-                                                                 "realm=\"" +
-                         realm +
-                         "\", "
-                         "qop=\"auth,auth-int\", "
-                         "nonce=\"" +
-                         hash.second->calcNonce(server_nonce_secret) + "\"\r\n";
+            push_challenge(challenge, "Digest realm=\"" + realm + "\", qop=\"auth,auth-int\", nonce=\"" +
+                                          hash.second->calcNonce(server_nonce_secret) + "\"");
         };
         ret.push(challenge);
     }

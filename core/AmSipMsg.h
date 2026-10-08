@@ -181,6 +181,13 @@ string headers2string(const AmSipHeaderMap &hdrs);
  *  @return false on malformed input (nothing is added then) */
 bool parseHeadersString(const string &hdrs_str, AmSipHeaderMap &hdrs);
 
+/** AmArg representation: array of [name, value] pairs */
+AmArg headers2arg(const AmSipHeaderMap &hdrs);
+
+/** add entries from array of [name, value] pairs
+ *  @return false on unexpected layout (nothing is added then) */
+bool arg2headers(const AmArg &arg, AmSipHeaderMap &hdrs);
+
 /** get the value of key @param name from PARAM_HDR header in hdrs */
 string get_session_param(const AmSipHeaderMap &hdrs, const string &name);
 

@@ -185,6 +185,33 @@ bool parseHeadersString(const string &hdrs_str, AmSipHeaderMap &hdrs)
     return !err;
 }
 
+AmArg headers2arg(const AmSipHeaderMap &hdrs)
+{
+    AmArg ret;
+    ret.assertArray();
+    for (const auto &[name, value] : hdrs) {
+        AmArg pair;
+        pair.push(name);
+        pair.push(value);
+        ret.push(pair);
+    }
+    return ret;
+}
+
+bool arg2headers(const AmArg &arg, AmSipHeaderMap &hdrs)
+{
+    if (!isArgArray(arg))
+        return false;
+    for (size_t i = 0; i < arg.size(); i++) {
+        const AmArg &pair = arg.get(i);
+        if (!isArgArray(pair) || pair.size() != 2 || !isArgCStr(pair.get(0)) || !isArgCStr(pair.get(1)))
+            return false;
+    }
+    for (size_t i = 0; i < arg.size(); i++)
+        hdrs.emplace(arg.get(i).get(0).asCStr(), arg.get(i).get(1).asCStr());
+    return true;
+}
+
 /** get the value of key @param name from \ref PARAM_HDR header in hdrs */
 string get_session_param(const AmSipHeaderMap &hdrs, const string &name)
 {
