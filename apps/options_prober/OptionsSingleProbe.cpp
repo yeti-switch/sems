@@ -209,10 +209,9 @@ bool SipSingleProbe::initFromAmArg(const AmArg &a)
         uri_parser.uri_param += c2stlstr(transport_str(transport_protocol_id));
     }
 
-    req.r_uri = uri_parser.uri_str();
-    uri_parser.uri_param.clear(); // remove transport for To/From/Contact headers
-
     uri_parser.uri_user = ruri_username;
+    req.r_uri           = uri_parser.uri_str();
+    uri_parser.uri_param.clear(); // remove transport for To/From/Contact headers
 
     req.from     = from_uri.empty() ? uri_parser.nameaddr_str() : from_uri;
     req.from_tag = tag;
