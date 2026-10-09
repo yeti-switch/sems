@@ -1122,6 +1122,8 @@ bool _SipCtrlInterface::sip_msg2am_reply(const sip_msg *msg, AmSipReply &reply)
 
     reply.callid = c2stlstr(msg->callid->value);
 
+    reply.from     = c2stlstr(msg->from->value);
+    reply.to       = c2stlstr(msg->to->value);
     reply.to_tag   = c2stlstr(((sip_from_to *)msg->to->p)->tag);
     reply.from_tag = c2stlstr(((sip_from_to *)msg->from->p)->tag);
 
