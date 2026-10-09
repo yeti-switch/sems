@@ -186,7 +186,13 @@ void AmSrtpConnection::update_keys(srtp_profile_t profile, const string &tx_key,
             break;
         }
 
-        srtp::crypto_policy_set_from_profile_for_rtp(&rx_policy.rtp, srtp_profile);
+        /* comment out light update.
+         * replace it with full srtp stream remove/add in handleConnection() -> ensure_rx_stream_context().
+         * we need allowed RTP seq skew detection with explicit replay window clearing
+         * OR artifical monotonic rx rtp seq with explicit replay window clearing otherwise */
+        last_rx_ssrc_net_order = 0;
+
+        /*srtp::crypto_policy_set_from_profile_for_rtp(&rx_policy.rtp, srtp_profile);
         srtp::crypto_policy_set_from_profile_for_rtcp(&rx_policy.rtcp, srtp_profile);
 
         apply_rx_policy_keys();
@@ -194,7 +200,8 @@ void AmSrtpConnection::update_keys(srtp_profile_t profile, const string &tx_key,
         CLASS_DBG("update srtp_rx_session");
         if (auto ret = srtp_update_stream(srtp_rx_session, &rx_policy); ret != srtp_err_status_ok) {
             ERROR("srtp_update_stream error %d", ret);
-        }
+            break;
+        }*/
     } while (0);
 }
 
