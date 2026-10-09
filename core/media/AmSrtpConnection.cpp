@@ -114,26 +114,38 @@ void AmSrtpConnection::use_keys(srtp_profile_t profile, const string &tx_key, co
 
 void AmSrtpConnection::update_keys(srtp_profile_t profile, const string &tx_key, const srtp_master_keys &rx_keys)
 {
-    if (is_valid_keys(profile, tx_key, rx_keys) < 0)
-        return;
+    CLASS_DBG("ssrc: 0x%08x", rx_policy.ssrc.value);
 
-    if (srtp_profile != profile)
+    if (is_valid_keys(profile, tx_key, rx_keys) < 0) {
+        CLASS_DBG("invalid keys. ignore");
+        return;
+    }
+
+    if (srtp_profile != profile) {
+        CLASS_DBG("change srtp_profile %d -> %d", srtp_profile, profile);
         srtp_profile = profile;
+    }
 
     do { // scope for session_tx_mutex
         AmLock lock(session_tx_mutex);
 
-        if (srtp_tx_session == nullptr)
+        if (srtp_tx_session == nullptr) {
+            CLASS_DBG("no srtp_tx_session. skip srtp_tx_session update");
             break;
+        }
 
-        if (c_tx_key == tx_key)
+        if (c_tx_key == tx_key) {
+            CLASS_DBG("tx_key is not changed. skip srtp_tx_session update");
             break;
+        }
 
         CLASS_DBG("update c_tx_key");
         c_tx_key = tx_key;
 
-        if (!tx_context_initialized)
+        if (!tx_context_initialized) {
+            CLASS_DBG("no tx_context_initialized. skip srtp_tx_session update");
             break;
+        }
 
         srtp_policy_t tx_policy;
         memset(&tx_policy, 0, sizeof(tx_policy));
@@ -146,6 +158,7 @@ void AmSrtpConnection::update_keys(srtp_profile_t profile, const string &tx_key,
         tx_policy.key             = reinterpret_cast<unsigned char *>(c_tx_key.data());
         tx_policy.ssrc.type       = ssrc_any_outbound; // any outbound SSRC; ssrc.value unused
 
+        CLASS_DBG("update srtp_tx_session");
         if (auto ret = srtp_update_stream(srtp_tx_session, &tx_policy); ret != srtp_err_status_ok) {
             ERROR("srtp_update_stream error %d", ret);
         }
@@ -154,24 +167,31 @@ void AmSrtpConnection::update_keys(srtp_profile_t profile, const string &tx_key,
     do { // scope for session_rx_mutex
         AmLock lock(session_rx_mutex);
 
-        if (srtp_rx_session == nullptr)
+        if (srtp_rx_session == nullptr) {
+            CLASS_DBG("no srtp_rx_session. skip srtp_rx_session update");
             break;
+        }
 
-        if (c_rx_keys == rx_keys)
+        if (c_rx_keys == rx_keys) {
+            CLASS_DBG("rx_keys are not changed. skip srtp_rx_session update");
             break;
+        }
 
         CLASS_DBG("update c_rx_keys");
         c_rx_keys = rx_keys;
         use_mki   = rx_keys.has_mki();
 
-        if (!rx_context_initialized)
+        if (!rx_context_initialized) {
+            CLASS_DBG("no rx_context_initialized. skip srtp_rx_session update");
             break;
+        }
 
         srtp::crypto_policy_set_from_profile_for_rtp(&rx_policy.rtp, srtp_profile);
         srtp::crypto_policy_set_from_profile_for_rtcp(&rx_policy.rtcp, srtp_profile);
 
         apply_rx_policy_keys();
 
+        CLASS_DBG("update srtp_rx_session");
         if (auto ret = srtp_update_stream(srtp_rx_session, &rx_policy); ret != srtp_err_status_ok) {
             ERROR("srtp_update_stream error %d", ret);
         }
@@ -354,10 +374,11 @@ void AmSrtpConnection::handleConnection(uint8_t *data, unsigned int size, struct
                                         struct timeval recv_time)
 {
     srtp_err_status_t ret;
-    uint32_t          rx_ssrc_net_order;
-
     {
+        uint32_t rx_ssrc_net_order;
+
         AmLock lock(session_rx_mutex);
+
         if (!srtp_rx_session) {
             transport->getEndpoint()->onErrorRtpTransport(SRTP_INIT_ERROR, "srtp session is not initialized",
                                                           transport);
@@ -365,11 +386,11 @@ void AmSrtpConnection::handleConnection(uint8_t *data, unsigned int size, struct
         }
 
         if (getConnType() == RTP_CONN) {
-            rtp_hdr_t *header = reinterpret_cast<rtp_hdr_t *>(data);
-            rx_ssrc_net_order = header->ssrc;
+            const rtp_hdr_t *header = reinterpret_cast<rtp_hdr_t *>(data);
+            rx_ssrc_net_order       = header->ssrc;
         } else {
-            RtcpCommonHeader *header = reinterpret_cast<RtcpCommonHeader *>(data);
-            rx_ssrc_net_order        = header->ssrc;
+            const RtcpCommonHeader *header = reinterpret_cast<RtcpCommonHeader *>(data);
+            rx_ssrc_net_order              = header->ssrc;
         }
 
         if (last_rx_ssrc_net_order != rx_ssrc_net_order) {
@@ -396,13 +417,11 @@ void AmSrtpConnection::handleConnection(uint8_t *data, unsigned int size, struct
     if (ret == srtp_err_status_ok || getConnType() == RTCP_CONN) {
         s_stream->process_packet(data, size, recv_addr, recv_time);
     } else {
-        CLASS_DBG("srtp_unprotect for %s - error:%d", getConnType() == RTP_CONN ? "rtp" : "rtcp", ret);
-        sockaddr_storage saddr;
-        transport->getLocalAddr(&saddr);
-        string error("error parsing: incorrect S");
-        error.append(getConnType() == RTP_CONN ? "RTP" : "RTCP");
-        error.append(" packet");
-        transport->getEndpoint()->onErrorRtpTransport(SRTP_UNPROTECT_ERROR, error, transport);
+        static const string_view error_prefix_RTP{ "SRTP RTP unprotect error" };
+        static const string_view error_prefix_RTCP{ "SRTP RTCP unprotect error" };
+
+        transport->getEndpoint()->onErrorRtpTransport(
+            SRTP_UNPROTECT_ERROR, getConnType() == RTP_CONN ? error_prefix_RTP : error_prefix_RTCP, transport, ret);
     }
 }
 

@@ -971,20 +971,25 @@ AmRtpPacket *AmMediaEndpoint::createRtpPacket()
     return p;
 }
 
-void AmMediaEndpoint::onErrorRtpTransport(AmStreamConnection::ConnectionError err, const string &error,
-                                          AmMediaTransport *t)
+void AmMediaEndpoint::onErrorRtpTransport(AmStreamConnection::ConnectionError err_id, const string_view &err_str,
+                                          AmMediaTransport *t, int err_code)
 {
     struct sockaddr_storage laddr;
     t->getLocalAddr(&laddr);
-    if (err == AmStreamConnection::RTP_PARSER_ERROR)
+    if (err_id == AmStreamConnection::RTP_PARSER_ERROR)
         rtp_parse_errors++;
-    else if (err == AmStreamConnection::SRTP_UNPROTECT_ERROR)
+    else if (err_id == AmStreamConnection::SRTP_UNPROTECT_ERROR) {
+        if (0 == (srtp_unprotect_errors % 1500)) {
+            CLASS_DBG("%s: %d (src_addr: %s:%i, local_tag: %s)\n", err_str.data(), err_code,
+                      get_addr_str(&laddr).c_str(), am_get_port(&laddr),
+                      session ? session->getLocalTag().c_str() : "no session");
+        }
         srtp_unprotect_errors++;
-    else if (err == AmStreamConnection::STUN_DROPPED_ERROR || err == AmStreamConnection::STUN_VALID_ERROR) {
-        CLASS_DBG("%s (src_addr: %s:%i, local_tag: %s)\n", error.c_str(), get_addr_str(&laddr).c_str(),
+    } else if (err_id == AmStreamConnection::STUN_DROPPED_ERROR || err_id == AmStreamConnection::STUN_VALID_ERROR) {
+        CLASS_DBG("%s (src_addr: %s:%i, local_tag: %s)\n", err_str.data(), get_addr_str(&laddr).c_str(),
                   am_get_port(&laddr), session ? session->getLocalTag().c_str() : "no session");
     } else {
-        CLASS_ERROR("%s (src_addr: %s:%i, local_tag: %s)\n", error.c_str(), get_addr_str(&laddr).c_str(),
+        CLASS_ERROR("%s (src_addr: %s:%i, local_tag: %s)\n", err_str.data(), get_addr_str(&laddr).c_str(),
                     am_get_port(&laddr), session ? session->getLocalTag().c_str() : "no session");
     }
 }

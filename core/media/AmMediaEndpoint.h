@@ -197,7 +197,8 @@ class AmMediaEndpoint
     AmRtpPacket *createRtpPacket();
     AmRtpPacket *reuseBufferedPacket();
     void         clearRTPTimeout(struct timeval *recv_time);
-    void         onErrorRtpTransport(AmStreamConnection::ConnectionError err, const string &error, AmMediaTransport *t);
+    void         onErrorRtpTransport(AmStreamConnection::ConnectionError err_id, const string_view &err_str,
+                                     AmMediaTransport *t, int err_code = 0);
     void         onRtpPacket(AmRtpPacket *p, AmMediaTransport *t);
     void         onRtcpPacket(AmRtpPacket *p, AmMediaTransport *t);
     void         onUdptlPacket(AmRtpPacket *p, AmMediaTransport *t);
