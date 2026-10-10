@@ -512,10 +512,6 @@ void AmSIPRegistration::onRegisterExpired()
 
 void AmSIPRegistration::onRegisterSendTimeout()
 {
-    if (info.max_attempts && info.attempt >= info.max_attempts) {
-        return;
-    }
-
     if (sess_link.length()) {
         AmSessionContainer::instance()->postEvent(
             sess_link, new SIPRegistrationEvent(SIPRegistrationEvent::RegisterSendTimeout, handle, info.id));
@@ -526,7 +522,7 @@ void AmSIPRegistration::onRegisterSendTimeout()
 
 bool AmSIPRegistration::registerSendTimeout(time_t now_sec)
 {
-    return now_sec > reg_send_begin + info.retry_delay;
+    return (now_sec > reg_send_begin + info.retry_delay) && (!info.max_attempts || info.attempt < info.max_attempts);
 }
 
 bool AmSIPRegistration::timeToReregister(time_t now_sec)
