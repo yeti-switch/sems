@@ -773,6 +773,7 @@ bool UACAuth::do_auth(const UACAuthDigestChallenge &challenge, const unsigned in
 
     if (credential->realm.length() && (credential->realm != challenge.realm)) {
         DBG("authentication realm mismatch ('%s' vs '%s').", credential->realm.c_str(), challenge.realm.c_str());
+        return false;
     }
 
     string ha1;
