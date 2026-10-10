@@ -791,7 +791,7 @@ void SipRegistrar::process_register_request_event(SipRegistrarRegisterRequestEve
 
     if (parse_nameaddr_list(contact_list, req->contact.c_str(), static_cast<int>(req->contact.length())) < 0) {
         DBG("could not parse contact list");
-        post_register_response(event.session_id, req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR);
+        post_register_response(event.session_id, req, 400, SIP_REPLY_INVALID_REQUEST);
         return;
     }
 
@@ -804,7 +804,7 @@ void SipRegistrar::process_register_request_event(SipRegistrarRegisterRequestEve
         AmUriParser contact_uri;
         if (!contact_uri.parse_contact(c2stlstr(c), 0, end)) {
             DBG("error parsing contact: '%.*s'", c.len, c.s);
-            post_register_response(event.session_id, req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR);
+            post_register_response(event.session_id, req, 400, SIP_REPLY_INVALID_REQUEST);
             return;
         } else {
             DBG("successfully parsed contact %s@%s", contact_uri.uri_user.c_str(), contact_uri.uri_host.c_str());
@@ -814,7 +814,7 @@ void SipRegistrar::process_register_request_event(SipRegistrarRegisterRequestEve
 
     if (asterisk_contact && !contacts.empty()) {
         DBG("additional Contact headers with Contact: *");
-        post_register_response(event.session_id, req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR);
+        post_register_response(event.session_id, req, 400, SIP_REPLY_INVALID_REQUEST);
         return;
     }
 
@@ -876,7 +876,7 @@ void SipRegistrar::process_register_request_event(SipRegistrarRegisterRequestEve
     if (expires_found) {
         if (!str2int(expires, expires_int)) {
             DBG("failed to cast expires value '%s'", expires.c_str());
-            post_register_response(event.session_id, req, 400, "Invalid Request");
+            post_register_response(event.session_id, req, 400, SIP_REPLY_INVALID_REQUEST);
             return;
         }
 
@@ -902,7 +902,7 @@ void SipRegistrar::process_register_request_event(SipRegistrarRegisterRequestEve
     if (asterisk_contact) {
         if (expires_int != 0) {
             DBG("non zero expires with Contact: *");
-            post_register_response(event.session_id, req, 400, "Invalid Request");
+            post_register_response(event.session_id, req, 400, SIP_REPLY_INVALID_REQUEST);
             return;
         }
 

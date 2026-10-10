@@ -93,5 +93,6 @@
 #define SIP_REPLY_TRYING                "Trying"
 #define SIP_REPLY_TOO_MANY_HOPS         "Too Many Hops"
 #define SIP_REPLY_RINGING               "Ringing"
+#define SIP_REPLY_INVALID_REQUEST       "Invalid Request"
 
 #endif
