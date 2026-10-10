@@ -119,7 +119,7 @@ cleanup_instance_reg_id(id, instance, reg_id, one_contact_per_aor, contact_key)
 -- check for max allowed bindings
 if redis.call('SCARD', auth_id) >= bindings_max then
     -- detect same contact refresh
-    if not redis.call('SISMEMBER', auth_id, contact) then
+    if 0==redis.call('SISMEMBER', auth_id, contact) then
         return 'Too many registered contacts'
     end
 end
