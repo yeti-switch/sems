@@ -194,6 +194,34 @@ bool SipSingleProbe::initFromAmArg(const AmArg &a)
     cred.user  = auth_username;
     cred.pwd   = auth_password;
 
+    if (!auth_username.empty() && !auth_password.empty()) {
+        AmDynInvokeFactory *uac_auth_f = AmPlugIn::instance()->getFactory4Di("uac_auth");
+        if (uac_auth_f) {
+            AmDynInvoke *uac_auth_i = uac_auth_f->getInstance();
+
+            AmArg di_args, ret;
+            AmArg self_ptr;
+
+            self_ptr.setBorrowedPointer(this);
+
+            di_args.push(self_ptr);
+            di_args.push(self_ptr);
+
+            uac_auth_i->invoke("getHandler", di_args, ret);
+
+            if (!ret.size()) {
+                ERROR("Can not add auth handler for new options probe");
+            } else {
+                AmObject *p = ret.get(0).asObject();
+                if (p != nullptr) {
+                    AmSessionEventHandler *h = dynamic_cast<AmSessionEventHandler *>(p);
+                    if (h != nullptr)
+                        auth.reset(h);
+                }
+            }
+        }
+    }
+
     AmUriParser uri_parser;
     req.method = "OPTIONS";
     req.user   = ruri_username;
@@ -303,8 +331,23 @@ bool SipSingleProbe::needProcess(timep &now)
     return now >= recheck_time && !active_dialog;
 }
 
+void SipSingleProbe::onSendRequest(AmSipRequest &req, int &flags)
+{
+    if (auth)
+        auth->onSendRequest(req, flags);
+}
+
+void SipSingleProbe::onSendReply(const AmSipRequest &req, AmSipReply &reply, int &flags)
+{
+    if (auth)
+        auth->onSendReply(req, reply, flags);
+}
+
 void SipSingleProbe::onSipReply(const AmSipRequest &req, const AmSipReply &reply, AmBasicSipDialog::Status old_status)
 {
+    if (auth && auth->onSipReply(req, reply, old_status))
+        return;
+
     DBG("got sip reply. code:%d", reply.code);
     active_dialog     = false;
     last_reply_code   = reply.code;

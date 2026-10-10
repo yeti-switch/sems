@@ -1,6 +1,7 @@
 #pragma once
 
 #include "AmBasicSipDialog.h"
+#include "AmSessionEventHandler.h"
 #include "RequestShaper.h"
 #include "ampi/UACAuthAPI.h"
 
@@ -56,6 +57,7 @@ class SipSingleProbe : public AmBasicSipEventHandler, public DialogControl, publ
     string               auth_username;
     string               auth_password;
 
+    std::unique_ptr<AmSessionEventHandler> auth;
 
     void patch_transport(string &uri, int transport_protocol_id);
 
@@ -84,6 +86,8 @@ class SipSingleProbe : public AmBasicSipEventHandler, public DialogControl, publ
     bool process(timep &now);
     bool needProcess(timep &now);
 
+    void onSendRequest(AmSipRequest &req, int &flags) override;
+    void onSendReply(const AmSipRequest &req, AmSipReply &reply, int &flags) override;
     void onSipReply(const AmSipRequest &req, const AmSipReply &reply, AmBasicSipDialog::Status old_status) override;
 
     const string &getTag() const { return tag; }
