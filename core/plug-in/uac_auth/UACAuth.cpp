@@ -728,34 +728,6 @@ bool UACAuth::tc_isequal(const char *s1, const char *s2, size_t len)
     return !res;
 }
 
-
-bool UACAuth::do_auth(const unsigned int code, const string &auth_hdr, const string &method, const string &uri,
-                      const AmMimeBody *body, string &result)
-{
-    if (!auth_hdr.length()) {
-        DBG("empty auth header.");
-        return false;
-    }
-
-    vector<UACAuthDigestChallenge> challenges;
-    if (!UACAuthDigestChallenge::parse(auth_hdr, challenges)) {
-        DBG("error parsing auth header '%s'", auth_hdr.c_str());
-        return false;
-    }
-
-    const HashCalculation        *hash_p;
-    const UACAuthDigestChallenge *challenge_p = choose_challenge(challenges, hash_p);
-    if (!challenge_p) {
-        DBG("no supported algorithm found");
-        return false;
-    }
-
-    challenge      = *challenge_p;
-    challenge_code = code;
-
-    return do_auth(challenge, code, method, uri, body, result);
-}
-
 bool UACAuth::do_auth(const unsigned int code, const list<string> &auth_hdrs, const string &method, const string &uri,
                       const AmMimeBody *body, string &result)
 {

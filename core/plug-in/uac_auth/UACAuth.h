@@ -126,11 +126,8 @@ class UACAuth : public AmSessionEventHandler {
      *  do auth on cmd with nonce in auth_hdr if possible
      *  @return true if successful
      */
-    bool do_auth(const unsigned int code, const string &auth_hdr, const string &method, const string &uri,
-                 const AmMimeBody *body, string &result);
     bool do_auth(const unsigned int code, const list<string> &auth_hdrs, const string &method, const string &uri,
                  const AmMimeBody *body, string &result);
-
 
     /**
      *  do auth on cmd with saved challenge
