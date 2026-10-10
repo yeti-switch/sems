@@ -1,3 +1,15 @@
+sems (1.216.0) stable; urgency=low
+  * AmSipMsg: hdrs as AmSipHeaderMap (multimap) instead of raw string
+  * uac_auth: ignore replies on realm mismatch
+  * uac_auth: fix multiple challenges parsing in reply
+  * registrar: allow same contact refresh after max binding limit is reached
+  * registrar_client: fix max_attempts processing
+  * options_prober: add auth support
+  * AmSipDialog: allow AmOfferAnswer errors in connected state
+  * AmBasicSipDialog: fix str2transport for ws/wss
+  * AmBasicSipDialog: force remote_ip as next_hop for initial incoming WS/WSS
+ -- Michael Furmur <furmur@pm.me>  Sat, 10 Oct 2026 22:44:26 +0300
+
 sems (1.215.1) stable; urgency=low
   * uac_auth: getChallenge: use configured qops on non-number flag in args
   * AmMimeBody: strip quotes from CT boundary parameter to match RFC2046 behavior
