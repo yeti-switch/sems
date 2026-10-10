@@ -53,6 +53,22 @@ string getHeader(const AmSipHeaderMap &hdrs, std::string_view hdr_name, bool sin
     return ret;
 }
 
+std::optional<std::list<string>> getHeaderValues(const AmSipHeaderMap &hdrs, std::string_view hdr_name)
+{
+    if (hdr_name.empty())
+        return std::nullopt;
+
+    auto [it, end] = hdrs.equal_range(hdr_name);
+    if (it == end)
+        return std::nullopt;
+
+    std::list<string> ret;
+    for (; it != end; ++it) {
+        ret.push_back(it->second);
+    }
+    return ret;
+}
+
 bool hasHeader(const AmSipHeaderMap &hdrs, std::string_view hdr_name)
 {
     return hdrs.find(hdr_name) != hdrs.end();

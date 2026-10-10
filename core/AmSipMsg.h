@@ -7,6 +7,7 @@
 #include <string_view>
 #include <map>
 #include <algorithm>
+#include <optional>
 #include <strings.h>
 using std::string;
 
@@ -152,6 +153,8 @@ class AmSipRequest : public _AmSipMsgInDlg {
 
 /** @return first value of hdr_name if single, else all values joined with ", " */
 string getHeader(const AmSipHeaderMap &hdrs, std::string_view hdr_name, bool single = false);
+
+std::optional<std::list<string>> getHeaderValues(const AmSipHeaderMap &hdrs, std::string_view hdr_name);
 
 /** @return whether header hdr_name is in hdrs */
 bool hasHeader(const AmSipHeaderMap &hdrs, std::string_view hdr_name);

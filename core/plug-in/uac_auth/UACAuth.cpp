@@ -509,6 +509,22 @@ bool UACAuthDigestChallenge::parse(const std::string auth_hdr, vector<UACAuthDig
     return challenges.size();
 }
 
+bool UACAuthDigestChallenge::parse(const std::list<string> auth_hdrs, vector<UACAuthDigestChallenge> &challenges)
+{
+    for (const auto &auth_hdr : auth_hdrs) {
+        if (auth_hdr.empty()) {
+            DBG("empty auth header");
+            return false;
+        }
+        if (!parse(auth_hdr, challenges)) {
+            DBG("error parsing auth header '%s'", auth_hdr.c_str());
+            return false;
+        }
+    }
+
+    return true;
+}
+
 AmSessionEventHandler *UACAuthFactory::getHandler(AmSession *s)
 {
     CredentialHolder *c = dynamic_cast<CredentialHolder *>(s);
@@ -574,8 +590,8 @@ bool UACAuth::onSipReply(const AmSipRequest &, const AmSipReply &reply, AmBasicS
 
     DBG("processing %s reply:%d. nonce_reuse:%d", reply.cseq_method.data(), reply.code, nonce_reuse);
 
-    string auth_hdr = proxy_auth ? getHeader(reply.hdrs, SIP_HDR_PROXY_AUTHENTICATE)
-                                 : getHeader(reply.hdrs, SIP_HDR_WWW_AUTHENTICATE);
+    auto auth_hdrs = proxy_auth ? getHeaderValues(reply.hdrs, SIP_HDR_PROXY_AUTHENTICATE)
+                                : getHeaderValues(reply.hdrs, SIP_HDR_WWW_AUTHENTICATE);
 
     if (!nonce_reuse && (proxy_auth ? getHeader(ri->second.hdrs, SIP_HDR_PROXY_AUTHORIZATION).length()
                                     : getHeader(ri->second.hdrs, SIP_HDR_AUTHORIZATION).length()))
@@ -587,7 +603,10 @@ bool UACAuth::onSipReply(const AmSipRequest &, const AmSipReply &reply, AmBasicS
 
         nonce_reuse = false;
 
-        if (!do_auth(reply.code, auth_hdr, ri->second.method, auth_uri, &(ri->second.body), result)) {
+        if (!auth_hdrs)
+            goto out;
+
+        if (!do_auth(reply.code, auth_hdrs.value(), ri->second.method, auth_uri, &(ri->second.body), result)) {
             goto out;
         }
 
@@ -737,6 +756,27 @@ bool UACAuth::do_auth(const unsigned int code, const string &auth_hdr, const str
     return do_auth(challenge, code, method, uri, body, result);
 }
 
+bool UACAuth::do_auth(const unsigned int code, const list<string> &auth_hdrs, const string &method, const string &uri,
+                      const AmMimeBody *body, string &result)
+{
+    vector<UACAuthDigestChallenge> challenges;
+    if (!UACAuthDigestChallenge::parse(auth_hdrs, challenges)) {
+        DBG("error parsing auth headers");
+        return false;
+    }
+
+    const HashCalculation        *hash_p;
+    const UACAuthDigestChallenge *challenge_p = choose_challenge(challenges, hash_p);
+    if (!challenge_p) {
+        DBG("no supported algorithm found");
+        return false;
+    }
+
+    challenge      = *challenge_p;
+    challenge_code = code;
+
+    return do_auth(challenge, code, method, uri, body, result);
+}
 
 bool UACAuth::do_auth(const UACAuthDigestChallenge &challenge, const unsigned int code, const string &method,
                       const string &uri, const AmMimeBody *body, string &result)

@@ -50,6 +50,7 @@ struct UACAuthDigestChallenge {
 
     std::map<string, string> attributes;
 
+    static bool parse(const std::list<string> auth_hdrs, vector<UACAuthDigestChallenge> &challenges);
     static bool parse(const std::string auth_hdr, vector<UACAuthDigestChallenge> &challenges);
     string      find_attribute(const string &name) const;
 };
@@ -127,6 +128,9 @@ class UACAuth : public AmSessionEventHandler {
      */
     bool do_auth(const unsigned int code, const string &auth_hdr, const string &method, const string &uri,
                  const AmMimeBody *body, string &result);
+    bool do_auth(const unsigned int code, const list<string> &auth_hdrs, const string &method, const string &uri,
+                 const AmMimeBody *body, string &result);
+
 
     /**
      *  do auth on cmd with saved challenge
