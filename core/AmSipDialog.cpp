@@ -160,7 +160,7 @@ bool AmSipDialog::onRxReqStatus(const AmSipRequest &req)
 
     bool cont = true;
     if (offeranswer_enabled) {
-        cont = (oa.onRequestIn(req) == 0);
+        cont = (oa.onRequestIn(req) == 0) || (status == Connected);
     }
 
     return cont;
