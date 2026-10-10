@@ -29,15 +29,24 @@ static AddressType str2addrtype(const std::string &s)
     return AT_NONE;
 }
 
+static bool icase_char_cmp(char a, char b)
+{
+    return std::tolower(static_cast<unsigned char>(a)) == std::tolower(static_cast<unsigned char>(b));
+}
+
 static SIP_info::SIP_type str2transport(cstring &s)
 {
-#define cmp_cond(trsp) 0 == strncasecmp(s.s, trsp.s, trsp.len <= s.len ? trsp.len : s.len)
-    static cstring udp("udp");
-    static cstring tcp("tcp");
-    static cstring tls("tls");
-    static cstring ws("ws");
-    static cstring wss("wss");
+#define cmp_cond(trsp) std::ranges::equal(sv, trsp, icase_char_cmp)
+
+    static string_view udp("udp");
+    static string_view tcp("tcp");
+    static string_view tls("tls");
+    static string_view ws("ws");
+    static string_view wss("wss");
+
     DBG("str2transport(cstring &s [%.*s])", s.len, s.s);
+    string_view sv{ s.s, s.len };
+
     if (cmp_cond(udp))
         return SIP_info::UDP;
     else if (cmp_cond(tcp))
