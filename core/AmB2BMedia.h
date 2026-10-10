@@ -108,6 +108,8 @@ class StreamData {
 
     bool sdp_offer_owner;
 
+    uint64_t write_stream_consecutive_get_errors_count = 0;
+
   public:
     StreamData()                    = delete;
     StreamData(StreamData const &)  = delete;

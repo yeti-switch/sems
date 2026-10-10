@@ -1065,8 +1065,10 @@ void AmSession::onNoPrack(const AmSipRequest &req, const AmSipReply &rpl)
 
 void AmSession::onAudioEvent(AmAudioEvent *audio_ev)
 {
-    if (audio_ev->event_id == AmAudioEvent::cleared)
+    if (audio_ev->event_id == AmAudioEvent::cleared) {
+        DBG("got audio cleared event. stop session");
         setStopped();
+    }
 }
 
 void AmSession::onInvite(const AmSipRequest &req)

@@ -17,6 +17,12 @@ using namespace std;
 #define TRACE             DBG
 #define UNDEFINED_PAYLOAD (-1)
 
+/* threshold for max allowed failed src_in/src_stream->get() calls
+ * in StreamData::writeStream() before escalating an error
+ * 500 is around 10 seconds for ptime 0.02
+ */
+#define MAX_FAILED_SRC_GET_COUNT 500
+
 /** class for computing payloads for relay the simpliest way - allow relaying of
  * all payloads supported by remote party */
 static B2BMediaStatistics b2b_stats;
@@ -673,6 +679,7 @@ int StreamData::writeStream(unsigned long long ts, unsigned char *buffer, Stream
                     got = src_stream->get(ts, buffer, sample_rate, f_size);
                     // DBG("[%p] stream %p got %d from stream %p",this,stream,got,src_stream);
                     if (got > 0) {
+                        write_stream_consecutive_get_errors_count = 0;
                         src_stream->feedInbandDetector(buffer, static_cast<unsigned int>(got), ts);
                         if (src_stream->isLastSamplesRelayed()) {
                             stream->record(ts, buffer, sample_rate, static_cast<unsigned int>(got));
@@ -700,7 +707,14 @@ int StreamData::writeStream(unsigned long long ts, unsigned char *buffer, Stream
                 } else {
                     DBG("src_stream->get: %d", got);
                 }
+                if (++write_stream_consecutive_get_errors_count < MAX_FAILED_SRC_GET_COUNT) {
+                    // suppress get/decoding errors for the first MAX_FAILED_SRC_GET_COUNT calls
+                    return 0;
+                }
+                CLASS_DBG("max failed get() calls threshold reached. return -1");
                 return -1;
+            } else {
+                write_stream_consecutive_get_errors_count = 0;
             }
         }
 
