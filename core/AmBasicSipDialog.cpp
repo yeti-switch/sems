@@ -523,6 +523,20 @@ void AmBasicSipDialog::onRxRequest(const AmSipRequest &req)
         setOutboundInterface(req.local_if);
         setOutboundAddrType(str2addrtype(req.local_ip));
         setOutboundProtoId(req.proto_idx);
+
+        // force next_hop to request remote IP for WS/WSS protocols
+        auto incoming_proto_type = AmConfig.sip_ifs[outbound_interface].proto_info[outbound_proto_id]->type;
+        if (incoming_proto_type == SIP_info::WS || incoming_proto_type == SIP_info::WSS) {
+            if (req.first_hop) {
+                string nh = req.remote_ip;
+                ensure_ipv6_reference(nh);
+                nh += ":" + int2str(req.remote_port) + "/" + req.trsp;
+
+                DBG("force next_hop to %s for WS or WSS incoming transport", nh.data());
+
+                setNextHop(nh);
+            }
+        }
     }
 
     if (onRxReqStatus(req)) {
