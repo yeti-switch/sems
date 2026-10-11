@@ -106,6 +106,7 @@ struct SIPRegistrationInfo {
         , expires_interval(0)
         , retry_delay(0)
         , max_attempts(0)
+        , attempt(0)
         , transport_protocol_id(0)
         , proxy_transport_protocol_id(0)
         , force_expires_interval(false)
