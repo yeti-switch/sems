@@ -1,3 +1,7 @@
+sems (1.216.1) stable; urgency=low
+  * registrar_client: fix attempts number init
+ -- Michael Furmur <furmur@pm.me>  Sun, 11 Oct 2026 19:36:05 +0300
+
 sems (1.216.0) stable; urgency=low
   * AmSipMsg: hdrs as AmSipHeaderMap (multimap) instead of raw string
   * uac_auth: ignore replies on realm mismatch
