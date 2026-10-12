@@ -281,7 +281,11 @@ void SIPRegistrarClient::checkTimeouts()
     for (auto it = registrations.begin(); it != registrations.end(); it++) {
         AmSIPRegistration *reg = it->second;
 
-        if (reg->postponed) {
+        if (reg->remove) {
+            remove_regs.push_back(it->first);
+        } else if (reg->unregistering) {
+            // ignore unregistering: waiting for the un-REGISTER reply
+        } else if (reg->postponed) {
             // ignore postponed: it will be handled in checkPostponedRegs()
         } else if (reg->active) {
             if (reg->registerExpired(now.tv_sec)) {
@@ -290,8 +294,6 @@ void SIPRegistrarClient::checkTimeouts()
             } else if (!reg->waiting_result && reg->timeToReregister(now.tv_sec)) {
                 doRegistrationWithShaper(*reg);
             }
-        } else if (reg->remove) {
-            remove_regs.push_back(it->first);
         } else if (!reg->waiting_result && reg->error_code != 0 && reg->registerSendTimeout(now.tv_sec)) {
             reg->onRegisterSendTimeout();
             doRegistrationWithShaper(*reg);
