@@ -1253,6 +1253,23 @@ void SipRegistrar::process_redis_reply_contact_subscribe_reg_channel_event(Redis
         return;
     }
 
+    if (keepalive_interval.count()) {
+        if (arg2int(d[5]) == AmConfig.node_id) {
+            // update KeepAliveContexts
+            create_or_update_keep_alive_context(d[2].asCStr(), // key
+                                                [&d](AmArg &data) {
+                                                    data["expires"]        = d[1];
+                                                    data["node_id"]        = d[5];
+                                                    data["path"]           = d[6];
+                                                    data["interface_name"] = d[7];
+                                                    data["user_agent"]     = d[8];
+                                                    repack_headers(d[9].asCStr(), data);
+                                                });
+        } else {
+            remove_keep_alive_context(d[2].asCStr());
+        }
+    }
+
     if (process_subscriptions) {
 
         // get auth_id
@@ -1307,23 +1324,6 @@ void SipRegistrar::process_redis_reply_contact_subscribe_reg_channel_event(Redis
             post_resolve_response(it->second.session_id, aors);
         }
         aor_lookup_subscribers.erase(range.first, range.second);
-    }
-
-    if (keepalive_interval.count()) {
-        if (arg2int(d[5]) == AmConfig.node_id) {
-            // update KeepAliveContexts
-            create_or_update_keep_alive_context(d[2].asCStr(), // key
-                                                [&d](AmArg &data) {
-                                                    data["expires"]        = d[1];
-                                                    data["node_id"]        = d[5];
-                                                    data["path"]           = d[6];
-                                                    data["interface_name"] = d[7];
-                                                    data["user_agent"]     = d[8];
-                                                    repack_headers(d[9].asCStr(), data);
-                                                });
-        } else {
-            remove_keep_alive_context(d[2].asCStr());
-        }
     }
 }
 
