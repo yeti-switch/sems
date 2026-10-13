@@ -424,6 +424,15 @@ void PoolWorker::getFreeConnection(Connection **conn, ConnectionPool **pool, std
     } while (!*pool);
 }
 
+bool PoolWorker::hasFreeConnection()
+{
+    if (master)
+        return master->hasFreeConnection();
+    if (slave)
+        return slave->hasFreeConnection();
+    return false;
+}
+
 // -1 - no free connection, wait and break from queue circle
 //  0 - transaction has executed or deleted, delete from queue
 //  1 - no free connection in slave pool or retransmit time not expired,
@@ -660,7 +669,8 @@ void PoolWorker::runTransaction(Transaction *trans, const string &sender_id, con
         send_next_time = time(0) + batch_timeout;
         // DBG("worker \'%s\' set next batch time: %lu", name.c_str(), send_next_time);
     }
-    setWorkTimer(queue.size() >= batch_size);
+
+    setWorkTimer(queue.size() >= batch_size && hasFreeConnection());
 }
 
 void PoolWorker::runPrepared(const PGPrepareData &prepared)

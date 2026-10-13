@@ -92,6 +92,13 @@ Connection *ConnectionPool::getFreeConnection()
     return nullptr;
 }
 
+bool ConnectionPool::hasFreeConnection()
+{
+    return std::any_of(connections.begin(), connections.end(), [this](auto c) {
+        return !c->isBusy() && c->getStatus() == CONNECTION_OK && !worker->isResetPlanned(c);
+    });
+}
+
 Connection *ConnectionPool::getConnection(int fd)
 {
     for (auto &conn : connections) {

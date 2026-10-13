@@ -32,6 +32,7 @@ class ConnectionPool {
 
     bool                 processEvent(void *p);
     Connection          *getFreeConnection();
+    bool                 hasFreeConnection();
     Connection          *getConnection(int fd);
     vector<Connection *> getLifetimeOverConnections(time_t &nextTime);
     bool                 checkConnection(Connection *conn, bool connect);

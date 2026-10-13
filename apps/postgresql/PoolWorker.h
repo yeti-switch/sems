@@ -99,6 +99,7 @@ class PoolWorker : public ITransactionHandler, public IConnectionHandler {
     bool   timer_is_set;
 
     void getFreeConnection(Connection **conn, ConnectionPool **pool, std::function<void(const string &)> func);
+    bool hasFreeConnection();
     void checkQueue();
     int  retransmitTransaction(TransContainer &trans);
     void setWorkTimer(bool immediately);
