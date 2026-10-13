@@ -1,3 +1,7 @@
+sems (1.217.1) stable; urgency=low
+  * postgresql: fix for high CPU load on full queue for workers in a batch mode
+ -- Michael Furmur <furmur@pm.me>  Tue, 13 Oct 2026 21:46:25 +0300
+
 sems (1.217.0) stable; urgency=low
   * postgresql: allow to offload PGParamExecute AmArg processing to external binding
  -- Michael Furmur <furmur@pm.me>  Tue, 13 Oct 2026 16:34:58 +0300
