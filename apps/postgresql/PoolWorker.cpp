@@ -670,7 +670,7 @@ void PoolWorker::runTransaction(Transaction *trans, const string &sender_id, con
         // DBG("worker \'%s\' set next batch time: %lu", name.c_str(), send_next_time);
     }
 
-    setWorkTimer(queue.size() >= batch_size && hasFreeConnection());
+    setWorkTimer(!batch_size || (queue.size() >= batch_size && hasFreeConnection()));
 }
 
 void PoolWorker::runPrepared(const PGPrepareData &prepared)
