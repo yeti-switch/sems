@@ -15,7 +15,8 @@ AmMediaState *AmMediaSecureUdptlState::init(const AmMediaStateArgs &args)
 
 void AmMediaSecureUdptlState::markEstablishIfReady()
 {
-    if (transport->getCurUdptlConn() && transport->getConnFactory()->srtp_cred.srtp_profile > srtp_profile_reserved)
+    if (isPathReady() && transport->getCurUdptlConn() &&
+        transport->getConnFactory()->srtp_cred.srtp_profile > srtp_profile_reserved)
         transport->markEstablish();
 }
 

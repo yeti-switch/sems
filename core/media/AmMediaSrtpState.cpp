@@ -146,7 +146,7 @@ AmMediaState *AmMediaSrtpState::onSrtpKeysAvailable(uint8_t transport_type, uint
 
 void AmMediaSrtpState::markEstablishIfReady()
 {
-    if (transport->getConnFactory()->srtp_cred.srtp_profile > srtp_profile_reserved)
+    if (isPathReady() && transport->getConnFactory()->srtp_cred.srtp_profile > srtp_profile_reserved)
         transport->markEstablish();
 }
 

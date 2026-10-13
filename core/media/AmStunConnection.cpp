@@ -71,6 +71,7 @@ IceContext::IceContext(AmMediaEndpoint *endpoint, int type)
     , restart_count(0)
     , fail_deadline_ms(0)
     , fail_notified(false)
+    , pair_allowed(false)
 {
     CLASS_DBG("IceContext(): transport type %d", type);
     stun_processor::instance()->add_ice_context(this);
@@ -190,6 +191,12 @@ sockaddr_storage *IceContext::getAllowedIceAddr(int family)
     return nullptr;
 }
 
+bool IceContext::isPairAllowed()
+{
+    AmLock lock(pairs_mut);
+    return pair_allowed;
+}
+
 AmMediaTransport *IceContext::getCurrentTransport()
 {
     AmLock lock(pairs_mut);
@@ -219,7 +226,8 @@ void IceContext::reset()
         }
         pairs.clear();
         current_candidate.reset(nullptr);
-        state = ICE_INITIAL;
+        pair_allowed = false;
+        state        = ICE_INITIAL;
     }
 
     setConnectivityCheckTimer(0);
@@ -274,6 +282,7 @@ void IceContext::allowStunPair()
     {
         AmLock lock(pairs_mut);
         assert(current_candidate);
+        pair_allowed = true;
         current_candidate->getRAddr(&ss);
         transport = current_candidate->getTransport();
     }
@@ -313,6 +322,8 @@ void IceContext::setCurrentCandidate(AmStunConnection *conn)
     current_candidate.reset(conn);
     if (conn)
         conn->markNominated();
+    else
+        pair_allowed = false;
 }
 
 void IceContext::fillStat(IceContextStat &out)

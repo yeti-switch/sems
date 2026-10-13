@@ -234,6 +234,7 @@ class AmMediaTransport : public AmMediaConnectionsHolder,
     void              getSdpAnswer(const SdpMedia &offer, SdpMedia &answer);
     void              prepareIceCandidate(SdpIceCandidate & candidate);
     sockaddr_storage *getAllowedIceAddr();
+    bool              isIcePairAllowed();
     void              getInfo(AmArg & ret);
 
     AmMediaEndpoint *getEndpoint()

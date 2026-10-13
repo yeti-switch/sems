@@ -15,7 +15,7 @@ AmMediaState *AmMediaUdptlState::init(const AmMediaStateArgs &args)
 
 void AmMediaUdptlState::markEstablishIfReady()
 {
-    if (transport->getCurUdptlConn())
+    if (isPathReady() && transport->getCurUdptlConn())
         transport->markEstablish();
 }
 

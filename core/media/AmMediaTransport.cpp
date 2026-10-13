@@ -581,6 +581,11 @@ sockaddr_storage *AmMediaTransport::getAllowedIceAddr()
     return getIceContext()->getAllowedIceAddr(getLocalAddrFamily());
 }
 
+bool AmMediaTransport::isIcePairAllowed()
+{
+    return getIceContext()->isPairAllowed();
+}
+
 void AmMediaTransport::getInfo(AmArg &ret)
 {
     if (mode == TRANSPORT_MODE_FAX)

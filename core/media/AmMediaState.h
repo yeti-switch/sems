@@ -34,6 +34,7 @@ class AmMediaState {
     virtual void        addConnections(const AmMediaStateArgs &args) {};
     virtual void        updateConnections(const AmMediaStateArgs &args) {};
     virtual void        markEstablishIfReady() {}
+    virtual bool        isPathReady() { return true; }
     virtual const char *state2str();
 
   protected:

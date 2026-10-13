@@ -78,6 +78,7 @@ class IceContext {
 
     unsigned long long fail_deadline_ms;
     bool               fail_notified;
+    bool               pair_allowed;
 
     /** set deadline (abs-ms in wheeltimer::unix_ms_clock); 0 disarms */
     void setConnectivityCheckTimer(unsigned long long deadline_ms);
@@ -96,6 +97,7 @@ class IceContext {
     ~IceContext();
 
     sockaddr_storage *getAllowedIceAddr(int family);
+    bool              isPairAllowed();
     AmMediaTransport *getCurrentTransport();
 
     int              getType() { return type; }

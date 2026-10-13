@@ -59,6 +59,7 @@ class AmStreamConnection : public atomic_ref_cnt
 
     virtual bool    isUseConnection(ConnectionType type);
     bool            isAddrConnection(struct sockaddr_storage * recv_addr) const;
+    static bool     isSameAddr(const struct sockaddr_storage *a, const struct sockaddr_storage *b);
     ConnectionType  getConnType();
     virtual ssize_t send(AmRtpPacket * packet);
     virtual void    process_packet(uint8_t *data, unsigned int size, struct sockaddr_storage *recv_addr,
@@ -113,9 +114,6 @@ class AmStreamConnection : public atomic_ref_cnt
 
     /** symmetric RTP | RTCP */
     bool passive;
-    /** flag for the one-time onRtpEndpointLearned() calling in the active mode.
-     *  see: AmStreamConnection::handleSymmetricRtp() */
-    bool active_raddr_packet_received;
     /** Timestamp of the last received RTP packet */
     struct timeval last_recv_time;
     struct timeval passive_set_time;

@@ -14,6 +14,7 @@ class AmMediaIceState : public virtual AmMediaState {
     AmMediaState *init(const AmMediaStateArgs &args) override;
     AmMediaState *update(const AmMediaStateArgs &args) override;
     const char   *state2str() override;
+    bool          isPathReady() override;
 
   protected:
     void                  addStunConnections(const vector<SdpIceCandidate> *candidates, bool sdp_offer_owner);

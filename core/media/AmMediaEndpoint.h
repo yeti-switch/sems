@@ -70,6 +70,7 @@ class AmMediaEndpoint
     AmMediaTransport               *cur_rtp_trans;
     AmMediaTransport               *cur_rtcp_trans;
 
+    sockaddr_storage learned_rtp_addr;
     /** MediaEstablishedEvent already posted; re-armed by clearEstablished() on ICE restart */
     bool media_established_fired;
     /** raw-relay mode: endpoint carries a single non-RTP stream (UDPTL/fax); mutually exclusive with bundle */
@@ -205,6 +206,7 @@ class AmMediaEndpoint
     void         onRawPacket(AmRtpPacket *p, AmMediaTransport *t);
     void         onLeavePassiveMode();
     void         onRtpEndpointLearned();
+    void         learnRtpEndpoint(const sockaddr_storage *raddr);
     virtual void onTransportEstablished();
     void         clearEstablished();
     void         resetMediaSetupTimer();

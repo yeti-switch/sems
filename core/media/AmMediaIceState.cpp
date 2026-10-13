@@ -38,6 +38,7 @@ AmMediaState *AmMediaIceState::update(const AmMediaStateArgs &args)
         addStunConnections(*args.candidates, *args.sdp_offer_owner);
 
     is_udptl = args.udptl.value_or(false);
+    markEstablishIfReady();
     return this;
 }
 
@@ -191,6 +192,11 @@ void AmMediaIceState::resetCurRtpConnection()
     transport->setRAddr(am_inet_ntop(target_addr), am_get_port(target_addr));
     DBG("current %s connection type %s", transport->getTransportType() == RTP_TRANSPORT ? "rtp" : "rtcp",
         conn ? AmStreamConnection::connType2Str(conn->getConnType()).c_str() : "");
+}
+
+bool AmMediaIceState::isPathReady()
+{
+    return transport->isIcePairAllowed();
 }
 
 bool AmMediaIceState::isSrtp()

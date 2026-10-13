@@ -9,8 +9,9 @@ AmMediaRtpState::AmMediaRtpState(AmMediaTransport *transport)
 
 AmMediaState *AmMediaRtpState::init(const AmMediaStateArgs &args)
 {
+    auto next_state = AmMediaState::init(args);
     markEstablishIfReady();
-    return AmMediaState::init(args);
+    return next_state;
 }
 
 AmMediaState *AmMediaRtpState::update(const AmMediaStateArgs &args)
@@ -28,7 +29,7 @@ AmMediaState *AmMediaRtpState::update(const AmMediaStateArgs &args)
 
 void AmMediaRtpState::markEstablishIfReady()
 {
-    if (transport->getCurRtpConn())
+    if (isPathReady() && transport->getConnection(AmStreamConnection::RTP_CONN))
         transport->markEstablish();
 }
 

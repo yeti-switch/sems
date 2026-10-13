@@ -27,7 +27,6 @@ AmStreamConnection::AmStreamConnection(AmMediaTransport *_transport, const strin
     , stream_is_ice_stream(transport->getEndpoint()->isIceStream())
     , stream_symmetric_rtp_endless(transport->getEndpoint()->isSymmetricRtpEndless())
     , passive(transport->getEndpoint()->isSymmetricRtpEnable())
-    , active_raddr_packet_received(false)
     , passive_set_time{ 0, 0 }
     , passive_packets(0)
     , dropped_by_raddr_packets(0)
@@ -49,7 +48,6 @@ AmStreamConnection::AmStreamConnection(AmStreamConnection *_parent, const string
     , stream_is_ice_stream(transport->getEndpoint()->isIceStream())
     , stream_symmetric_rtp_endless(transport->getEndpoint()->isSymmetricRtpEndless())
     , passive(transport->getEndpoint()->isSymmetricRtpEnable())
-    , active_raddr_packet_received(false)
     , passive_set_time{ 0, 0 }
     , passive_packets(0)
     , dropped_by_raddr_packets(0)
@@ -70,12 +68,15 @@ bool AmStreamConnection::isUseConnection(ConnectionType type)
 
 bool AmStreamConnection::isAddrConnection(struct sockaddr_storage *recv_addr) const
 {
-    if (recv_addr->ss_family == AF_INET) {
-        return SAv4(&r_addr)->sin_port == SAv4(recv_addr)->sin_port &&
-               SAv4(&r_addr)->sin_addr.s_addr == SAv4(recv_addr)->sin_addr.s_addr;
-    } else if (recv_addr->ss_family == AF_INET6) {
-        return SAv6(&r_addr)->sin6_port == SAv6(recv_addr)->sin6_port &&
-               IN6_ARE_ADDR_EQUAL(&SAv6(&r_addr)->sin6_addr, &SAv6(recv_addr)->sin6_addr);
+    return isSameAddr(&r_addr, recv_addr);
+}
+
+bool AmStreamConnection::isSameAddr(const struct sockaddr_storage *a, const struct sockaddr_storage *b)
+{
+    if (b->ss_family == AF_INET) {
+        return SAv4(a)->sin_port == SAv4(b)->sin_port && SAv4(a)->sin_addr.s_addr == SAv4(b)->sin_addr.s_addr;
+    } else if (b->ss_family == AF_INET6) {
+        return SAv6(a)->sin6_port == SAv6(b)->sin6_port && IN6_ARE_ADDR_EQUAL(&SAv6(a)->sin6_addr, &SAv6(b)->sin6_addr);
     }
     return false;
 }
@@ -104,11 +105,6 @@ ssize_t AmStreamConnection::send(AmRtpPacket *packet)
 void AmStreamConnection::setRAddr(const string &addr, unsigned short port)
 {
     CLASS_DBG("setRAddr(%s,%hu) type:%d, endpoint: %s:%d", addr.data(), port, conn_type, r_host.data(), r_port);
-
-    if (port != r_port || addr != r_host) {
-        active_raddr_packet_received = false;
-    }
-
     resolveRemoteAddress(addr, port);
 }
 
@@ -175,14 +171,8 @@ void AmStreamConnection::handleSymmetricRtp(struct sockaddr_storage *recv_addr, 
     if (parent)
         parent->handleSymmetricRtp(recv_addr, rv_time);
 
-    if (!passive) {
-        // active mode
-        if (!active_raddr_packet_received && isAddrConnection(recv_addr)) {
-            active_raddr_packet_received = true;
-            transport->getEndpoint()->onRtpEndpointLearned();
-        }
+    if (!passive)
         return;
-    }
 
     // passive mode
 
@@ -259,8 +249,6 @@ void AmStreamConnection::handleSymmetricRtp(struct sockaddr_storage *recv_addr, 
         setRAddr(addr_str, port);
         CLASS_DBG("Symmetric %s: set new remote address: %s:%i. Stay in passive mode", proto_str, addr_str.c_str(),
                   port);
-
-        endpoint->onRtpEndpointLearned();
     }
 }
 
@@ -364,6 +352,8 @@ void AmRtpConnection::handleConnection(uint8_t *data, unsigned int size, struct 
     p->setAddr(recv_addr);
     p->setLocalAddr(&laddr);
     p->setBuffer(data, size);
+    if (isAddrConnection(recv_addr))
+        transport->getEndpoint()->learnRtpEndpoint(recv_addr);
     transport->onRtpPacket(p, parent ? parent : this);
 }
 

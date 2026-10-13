@@ -36,6 +36,7 @@ AmMediaEndpoint::AmMediaEndpoint(AmRtpStream *s, AmSession *sess, int iface)
     , ssl_key_log_file(nullptr)
     , cur_rtp_trans(nullptr)
     , cur_rtcp_trans(nullptr)
+    , learned_rtp_addr{}
     , media_established_fired(false)
     , raw_mode(false)
     , media_setup_start(std::chrono::steady_clock::now())
@@ -563,7 +564,6 @@ void AmMediaEndpoint::allowStunConnection(AmMediaTransport *t, sockaddr_storage 
 void AmMediaEndpoint::allowStunPair(AmMediaTransport *t, sockaddr_storage *remote_addr)
 {
     onLeavePassiveMode();
-    onRtpEndpointLearned();
 
     try {
         iterateTransports([&](auto tr) {
@@ -1080,6 +1080,16 @@ void AmMediaEndpoint::onRtpEndpointLearned()
 {
     if (session)
         session->onRtpEndpointLearned();
+}
+
+void AmMediaEndpoint::learnRtpEndpoint(const sockaddr_storage *raddr)
+{
+    if (AmStreamConnection::isSameAddr(&learned_rtp_addr, raddr))
+        return;
+
+    CLASS_DBG("RTP endpoint learned: %s:%hu", get_addr_str(raddr).data(), am_get_port(raddr));
+    memcpy(&learned_rtp_addr, raddr, sizeof(sockaddr_storage));
+    onRtpEndpointLearned();
 }
 
 void AmMediaEndpoint::onTransportEstablished()
