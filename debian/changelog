@@ -1,3 +1,7 @@
+sems (1.217.0) stable; urgency=low
+  * postgresql: allow to offload PGParamExecute AmArg processing to external binding
+ -- Michael Furmur <furmur@pm.me>  Tue, 13 Oct 2026 16:34:58 +0300
+
 sems (1.216.2) stable; urgency=low
   * registrar,registrar_client: fix registrations states racings
  -- Michael Furmur <furmur@pm.me>  Mon, 12 Oct 2026 14:54:17 +0300
