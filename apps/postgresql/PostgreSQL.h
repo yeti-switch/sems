@@ -69,7 +69,8 @@ class PostgreSQL : public AmThread,
                    public AmEventFdQueue,
                    public AmEventHandler,
                    public RpcTreeHandler,
-                   public ShutdownHandler {
+                   public ShutdownHandler,
+                   public AmDynInvokeFactory {
     friend class PostgreSQLFactory;
     static PostgreSQL *_instance;
 
@@ -100,15 +101,20 @@ class PostgreSQL : public AmThread,
     void onRpcRequestResponse(const PGResponse &e);
     void onRpcRequestError(const string &err, const string &token);
 
+    PGBindings external_bindings;
+
+    static IQuery *preproces_PGParamExecute(const PGParamExecute &e);
+
   public:
     PostgreSQL();
     ~PostgreSQL();
 
     static PostgreSQL *instance();
     static void        dispose();
-    AmDynInvoke       *getInstance() { return static_cast<AmDynInvoke *>(instance()); }
+    AmDynInvoke       *getInstance() override { return static_cast<AmDynInvoke *>(instance()); }
+    void               invoke(const string &method, const AmArg &args, AmArg &ret) override;
 
-    int onLoad();
+    int onLoad() override;
     int configure(const string &config);
     int reconfigure(const string &config);
 

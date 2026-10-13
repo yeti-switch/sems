@@ -20,6 +20,27 @@ using std::string;
 #define PG_DEFAULT_CONN_LIFETIME       0  // in sec
 #define PG_DEFAULT_KEEPALIVES_INTERVAL 10 // in sec
 
+class Connection;
+
+struct IQuery {
+    IQuery() {}
+    virtual ~IQuery() {}
+    virtual int         exec()                            = 0;
+    virtual bool        is_single_mode()                  = 0;
+    virtual bool        is_finished()                     = 0;
+    virtual const char *get_last_error()                  = 0;
+    virtual void        reset(Connection *conn)           = 0;
+    virtual std::string get_query()                       = 0;
+    virtual uint32_t    get_size()                        = 0;
+    virtual IQuery     *clone()                           = 0;
+    virtual IQuery     *get_current_query()               = 0;
+    virtual void        set_finished()                    = 0;
+    virtual Connection *getConnection()                   = 0;
+    virtual void        put_result()                      = 0;
+    virtual uint32_t    get_result_got()                  = 0;
+    virtual void        set_last_error(const char *error) = 0;
+};
+
 class PGEvent : public AmEvent {
   public:
     enum Type {
@@ -254,12 +275,14 @@ class PGParamExecute : public PGEvent {
     PGQueryData       qdata;
     PGTransactionData tdata;
     bool              prepared;
+    IQuery           *query;
 
     PGParamExecute(const PGQueryData &qdata_, const PGTransactionData &tdata_, bool prepared_)
         : PGEvent(ParamExecute)
         , qdata(qdata_)
         , tdata(tdata_)
         , prepared(prepared_)
+        , query(nullptr)
     {
     }
 
@@ -396,4 +419,8 @@ class PGTimeout : public PGEvent {
         , token(token_)
     {
     }
+};
+
+struct PGBindings : public AmObject {
+    std::function<IQuery *(const PGParamExecute &event)> preproces_PGParamExecute;
 };

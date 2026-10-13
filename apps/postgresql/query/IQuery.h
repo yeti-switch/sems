@@ -3,6 +3,8 @@
 #include <string>
 #include <cstdint>
 
+#include "ampi/PostgreSqlAPI.h"
+/* moved to PostgreSqlApi.h
 class Connection;
 
 struct IQuery {
@@ -23,3 +25,4 @@ struct IQuery {
     virtual uint32_t    get_result_got()                  = 0;
     virtual void        set_last_error(const char *error) = 0;
 };
+*/

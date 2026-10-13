@@ -77,10 +77,32 @@ void PostgreSQL::dispose()
     _instance = nullptr;
 }
 
+IQuery *PostgreSQL::preproces_PGParamExecute(const PGParamExecute &e)
+{
+    QueryParams *qparams = new QueryParams(e.qdata.info[0].query, e.qdata.info[0].single, e.prepared);
+    qparams->addParams(getParams(e.qdata.info[0].params));
+    IQuery *query = qparams;
+    if (e.qdata.info.size() > 1) {
+        QueryChain *chain = new QueryChain(query);
+        for (size_t i = 1; i < e.qdata.info.size(); i++) {
+            qparams = new QueryParams(e.qdata.info[i].query, e.qdata.info[i].single, e.prepared);
+            qparams->addParams(getParams(e.qdata.info[i].params));
+            chain->addQuery(qparams);
+        }
+        query = chain;
+    }
+    return query;
+}
+
 PostgreSQL::PostgreSQL()
     : AmEventFdQueue(this)
     , ShutdownHandler(MOD_NAME, POSTGRESQL_QUEUE)
+    , AmDynInvokeFactory(MOD_NAME)
+    , epoll_fd(-1)
+    , log_time(0)
+    , log_pg_events(false)
 {
+    external_bindings.preproces_PGParamExecute = preproces_PGParamExecute;
 }
 
 PostgreSQL::~PostgreSQL()
@@ -100,6 +122,17 @@ int PostgreSQL::onLoad()
     start();
     return 0;
 }
+
+void PostgreSQL::invoke(const string &method, const AmArg &args, AmArg &ret)
+{
+    if (method == "getBindings") {
+        ret.setBorrowedPointer(&external_bindings);
+        return;
+    }
+
+    throw NotImplemented(method);
+}
+
 
 void cfg_error_callback(cfg_t *cfg, const char *fmt, va_list ap)
 {
@@ -643,18 +676,8 @@ void PostgreSQL::onParamExecute(const PGParamExecute &e)
 
     PoolWorker *worker = getWorker(e.qdata);
     if (worker) {
-        QueryParams *qparams = new QueryParams(e.qdata.info[0].query, e.qdata.info[0].single, e.prepared);
-        qparams->addParams(getParams(e.qdata.info[0].params));
-        IQuery *query = qparams;
-        if (e.qdata.info.size() > 1) {
-            QueryChain *chain = new QueryChain(query);
-            for (size_t i = 1; i < e.qdata.info.size(); i++) {
-                qparams = new QueryParams(e.qdata.info[i].query, e.qdata.info[i].single, e.prepared);
-                qparams->addParams(getParams(e.qdata.info[i].params));
-                chain->addQuery(qparams);
-            }
-            query = chain;
-        }
+        // use preprocessed query if available
+        auto query = e.query ? e.query : preproces_PGParamExecute(e);
 
         Transaction *trans = 0;
         if (!e.tdata.use_transaction)
