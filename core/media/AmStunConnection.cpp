@@ -453,6 +453,8 @@ AmStunConnection::AmStunConnection(AmMediaTransport *_transport, const string &r
     , priority(_priority)
     , lpriority(_lpriority)
     , current_trans_id{ 0 }
+    , request_controlled(false)
+    , request_tiebreaker(0)
     , count(0)
     , retransmit_intervals{ 500, 1500, 3500, 7500, 15500, 31500, 39500 }
     , // rfc5389 7.2.1.Sending over UDP
@@ -597,23 +599,12 @@ void AmStunConnection::check_request(CStunMessageReader *reader, sockaddr_storag
     if (remote_ice_role_is_controlled.has_value()) {
         remote_tiebreaker = be64toh(*(uint64_t *)(reader->GetStream().GetDataPointerUnsafe() + ice_ctrl_attr.offset));
 
-        if (valid && ((*remote_ice_role_is_controlled) == transport->getEndpoint()->isIceControlled())) {
-            // roles conflict. less tiebreaker value means controlled mode
-            DBG("roles conflict. local:0x%llx, remote:0x%llx", transport->getEndpoint()->getIceTieBreaker(),
-                remote_tiebreaker);
-
-            bool tiebreaked_local_role_is_controlled = transport->getEndpoint()->getIceTieBreaker() < remote_tiebreaker;
-            if (tiebreaked_local_role_is_controlled != transport->getEndpoint()->isIceControlled()) {
-                DBG("accept role change");
-                // accept role change
-                transport->getEndpoint()->onIceRoleConflict();
-            } else {
-                DBG("reject role change");
-                // reject ICE role change
-                err_code  = STUN_ERROR_ROLECONFLICT;
-                error_str = "Role Conflict";
-                valid     = false;
-            }
+        if (valid && !transport->getEndpoint()->checkIceRoleConflict(*remote_ice_role_is_controlled, remote_tiebreaker))
+        {
+            // reject ICE role change
+            err_code  = STUN_ERROR_ROLECONFLICT;
+            error_str = "Role Conflict";
+            valid     = false;
         }
     } else {
         DBG("no ICE_CONTROLLING/ICE_CONTROLLED attributes in the STUN binding request from %s:%hu",
@@ -739,7 +730,14 @@ void AmStunConnection::check_response(CStunMessageReader *reader, sockaddr_stora
 
     if (valid && reader->GetErrorCode(&err_code) == S_OK) {
         if (err_code == STUN_ERROR_ROLECONFLICT) {
-            transport->getEndpoint()->onIceRoleConflict();
+            if (transport->getEndpoint()->onIceRoleConflict(request_controlled)) {
+                transport->getEndpoint()->onErrorRtpTransport(STUN_VALID_ERROR,
+                                                              string("role conflict, switched to ") +
+                                                                  (request_controlled ? "controlling" : "controlled"),
+                                                              transport);
+            }
+            state = PAIR_WAITING;
+            return;
         }
         error_str = "error response";
         valid     = false;
@@ -753,10 +751,6 @@ void AmStunConnection::check_response(CStunMessageReader *reader, sockaddr_stora
         // rfc5389 10.1.3: unauthenticated response is discarded as if never received
         if (!authenticated)
             return;
-        if (err_code == STUN_ERROR_ROLECONFLICT) {
-            state = PAIR_WAITING;
-            return;
-        }
         if (state == PAIR_IN_PROGRESS) {
             state = PAIR_FAILED;
             recordResult(PAIR_FAILED);
@@ -787,9 +781,8 @@ void AmStunConnection::send_request(StunTransactionId trans_id)
     nt_info[0]          = htons(1);
     builder.AddAttribute(STUN_ATTRIBUTE_NETWORK_INFO, &nt_info, 4);
 
-    uint64_t tb = htobe64(transport->getEndpoint()->getIceTieBreaker());
-    builder.AddAttribute(transport->getEndpoint()->isIceControlled() ? STUN_ATTRIBUTE_ICE_CONTROLLED
-                                                                     : STUN_ATTRIBUTE_ICE_CONTROLLING,
+    uint64_t tb = htobe64(request_tiebreaker);
+    builder.AddAttribute(request_controlled ? STUN_ATTRIBUTE_ICE_CONTROLLED : STUN_ATTRIBUTE_ICE_CONTROLLING,
                          (uint8_t *)&tb, STUN_TIE_BREAKER_LENGTH);
     if (context->isUseCandidate(this))
         builder.AddAttribute(STUN_ATTRIBUTE_USE_CANDIDATE, nullptr, 0);
@@ -839,6 +832,8 @@ void AmStunConnection::checkState()
             trnsId.id[i] = (uint8_t)rand();
         }
         current_trans_id = trnsId;
+        // retransmits must carry the same role as the original request
+        transport->getEndpoint()->getIceRole(request_controlled, request_tiebreaker);
         send_request(trnsId);
     } else {
         retransmit();

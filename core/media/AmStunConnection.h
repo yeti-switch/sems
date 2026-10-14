@@ -137,6 +137,8 @@ class AmStunConnection : public AmStreamConnection {
     string       remote_user;
 
     StunTransactionId current_trans_id;
+    bool              request_controlled; // ICE role of the current transaction
+    uint64_t          request_tiebreaker;
     int               count;
     int               retransmit_intervals[STUN_INTERVALS_COUNT];
 

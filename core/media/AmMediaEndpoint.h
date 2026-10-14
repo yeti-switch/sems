@@ -11,6 +11,7 @@
 #include "sip/ssl_settings.h"
 
 #include <netinet/in.h>
+#include <atomic>
 #include <chrono>
 #include <functional>
 #include <memory>
@@ -53,10 +54,9 @@ class AmMediaEndpoint
     unsigned long      srtp_unprotect_errors;
 
     // --- ICE state + security contexts (one set per endpoint/transport) ---
-    bool        is_ice_stream;
-    bool        ice_controlled;
-    uint64_t    ice_tiebreaker;
-    std::string ice_pwd, ice_ufrag, ice_remote_pwd, ice_remote_ufrag;
+    bool                  is_ice_stream;
+    std::atomic<uint64_t> ice_role; // bit 0: controlled role, bits 1-63: tiebreaker
+    std::string           ice_pwd, ice_ufrag, ice_remote_pwd, ice_remote_ufrag;
 
     std::unique_ptr<IceContext>  ice_context[MAX_TRANSPORT_TYPE];
     std::unique_ptr<DtlsContext> dtls_context[MAX_TRANSPORT_TYPE];
@@ -171,8 +171,9 @@ class AmMediaEndpoint
     bool          isIceStream() const { return is_ice_stream; }
     void          setIceStream(bool v) { is_ice_stream = v; }
     bool          isIceControlled();
-    uint64_t      getIceTieBreaker();
-    void          onIceRoleConflict();
+    void          getIceRole(bool &controlled, uint64_t &tiebreaker) const;
+    bool          onIceRoleConflict(bool controlled);
+    bool          checkIceRoleConflict(bool remote_controlled, uint64_t remote_tiebreaker);
     IceContext   *getIceContext(uint8_t tt);
     DtlsContext  *getDtlsContext(uint8_t tt);
     void          initDtls(uint8_t tt, bool client);

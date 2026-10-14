@@ -16,6 +16,12 @@
 #define ICE_PWD_SIZE        22
 #define ICE_UFRAG_SIZE      4
 
+// bit 0 is reserved for the role in AmMediaEndpoint::ice_role
+static uint64_t gen_ice_tiebreaker()
+{
+    return ((uint64_t)get_random() << 32 | get_random()) & ~1ULL;
+}
+
 AmMediaEndpoint::AmMediaEndpoint(AmRtpStream *s, AmSession *sess, int iface)
     : streams{ s }
     , session(sess)
@@ -32,7 +38,7 @@ AmMediaEndpoint::AmMediaEndpoint(AmRtpStream *s, AmSession *sess, int iface)
     , out_of_buffer_errors(0)
     , srtp_unprotect_errors(0)
     , is_ice_stream(false)
-    , ice_controlled(false)
+    , ice_role(gen_ice_tiebreaker())
     , ssl_key_log_file(nullptr)
     , cur_rtp_trans(nullptr)
     , cur_rtcp_trans(nullptr)
@@ -42,8 +48,6 @@ AmMediaEndpoint::AmMediaEndpoint(AmRtpStream *s, AmSession *sess, int iface)
     , media_setup_start(std::chrono::steady_clock::now())
 {
     assert(s); // an endpoint is always created by its (primary) stream, so streams.front() stays valid
-    ((uint32_t *)&ice_tiebreaker)[0] = get_random();
-    ((uint32_t *)&ice_tiebreaker)[1] = get_random();
 #ifdef WITH_ZRTP
     zrtp_context.addSubscriber(this);
 #endif
@@ -596,20 +600,50 @@ void AmMediaEndpoint::dtlsSessionActivated(AmMediaTransport *t, uint16_t srtp_pr
     }
 }
 
-void AmMediaEndpoint::onIceRoleConflict()
+bool AmMediaEndpoint::onIceRoleConflict(bool controlled)
 {
-    ice_controlled                   = !ice_controlled;
-    ((uint32_t *)&ice_tiebreaker)[0] = get_random();
-    ((uint32_t *)&ice_tiebreaker)[1] = get_random();
+    // rfc8445 7.2.5.1: tiebreaker is changed along with the role
+    uint64_t new_role = gen_ice_tiebreaker() | !controlled;
+    uint64_t role     = ice_role.load();
+    do {
+        if ((role & 1) != controlled)
+            return false;
+    } while (!ice_role.compare_exchange_weak(role, new_role));
+    return true;
+}
+
+// rfc8445 7.3.1.1 role conflict on binding request, false if it must be rejected with 487
+bool AmMediaEndpoint::checkIceRoleConflict(bool remote_controlled, uint64_t remote_tiebreaker)
+{
+    uint64_t role = ice_role.load();
+    do {
+        bool controlled = role & 1;
+        if (remote_controlled != controlled)
+            return true;
+
+        // roles conflict. less tiebreaker value means controlled mode
+        uint64_t tiebreaker = role & ~1ULL;
+        CLASS_DBG("roles conflict. local:0x%llx, remote:0x%llx", tiebreaker, remote_tiebreaker);
+        if ((tiebreaker < remote_tiebreaker) == controlled) {
+            CLASS_DBG("reject role change");
+            return false;
+        }
+    } while (!ice_role.compare_exchange_weak(role, gen_ice_tiebreaker() | !(role & 1)));
+
+    CLASS_DBG("accept role change");
+    return true;
+}
+
+void AmMediaEndpoint::getIceRole(bool &controlled, uint64_t &tiebreaker) const
+{
+    uint64_t role = ice_role.load();
+    controlled    = role & 1;
+    tiebreaker    = role & ~1ULL;
 }
 
 bool AmMediaEndpoint::isIceControlled()
 {
-    return ice_controlled;
-}
-uint64_t AmMediaEndpoint::getIceTieBreaker()
-{
-    return ice_tiebreaker;
+    return ice_role.load() & 1;
 }
 
 DtlsContext *AmMediaEndpoint::getDtlsContext(uint8_t transport_type)
@@ -786,13 +820,13 @@ int AmMediaEndpoint::init(const AmSdp &local, const AmSdp &remote, int media_ind
             initIce();
             bool need_restart = !(ice_remote_ufrag == remote_media.ice_ufrag && ice_remote_pwd == remote_media.ice_pwd);
             if (need_restart) {
-                // lite peer never sends checks, full agent must be controlling (RFC 8445 6.1.1)
-                // sdp_offer_owner remote.ice_lite  ice_controlled
-                //              0                0  1
-                //              0                1  0
-                //              1                0  0
-                //              1                1  0
-                ice_controlled   = !sdp_offer_owner && !remote.ice_lite;
+                // lite peer never sends checks, full agent must be controlling (RFC 8445 6.1.1).
+                // otherwise the role is determined once and kept on ICE restart (RFC 8445 9)
+                bool first_init = ice_remote_ufrag.empty();
+                if (remote.ice_lite || (first_init && sdp_offer_owner))
+                    ice_role.fetch_and(~1ULL);
+                else if (first_init)
+                    ice_role.fetch_or(1);
                 ice_remote_ufrag = remote_media.ice_ufrag;
                 ice_remote_pwd   = remote_media.ice_pwd;
 
