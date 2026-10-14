@@ -787,7 +787,12 @@ int AmMediaEndpoint::init(const AmSdp &local, const AmSdp &remote, int media_ind
             bool need_restart = !(ice_remote_ufrag == remote_media.ice_ufrag && ice_remote_pwd == remote_media.ice_pwd);
             if (need_restart) {
                 // lite peer never sends checks, full agent must be controlling (RFC 8445 6.1.1)
-                ice_controlled   = sdp_offer_owner && !remote.ice_lite;
+                // sdp_offer_owner remote.ice_lite  ice_controlled
+                //              0                0  1
+                //              0                1  0
+                //              1                0  0
+                //              1                1  0
+                ice_controlled   = !sdp_offer_owner && !remote.ice_lite;
                 ice_remote_ufrag = remote_media.ice_ufrag;
                 ice_remote_pwd   = remote_media.ice_pwd;
 
