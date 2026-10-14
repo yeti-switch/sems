@@ -1,6 +1,7 @@
 sems (1.217.1) stable; urgency=low
-  * postgresql: fix for high CPU load on full queue for workers in a batch mode
- -- Michael Furmur <furmur@pm.me>  Tue, 13 Oct 2026 21:46:25 +0300
+  * AmMediaEndpoint: fix initial ICE controlling/controlled state
+  * AmMediaTransaction: correct clearing after dropping transaction
+ -- Michael Furmur <furmur@pm.me>  Wed, 14 Oct 2026 20:09:35 +0300
 
 sems (1.217.0) stable; urgency=low
   * postgresql: allow to offload PGParamExecute AmArg processing to external binding
