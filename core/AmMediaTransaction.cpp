@@ -10,7 +10,12 @@ AmMediaTransaction::AmMediaTransaction(AmSession *sess, const AmSdp &local_sdp)
 {
 }
 
-AmMediaTransaction::~AmMediaTransaction() = default;
+AmMediaTransaction::~AmMediaTransaction()
+{
+    // dropped without commit/rollback
+    for (auto &b : bindings)
+        b.first->clearPendingEndpoint();
+}
 
 AmMediaEndpoint *AmMediaTransaction::addEndpoint(AmMediaEndpoint *ep)
 {
@@ -67,6 +72,7 @@ void AmMediaTransaction::commit()
     // session pool until the session ends - in a bundle the shared endpoint needs guarding, TODO(C1))
     for (auto &b : bindings)
         b.first->setEndpoint(b.second);
+    bindings.clear();
     for (auto &ep : new_endpoints)
         session->addMediaEndpoint(ep.release()); // staged endpoints handed to the session pool
     new_endpoints.clear();
