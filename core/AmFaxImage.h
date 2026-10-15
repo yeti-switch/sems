@@ -38,7 +38,7 @@ class UDPTLConnection : public AmStreamConnection {
 
     void handleConnection(uint8_t *data, unsigned int size, struct sockaddr_storage *recv_addr,
                           struct timeval recv_time) override;
-    void handleSymmetricRtp(struct sockaddr_storage *, struct timeval *) override {}
+    void handleSymmetricRtp(struct sockaddr_storage *, struct timeval *, bool &) override {}
 };
 
 class DTLSUDPTLConnection : public AmStreamConnection {
@@ -52,7 +52,7 @@ class DTLSUDPTLConnection : public AmStreamConnection {
 
     void    handleConnection(uint8_t *data, unsigned int size, struct sockaddr_storage *recv_addr,
                              struct timeval recv_time) override;
-    void    handleSymmetricRtp(struct sockaddr_storage *, struct timeval *) override {}
+    void    handleSymmetricRtp(struct sockaddr_storage *, struct timeval *, bool &) override {}
     ssize_t send(AmRtpPacket *packet) override;
     void    setDtlsSessionClosed() { dtls_session_closed = true; }
 };

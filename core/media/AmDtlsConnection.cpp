@@ -500,7 +500,7 @@ void AmDtlsConnection::handleConnection(uint8_t *data, unsigned int size, struct
     }
 }
 
-void AmDtlsConnection::handleSymmetricRtp(struct sockaddr_storage *, struct timeval *)
+void AmDtlsConnection::handleSymmetricRtp(struct sockaddr_storage *, struct timeval *, bool &)
 {
     /*symmetric rtp is disabled for dtls connections*/
 }

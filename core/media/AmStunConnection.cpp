@@ -193,7 +193,6 @@ sockaddr_storage *IceContext::getAllowedIceAddr(int family)
 
 bool IceContext::isPairAllowed()
 {
-    AmLock lock(pairs_mut);
     return pair_allowed;
 }
 

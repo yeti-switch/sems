@@ -163,7 +163,7 @@ class AmStunConnection : public AmStreamConnection {
 
     void handleConnection(uint8_t *data, unsigned int size, struct sockaddr_storage *recv_addr,
                           struct timeval recv_time) override;
-    void handleSymmetricRtp(struct sockaddr_storage *, struct timeval *) override
+    void handleSymmetricRtp(struct sockaddr_storage *, struct timeval *, bool &) override
     { /*symmetric rtp is disabled for ice*/ }
     void getInfo(AmArg &ret) override;
 

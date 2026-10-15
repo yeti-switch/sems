@@ -72,7 +72,7 @@ class AmStreamConnection : public atomic_ref_cnt
         return passive;
     }
     virtual void setPassiveMode(bool p);
-    virtual void handleSymmetricRtp(struct sockaddr_storage * recv_addr, struct timeval * recv_time);
+    virtual void handleSymmetricRtp(struct sockaddr_storage * recv_addr, struct timeval * recv_time, bool &from_raddr);
     string       getRHost()
     {
         return r_host;
@@ -114,6 +114,8 @@ class AmStreamConnection : public atomic_ref_cnt
 
     /** symmetric RTP | RTCP */
     bool passive;
+    /** first packet from the current r_addr was reported to the endpoint. reset on r_addr change */
+    bool raddr_learned;
     /** Timestamp of the last received RTP packet */
     struct timeval last_recv_time;
     struct timeval passive_set_time;

@@ -63,7 +63,7 @@ class AmZRTPConnection : public AmStreamConnection {
 
     virtual void handleConnection(uint8_t *data, unsigned int size, struct sockaddr_storage *recv_addr,
                                   struct timeval recv_time);
-    virtual void handleSymmetricRtp(struct sockaddr_storage *, struct timeval *)
+    virtual void handleSymmetricRtp(struct sockaddr_storage *, struct timeval *, bool &)
     { /*symmetric rtp is dsabled for zrtp connection*/ }
     virtual bool    isUseConnection(ConnectionType type);
     virtual ssize_t send(AmRtpPacket *packet);

@@ -27,6 +27,7 @@ AmStreamConnection::AmStreamConnection(AmMediaTransport *_transport, const strin
     , stream_is_ice_stream(transport->getEndpoint()->isIceStream())
     , stream_symmetric_rtp_endless(transport->getEndpoint()->isSymmetricRtpEndless())
     , passive(transport->getEndpoint()->isSymmetricRtpEnable())
+    , raddr_learned(false)
     , passive_set_time{ 0, 0 }
     , passive_packets(0)
     , dropped_by_raddr_packets(0)
@@ -48,6 +49,7 @@ AmStreamConnection::AmStreamConnection(AmStreamConnection *_parent, const string
     , stream_is_ice_stream(transport->getEndpoint()->isIceStream())
     , stream_symmetric_rtp_endless(transport->getEndpoint()->isSymmetricRtpEndless())
     , passive(transport->getEndpoint()->isSymmetricRtpEnable())
+    , raddr_learned(false)
     , passive_set_time{ 0, 0 }
     , passive_packets(0)
     , dropped_by_raddr_packets(0)
@@ -137,6 +139,7 @@ void AmStreamConnection::resolveRemoteAddress(const string &remote_addr, int rem
         am_set_port(&r_addr, remote_port);
         r_port = remote_port;
     }
+    raddr_learned = false;
 
     mute = ((r_addr.ss_family == AF_INET) && (SAv4(&r_addr)->sin_addr.s_addr == INADDR_ANY)) ||
            ((r_addr.ss_family == AF_INET6) && IN6_IS_ADDR_UNSPECIFIED(&SAv6(&r_addr)->sin6_addr));
@@ -145,8 +148,9 @@ void AmStreamConnection::resolveRemoteAddress(const string &remote_addr, int rem
 void AmStreamConnection::process_packet(uint8_t *data, unsigned int size, struct sockaddr_storage *recv_addr,
                                         struct timeval recv_time)
 {
-    handleSymmetricRtp(recv_addr, &recv_time);
-    if (!passive && !isAddrConnection(recv_addr)) {
+    bool from_raddr = isAddrConnection(recv_addr);
+    handleSymmetricRtp(recv_addr, &recv_time, from_raddr);
+    if (!passive && !from_raddr) {
         // got packet from unknown remote addr. ignore it
         auto endpoint = transport->getEndpoint();
         endpoint->inc_drop_pack();
@@ -159,30 +163,35 @@ void AmStreamConnection::process_packet(uint8_t *data, unsigned int size, struct
         return;
     }
 
+    if (from_raddr && !raddr_learned && conn_type == RTP_CONN) {
+        raddr_learned = true;
+        transport->getEndpoint()->learnRtpEndpoint(recv_addr);
+    }
+
     memcpy(&last_recv_time, &recv_time, sizeof(struct timeval));
     handleConnection(data, size, recv_addr, recv_time);
 }
 
-void AmStreamConnection::handleSymmetricRtp(struct sockaddr_storage *recv_addr, struct timeval *rv_time)
+void AmStreamConnection::handleSymmetricRtp(struct sockaddr_storage *recv_addr, struct timeval *rv_time,
+                                            bool &from_raddr)
 {
     if (stream_is_ice_stream)
         return;
 
     if (parent)
-        parent->handleSymmetricRtp(recv_addr, rv_time);
+        parent->handleSymmetricRtp(recv_addr, rv_time, from_raddr);
 
     if (!passive)
         return;
 
     // passive mode
 
-    auto endpoint        = transport->getEndpoint();
-    auto recv_from_raddr = isAddrConnection(recv_addr);
+    auto endpoint = transport->getEndpoint();
 
     switch (AmConfig.symmetric_rtp_mode) {
     case ConfigContainer::SM_RTP_PACKETS:
         if (passive_packets < (unsigned int)AmConfig.symmetric_rtp_packets) {
-            if (recv_from_raddr) {
+            if (from_raddr) {
                 if (stream_symmetric_rtp_endless) {
                     // clear passive counter on the packet from the actual r_addr
                     passive_packets = 0;
@@ -203,7 +212,7 @@ void AmStreamConnection::handleSymmetricRtp(struct sockaddr_storage *recv_addr, 
         int delta_ms = delta.tv_sec * 1000 + delta.tv_usec / 1000;
 
         if (delta_ms < AmConfig.symmetric_rtp_delay) {
-            if (recv_from_raddr) {
+            if (from_raddr) {
                 if (stream_symmetric_rtp_endless) {
                     // clear passive time on the packet from the actual r_addr
                     memcpy(&passive_set_time, &last_recv_time, sizeof(struct timeval));
@@ -231,10 +240,11 @@ void AmStreamConnection::handleSymmetricRtp(struct sockaddr_storage *recv_addr, 
 
     if (!stream_symmetric_rtp_endless) {
         // normal mode
-        if (!recv_from_raddr) {
+        if (!from_raddr) {
             string         addr_str = get_addr_str(recv_addr);
             unsigned short port     = am_get_port(recv_addr);
             setRAddr(addr_str, port);
+            from_raddr = true;
             CLASS_DBG("Symmetric %s: set new remote address: %s:%i. Leave passive mode", proto_str, addr_str.c_str(),
                       port);
         } else {
@@ -247,6 +257,7 @@ void AmStreamConnection::handleSymmetricRtp(struct sockaddr_storage *recv_addr, 
         string         addr_str = get_addr_str(recv_addr);
         unsigned short port     = am_get_port(recv_addr);
         setRAddr(addr_str, port);
+        from_raddr = true;
         CLASS_DBG("Symmetric %s: set new remote address: %s:%i. Stay in passive mode", proto_str, addr_str.c_str(),
                   port);
     }
@@ -352,8 +363,6 @@ void AmRtpConnection::handleConnection(uint8_t *data, unsigned int size, struct 
     p->setAddr(recv_addr);
     p->setLocalAddr(&laddr);
     p->setBuffer(data, size);
-    if (isAddrConnection(recv_addr))
-        transport->getEndpoint()->learnRtpEndpoint(recv_addr);
     transport->onRtpPacket(p, parent ? parent : this);
 }
 
