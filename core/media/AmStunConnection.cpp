@@ -730,12 +730,7 @@ void AmStunConnection::check_response(CStunMessageReader *reader, sockaddr_stora
 
     if (valid && reader->GetErrorCode(&err_code) == S_OK) {
         if (err_code == STUN_ERROR_ROLECONFLICT) {
-            if (transport->getEndpoint()->onIceRoleConflict(request_controlled)) {
-                transport->getEndpoint()->onErrorRtpTransport(STUN_VALID_ERROR,
-                                                              string("role conflict, switched to ") +
-                                                                  (request_controlled ? "controlling" : "controlled"),
-                                                              transport);
-            }
+            transport->getEndpoint()->onIceRoleConflict(request_controlled);
             state = PAIR_WAITING;
             return;
         }
