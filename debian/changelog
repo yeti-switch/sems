@@ -1,3 +1,10 @@
+sems (1.218.0) stable; urgency=low
+  * media: fix ICE role selection and role conflict handlin
+  * media: session events refactoring
+    * MediaEstablished on send readiness for any endpoint type
+    * RtpEndpointLearned for each remote address learning/change
+ -- Michael Furmur <furmur@pm.me>  Thu, 15 Oct 2026 22:29:04 +0300
+
 sems (1.217.1) stable; urgency=low
   * AmMediaEndpoint: fix initial ICE controlling/controlled state
   * AmMediaTransaction: correct clearing after dropping transaction
