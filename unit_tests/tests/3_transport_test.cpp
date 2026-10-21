@@ -1,5 +1,11 @@
 #include "../Config.h"
 #include <sip/ws_trsp.h>
+#include <sip/tcp_trsp.h>
+#include <event2/thread.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <chrono>
+#include <thread>
 #include <AmLcConfig.h>
 #include <gtest/gtest.h>
 #include <string>
@@ -117,4 +123,64 @@ TEST(TransportTest, WebSocket)
                   "Content-Length: 0\r\n\r\n";
     worker.send(&server, &sa, "test.com", data, sizeof(data), 0, false);
     worker.join();
+}
+
+static int recv_with_timeout(int fd, unsigned int ms, char *buf, size_t len)
+{
+    struct timeval tv = { ms / 1000, (ms % 1000) * 1000 };
+    setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    return ::recv(fd, buf, len, 0);
+}
+
+TEST(TransportTest, TcpIdleTimeoutResetOnSend)
+{
+    unsigned int idx = AmConfig.sip_if_names[test_config::instance()->signalling_interface];
+    string       ip;
+    if (AmConfig.sip_ifs[idx].proto_info.size())
+        ip = AmConfig.sip_ifs[idx].proto_info[0]->getIP();
+    ASSERT_FALSE(ip.empty());
+
+    const unsigned int idle_ms = 1000;
+
+    evthread_use_pthreads();
+
+    trsp_worker worker;
+    worker.start();
+    trsp trsp_server;
+
+    tcp_server_socket server(0, 0, 0, trsp_socket::socket_transport::tcp_ipv4);
+    server.set_idle_timeout(idle_ms);
+    server.set_connect_timeout(DEFAULT_TCP_CONNECT_TIMEOUT);
+    ASSERT_FALSE(server.bind(ip, 50611) < 0);
+    trsp_worker *workers = &worker;
+    server.add_workers(&workers, 1);
+    trsp_server.add_socket(&server);
+    trsp_server.start();
+
+    // silent client: connects and only reads
+    int fd = ::socket(AF_INET, SOCK_STREAM, 0);
+    ASSERT_GE(fd, 0);
+    sockaddr_storage server_sa;
+    server.copy_addr_to(&server_sa);
+    ASSERT_EQ(0, ::connect(fd, (sockaddr *)&server_sa, sizeof(sockaddr_in)));
+    sockaddr_storage client_sa     = {};
+    socklen_t        client_sa_len = sizeof(client_sa);
+    ASSERT_EQ(0, ::getsockname(fd, (sockaddr *)&client_sa, &client_sa_len));
+
+    const char data[] = "OPTIONS sip:test.com SIP/2.0\r\nContent-Length: 0\r\n\r\n";
+    char       buf[256];
+
+    // 3 idle timeouts of sending, the connection must survive
+    for (int i = 0; i < 9; i++) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(idle_ms / 3));
+        ASSERT_EQ(0, worker.send(&server, &client_sa, "", data, sizeof(data) - 1, 0, true)) << "iteration " << i;
+        ASSERT_GT(recv_with_timeout(fd, idle_ms, buf, sizeof(buf)), 0) << "iteration " << i;
+    }
+
+    // no traffic anymore: server closes the connection on idle timeout
+    ASSERT_EQ(0, recv_with_timeout(fd, idle_ms * 2, buf, sizeof(buf)));
+    ::close(fd);
+
+    trsp_server.stop();
+    worker.stop(true);
 }

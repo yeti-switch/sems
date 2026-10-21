@@ -127,6 +127,11 @@ class tcp_base_trsp : public trsp_socket {
     void add_read_event();
 
     /**
+     * Resets the idle timeout of the connection.
+     */
+    void reset_idle_timeout();
+
+    /**
      * Adds one-shot write-event to event base.
      */
     void add_write_event(struct timeval *timeout = NULL);
@@ -286,6 +291,7 @@ class trsp_server_socket : public trsp_socket {
 
     /**
      * Idle Timeout before closing a connection.
+     * Reset by any traffic on the connection, incoming or outgoing.
      */
     struct timeval idle_timeout;
 

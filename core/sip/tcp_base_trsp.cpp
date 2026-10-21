@@ -282,6 +282,12 @@ void tcp_base_trsp::add_read_event()
     event_add(read_ev, server_sock->get_idle_timeout());
 }
 
+void tcp_base_trsp::reset_idle_timeout()
+{
+    // re-adding read event only reschedules its timeout
+    event_add(read_ev, server_sock->get_idle_timeout());
+}
+
 void tcp_base_trsp::add_write_event(struct timeval *timeout)
 {
     DBG3("%p add write_ev %p", this, write_ev);
@@ -578,6 +584,8 @@ void tcp_base_trsp::on_write(short ev)
             }
             return;
         }
+
+        reset_idle_timeout();
 
         if (trsp_socket::log_level_raw_msgs >= 0) {
             _LOG(trsp_socket::log_level_raw_msgs, "sent msg via %s/%i from %s:%i to %s:%i. bytes: %d/%d",
