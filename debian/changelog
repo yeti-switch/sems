@@ -1,3 +1,7 @@
+sems (1.218.1) stable; urgency=low
+  * tcp: reset idle-timeout on egress
+ -- Michael Furmur <furmur@pm.me>  Wed, 21 Oct 2026 18:55:08 +0300
+
 sems (1.218.0) stable; urgency=low
   * media: fix ICE role selection and role conflict handlin
   * media: session events refactoring
