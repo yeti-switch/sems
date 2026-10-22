@@ -907,7 +907,7 @@ int AmB2BSession::sendEstablishedReInvite()
     return -1;
 }
 
-bool AmB2BSession::refresh(int /*flags*/)
+bool AmB2BSession::refresh(int /*flags*/, bool force_reinvite)
 {
     // no session refresh if not connected
     if (dlg->getStatus() != AmSipDialog::Connected)
@@ -917,9 +917,9 @@ bool AmB2BSession::refresh(int /*flags*/)
     // not in B2B mode
     if (other_id.empty() ||
         // UPDATE as refresh handled like normal session
-        refresh_method == REFRESH_UPDATE)
+        (refresh_method == REFRESH_UPDATE && !force_reinvite))
     {
-        return AmSession::refresh(SIP_FLAGS_VERBATIM);
+        return AmSession::refresh(SIP_FLAGS_VERBATIM, force_reinvite);
     }
 
     // refresh with re-INVITE

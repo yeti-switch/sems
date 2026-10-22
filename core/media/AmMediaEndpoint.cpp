@@ -541,6 +541,17 @@ bool AmMediaEndpoint::getIceSelectedPairs(IcePair selected[MAX_TRANSPORT_TYPE])
     return true;
 }
 
+bool AmMediaEndpoint::iceUpdatedOfferNeeded()
+{
+    IcePair selected[MAX_TRANSPORT_TYPE];
+    if (isIceControlled() || !getIceSelectedPairs(selected))
+        return false;
+    for (int t = 0; t < MAX_TRANSPORT_TYPE; t++)
+        if (ice_context[t] && !(selected[t] == ice_default_pair[t]))
+            return true;
+    return false;
+}
+
 // post AmIceCompletedEvent once every component has a selected pair; called on each pair selection
 void AmMediaEndpoint::checkIceCompleted()
 {

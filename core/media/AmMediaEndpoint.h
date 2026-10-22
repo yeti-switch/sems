@@ -198,6 +198,7 @@ class AmMediaEndpoint
     void          onCloseDtlsSession(uint8_t tt);
     SSLKeyLogger *getSklfile() const { return ssl_key_log_file; }
     void          setSklfile(SSLKeyLogger *l);
+    bool          iceUpdatedOfferNeeded();
 #ifdef WITH_ZRTP
     zrtpContext *getZrtpContext() { return &zrtp_context; }
     void         initZrtp();

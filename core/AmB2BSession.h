@@ -265,7 +265,7 @@ class AmB2BSession : public AmSession, protected RelayController {
     int sendEstablishedReInvite();
 
     /** do session refresh */
-    bool refresh(int flags = 0) override;
+    bool refresh(int flags = 0, bool force_reinvite = false) override;
 
     /** @see AmEventQueue */
     void process(AmEvent *event) override;

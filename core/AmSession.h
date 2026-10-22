@@ -204,6 +204,9 @@ class AmSession : public virtual AmObject,
     /** use connectivity-check timer **/
     bool ice_allow_no_candidates;
 
+    /** updated offer after ICE completion (RFC 5245 8.1.2) is due, see sendIceUpdatedOffer() */
+    bool ice_updated_offer_pending;
+
     /** offer BUNDLE (RFC 9143) on the session's media streams **/
     bool use_bundle_media_stream;
 
@@ -513,13 +516,17 @@ class AmSession : public virtual AmObject,
     /* ----         Call control                         ---- */
 
     /** refresh the session - re-INVITE or UPDATE*/
-    virtual bool refresh(int flags = 0);
+    virtual bool refresh(int flags = 0, bool force_reinvite = false);
 
     /** send an UPDATE in the session */
     virtual int sendUpdate(const AmMimeBody *body, const AmSipHeaderMap &hdrs);
 
     /** send a Re-INVITE (if connected) */
     virtual int sendReinvite(bool updateSDP = true, const AmSipHeaderMap &headers = {}, int flags = 0);
+
+    /** send the updated offer due after ICE completion once the dialog allows it; retried from the
+        transaction hooks (onTransFinished, ACK, onSdpCompleted) while an INVITE transaction is pending */
+    void sendIceUpdatedOffer();
 
     /** send an INVITE */
     virtual int sendInvite(const AmSipHeaderMap &headers = {});
@@ -745,6 +752,8 @@ class AmSession : public virtual AmObject,
     /** This callback is called when ICE concludes for a media endpoint (every component has a selected pair).
         default_pair_changed: selected pairs differ from the m=/c= lines of the last offer/answer */
     virtual void onIceCompleted(const std::vector<int> &media_indexes, bool controlling, bool default_pair_changed);
+
+    void onTransFinished() override;
 
     /** This callback is called if session
         timeout encountered (session timers) */

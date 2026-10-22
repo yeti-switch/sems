@@ -95,6 +95,7 @@ AmSession::AmSession(AmSipDialog *p_dlg)
     , use_ice_media_stream(false)
     , ice_nominate_first_valid(false)
     , ice_allow_no_candidates(true)
+    , ice_updated_offer_pending(false)
     , use_bundle_media_stream(false)
     , audio_1st_stream(true)
     , rtcp_multiplexing(false)
@@ -985,6 +986,7 @@ void AmSession::onSipRequest(const AmSipRequest &req)
                 DBG("AmSession::onSipREquest() suspress reply with reason '%s'", e.reason.c_str());
         }
     } else if (req.method == SIP_METH_ACK) {
+        sendIceUpdatedOffer();
         return;
     } else if (req.method == SIP_METH_BYE) {
         dlg->reply(req, 200, "OK");
@@ -1353,11 +1355,6 @@ int AmSession::onSdpCompleted(const AmSdp &local_sdp, const AmSdp &remote_sdp, b
     SdpAttribute("sendonly")); set_on_hold = pos != remote_sdp.media[0].attributes.end();
     }*/
 
-    // TODO:
-    //   - get the right media ID
-    //   - check if the stream coresponding to the media ID
-    //     should be created or updated
-    //
     int    ret = 0;
     string init_error;
 
@@ -1387,6 +1384,8 @@ int AmSession::onSdpCompleted(const AmSdp &local_sdp, const AmSdp &remote_sdp, b
 
     if (ret == -1)
         onInitStreamFailed(init_error);
+    else
+        sendIceUpdatedOffer();
 
     if (!isProcessingMedia()) {
         setInbandDetector(AmConfig.default_dtmf_detector);
@@ -1446,6 +1445,39 @@ void AmSession::onIceCompleted(const std::vector<int> &, bool controlling, bool 
 {
     DBG("ICE completed for session[%s]: controlling %d, default pair changed %d", getLocalTag().c_str(), controlling,
         default_pair_changed);
+    if (controlling && default_pair_changed)
+        ice_updated_offer_pending = true;
+    sendIceUpdatedOffer();
+}
+
+void AmSession::onTransFinished()
+{
+    sendIceUpdatedOffer();
+}
+
+void AmSession::sendIceUpdatedOffer()
+{
+    if (!ice_updated_offer_pending || sess_stopped.get())
+        return;
+    if (dlg->getUASPendingInv())
+        return;
+
+    bool needed = false;
+    forEachRtpStream([&](AmRtpAudio *stream, MediaType, TransProt) {
+        if (!stream || stream->isDisabled())
+            return;
+        AmMediaEndpoint *ep = stream->getEndpoint();
+        if (ep && ep->isIceStream() && ep->iceUpdatedOfferNeeded())
+            needed = true;
+    });
+
+    if (!needed) { // selection matched the defaults meanwhile (e.g. by the peer's re-INVITE)
+        ice_updated_offer_pending = false;
+        return;
+    }
+
+    DBG("ICE: selected pairs differ from the default destinations, sending updated offer");
+    ice_updated_offer_pending = !refresh(0, true); // not sent yet: retried from the transaction hooks
 }
 
 void AmSession::onSessionTimeout()
@@ -1465,19 +1497,24 @@ void AmSession::updateRefreshMethod(const AmSipHeaderMap &headers)
     }
 }
 
-bool AmSession::refresh(int flags)
+bool AmSession::refresh(int flags, bool force_reinvite)
 {
     // no session refresh if not connected
     if (dlg->getStatus() != AmSipDialog::Connected)
         return false;
 
-    if (refresh_method == REFRESH_UPDATE) {
+    if (refresh_method == REFRESH_UPDATE && !force_reinvite) {
         DBG("Refreshing session with UPDATE");
         return sendUpdate(NULL, {}) == 0;
     } else {
 
         if (dlg->getUACInvTransPending()) {
             DBG("INVITE transaction pending - not refreshing now");
+            return false;
+        }
+
+        if (dlg->getOAState() != AmOfferAnswer::OA_Completed) {
+            DBG("offer/answer not completed - not refreshing now");
             return false;
         }
 
