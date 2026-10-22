@@ -949,6 +949,12 @@ void AmSession::process(AmEvent *ev)
         onMediaEstablished(media_est_ev->setup_time_ms, media_est_ev->media_indexes);
         return;
     }
+
+    AmIceCompletedEvent *ice_done_ev = dynamic_cast<AmIceCompletedEvent *>(ev);
+    if (ice_done_ev) {
+        onIceCompleted(ice_done_ev->media_indexes, ice_done_ev->controlling, ice_done_ev->default_pair_changed);
+        return;
+    }
 }
 
 void AmSession::onSipRequest(const AmSipRequest &req)
@@ -1434,6 +1440,12 @@ void AmSession::onIceConnectivityFailed()
 void AmSession::onMediaEstablished(unsigned long setup_time_ms, const std::vector<int> &media_indexes)
 {
     DBG("media established for session[%s] in %lu ms", getLocalTag().c_str(), setup_time_ms);
+}
+
+void AmSession::onIceCompleted(const std::vector<int> &, bool controlling, bool default_pair_changed)
+{
+    DBG("ICE completed for session[%s]: controlling %d, default pair changed %d", getLocalTag().c_str(), controlling,
+        default_pair_changed);
 }
 
 void AmSession::onSessionTimeout()

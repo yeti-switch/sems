@@ -196,6 +196,16 @@ bool IceContext::isPairAllowed()
     return pair_allowed;
 }
 
+bool IceContext::getSelectedPair(AmMediaTransport *&t, sockaddr_storage &raddr)
+{
+    AmLock lock(pairs_mut);
+    if (state != ICE_KEEP_ALIVE || !current_candidate)
+        return false;
+    t = current_candidate->getTransport();
+    current_candidate->getRAddr(&raddr);
+    return true;
+}
+
 AmMediaTransport *IceContext::getCurrentTransport()
 {
     AmLock lock(pairs_mut);

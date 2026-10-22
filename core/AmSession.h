@@ -742,6 +742,10 @@ class AmSession : public virtual AmObject,
     /** This callback is called once per media session when the media path becomes usable */
     virtual void onMediaEstablished(unsigned long setup_time_ms, const std::vector<int> &media_indexes);
 
+    /** This callback is called when ICE concludes for a media endpoint (every component has a selected pair).
+        default_pair_changed: selected pairs differ from the m=/c= lines of the last offer/answer */
+    virtual void onIceCompleted(const std::vector<int> &media_indexes, bool controlling, bool default_pair_changed);
+
     /** This callback is called if session
         timeout encountered (session timers) */
     virtual void onSessionTimeout();

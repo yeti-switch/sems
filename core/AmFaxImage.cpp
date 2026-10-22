@@ -627,8 +627,8 @@ int FaxT38Image::send_udptl_packet(const uint8_t *buf, int len)
     if (!fax)
         return -1;
 
-    FAX_DBG("udptl fax packet (len = %d) send to %s:%d", packet_len, fax->getRHost(FAX_TRANSPORT).c_str(),
-            fax->getRPort(FAX_TRANSPORT));
+    FAX_DBG("udptl fax packet (len = %d) send to %s:%d", packet_len, fax->getRHost(RTP_TRANSPORT).c_str(),
+            fax->getRPort(RTP_TRANSPORT));
     unsigned int tx_user_ts = m_last_ts * (FAX_RATE / 100) / (WALLCLOCK_RATE / 100);
     int          ret        = fax->send_udptl(tx_user_ts, data, packet_len);
     if (-1 == ret) {

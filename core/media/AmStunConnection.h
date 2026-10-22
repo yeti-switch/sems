@@ -98,6 +98,7 @@ class IceContext {
 
     sockaddr_storage *getAllowedIceAddr(int family);
     bool              isPairAllowed();
+    bool              getSelectedPair(AmMediaTransport *&t, sockaddr_storage &raddr);
     AmMediaTransport *getCurrentTransport();
 
     int              getType() { return type; }

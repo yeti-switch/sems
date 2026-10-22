@@ -597,8 +597,6 @@ void AmMediaTransport::getInfo(AmArg &ret)
     else if (mode == TRANSPORT_MODE_DEFAULT)
         ret["mode"] = "default";
 
-    if (type == FAX_TRANSPORT)
-        ret["type"] = "fax";
     if (type == RTP_TRANSPORT)
         ret["type"] = "rtp";
     if (type == RTCP_TRANSPORT)
@@ -1085,15 +1083,11 @@ const char *AmMediaTransport::type2str()
 {
     static const char *rtp     = "RTP";
     static const char *rtcp    = "RTCP";
-    static const char *fax     = "FAX";
-    static const char *raw     = "RAW";
     static const char *unknown = "UNKNOWN";
 
     switch (type) {
     case RTP_TRANSPORT:  return rtp;
     case RTCP_TRANSPORT: return rtcp;
-    case FAX_TRANSPORT:  return fax;
-    case RAW_TRANSPORT:  return raw;
     default:             return unknown;
     }
 }

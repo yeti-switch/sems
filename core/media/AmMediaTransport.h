@@ -32,12 +32,10 @@ class AmMediaState;
 #define RTP_PACKET_BUF_SIZE           4096
 #define RTP_PACKET_TIMESTAMP_DATASIZE (CMSG_SPACE(sizeof(struct timeval)))
 
-#define RAW_TRANSPORT  0
-#define RTP_TRANSPORT  1
-#define RTCP_TRANSPORT 2
-#define FAX_TRANSPORT  3
+#define RTP_TRANSPORT  0
+#define RTCP_TRANSPORT 1
 
-#define MAX_TRANSPORT_TYPE 4
+#define MAX_TRANSPORT_TYPE 2
 
 class AmMediaTransport : public AmMediaConnectionsHolder,
                          public AmRtpSession

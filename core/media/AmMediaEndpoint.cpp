@@ -181,7 +181,7 @@ void AmMediaEndpoint::setCurrentTransport(AmMediaTransport *tr)
 {
     if (!tr)
         return;
-    if (tr->getTransportType() == RTP_TRANSPORT || tr->getTransportType() == FAX_TRANSPORT) {
+    if (tr->getTransportType() == RTP_TRANSPORT) {
         cur_rtp_trans = tr;
         if (!cur_rtcp_trans && multiplexing)
             cur_rtcp_trans = tr;
@@ -215,7 +215,7 @@ void AmMediaEndpoint::setLocalIP(AddressType addrtype)
     }
 
     for (auto tr : *transports) {
-        if (tr->getTransportType() == RTP_TRANSPORT || tr->getTransportType() == FAX_TRANSPORT)
+        if (tr->getTransportType() == RTP_TRANSPORT)
             cur_rtp_trans = tr;
         else if (tr->getTransportType() == RTCP_TRANSPORT)
             cur_rtcp_trans = tr;
@@ -283,7 +283,7 @@ int AmMediaEndpoint::getRPort(int type)
 {
     if (type == RTCP_TRANSPORT && cur_rtcp_trans)
         return cur_rtcp_trans->getRPort(true);
-    else if ((type == RTP_TRANSPORT || type == FAX_TRANSPORT) && cur_rtp_trans)
+    else if (type == RTP_TRANSPORT && cur_rtp_trans)
         return cur_rtp_trans->getRPort(false);
     return 0;
 }
@@ -292,7 +292,7 @@ string AmMediaEndpoint::getRHost(int type)
 {
     if (type == RTCP_TRANSPORT && cur_rtcp_trans)
         return cur_rtcp_trans->getRHost(true);
-    else if ((type == RTP_TRANSPORT || type == FAX_TRANSPORT) && cur_rtp_trans)
+    else if (type == RTP_TRANSPORT && cur_rtp_trans)
         return cur_rtp_trans->getRHost(false);
     return "";
 }
@@ -482,7 +482,7 @@ void AmMediaEndpoint::getRAddr(int type, sockaddr_storage *a)
 {
     if (type == RTCP_TRANSPORT && cur_rtcp_trans)
         cur_rtcp_trans->getRAddr(true, a);
-    else if ((type == RTP_TRANSPORT || type == FAX_TRANSPORT) && cur_rtp_trans)
+    else if (type == RTP_TRANSPORT && cur_rtp_trans)
         cur_rtp_trans->getRAddr(false, a);
 }
 
@@ -510,11 +510,59 @@ void AmMediaEndpoint::onCloseDtlsSession(uint8_t transport_type)
     });
 }
 
-void AmMediaEndpoint::initIce()
+bool AmMediaEndpoint::IcePair::operator==(const IcePair &o) const
+{
+    return local == o.local && remote.ss_family == o.remote.ss_family &&
+           AmStreamConnection::isSameAddr(&remote, &o.remote);
+}
+
+void AmMediaEndpoint::setIceDefaultPair(int transport_type, const string &laddr, int lport, const string &raddr,
+                                        int rport)
+{
+    IcePair &p = ice_default_pair[transport_type];
+    p.local    = nullptr;
+    iterateTransports([&](AmMediaTransport *tr) {
+        if (tr->getTransportType() == transport_type && tr->getLocalPort() == lport && tr->getLocalAddress() == laddr)
+            p.local = tr;
+    });
+    memset(&p.remote, 0, sizeof(p.remote));
+    if (am_inet_pton(raddr.c_str(), &p.remote)) // FQDN stays unset and never matches
+        am_set_port(&p.remote, rport);
+}
+
+// post AmIceCompletedEvent once every component has a selected pair; called on each pair selection
+void AmMediaEndpoint::checkIceCompleted()
+{
+    IcePair selected[MAX_TRANSPORT_TYPE];
+    bool    changed = false, default_changed = false;
+    for (int t = 0; t < MAX_TRANSPORT_TYPE; t++) {
+        if (!ice_context[t])
+            continue;
+        if (!ice_context[t]->getSelectedPair(selected[t].local, selected[t].remote))
+            return;
+        if (!(selected[t] == ice_selected_pair[t]))
+            changed = true;
+        if (!(selected[t] == ice_default_pair[t]))
+            default_changed = true;
+    }
+    if (!changed || !session)
+        return;
+
+    std::copy(std::begin(selected), std::end(selected), std::begin(ice_selected_pair));
+
+    CLASS_DBG("ICE completed: controlling %d, default pair changed %d", !isIceControlled(), default_changed);
+    std::vector<int> indexes;
+    indexes.reserve(streams.size());
+    for (auto *s : streams)
+        indexes.push_back(s->getSdpMediaIndex());
+    session->postEvent(new AmIceCompletedEvent(std::move(indexes), !isIceControlled(), default_changed));
+}
+
+void AmMediaEndpoint::initIce(bool use_rtcp)
 {
     if (!ice_context[RTP_TRANSPORT])
         ice_context[RTP_TRANSPORT].reset(new IceContext(this, RTP_TRANSPORT));
-    if (!ice_context[RTCP_TRANSPORT] && !multiplexing)
+    if (!ice_context[RTCP_TRANSPORT] && use_rtcp)
         ice_context[RTCP_TRANSPORT].reset(new IceContext(this, RTCP_TRANSPORT));
 }
 
@@ -584,6 +632,7 @@ void AmMediaEndpoint::allowStunPair(AmMediaTransport *t, sockaddr_storage *remot
         CLASS_ERROR("allowStunPair: %s", error.c_str());
     }
     setCurrentTransport(t);
+    checkIceCompleted();
 }
 
 void AmMediaEndpoint::dtlsSessionActivated(AmMediaTransport *t, uint16_t srtp_profile, const vector<uint8_t> &local_key,
@@ -654,16 +703,12 @@ bool AmMediaEndpoint::isIceControlled()
 DtlsContext *AmMediaEndpoint::getDtlsContext(uint8_t transport_type)
 {
     assert(transport_type < MAX_TRANSPORT_TYPE);
-    if (transport_type == FAX_TRANSPORT)
-        transport_type = RTP_TRANSPORT;
     return dtls_context[transport_type].get();
 }
 
 IceContext *AmMediaEndpoint::getIceContext(uint8_t transport_type)
 {
     assert(transport_type < MAX_TRANSPORT_TYPE);
-    if (transport_type == FAX_TRANSPORT)
-        transport_type = RTP_TRANSPORT;
     return ice_context[transport_type].get();
 }
 
@@ -822,7 +867,9 @@ int AmMediaEndpoint::init(const AmSdp &local, const AmSdp &remote, int media_ind
         AmMediaStateArgs args;
 
         if (remote_media.is_use_ice() && is_ice_stream) {
-            initIce();
+            bool udptl    = local_media.is_dtls_udptl() || local_media.is_udptl();
+            bool use_rtcp = !multiplexing && !udptl; // T.38 has the single component
+            initIce(use_rtcp);
             bool need_restart = !(ice_remote_ufrag == remote_media.ice_ufrag && ice_remote_pwd == remote_media.ice_pwd);
             if (need_restart) {
                 // lite peer never sends checks, full agent must be controlling (RFC 8445 6.1.1).
@@ -836,23 +883,31 @@ int AmMediaEndpoint::init(const AmSdp &local, const AmSdp &remote, int media_ind
                 ice_remote_pwd   = remote_media.ice_pwd;
 
                 getIceContext(RTP_TRANSPORT)->reset();
-                if (!multiplexing)
+                if (use_rtcp)
                     getIceContext(RTCP_TRANSPORT)->reset();
             }
+
+            string local_address = local_media.conn.address.empty() ? local.conn.address : local_media.conn.address;
+            setIceDefaultPair(RTP_TRANSPORT, local_address, local_media.port, address, port);
+            if (use_rtcp)
+                setIceDefaultPair(RTCP_TRANSPORT, local_address,
+                                  local_media.rtcp_port ? local_media.rtcp_port : local_media.port + 1, rtcp_address,
+                                  rtcp_port);
+
             iterateTransports([&](auto tr) {
                 CLASS_DBG("init ice endpoint:%p, state:%s", to_void(this), tr->state2str());
                 auto conn_factory    = tr->getConnFactory();
                 args.candidates      = &remote_media.ice_candidate;
                 args.sdp_offer_owner = sdp_offer_owner;
                 args.need_restart    = need_restart;
-                args.udptl           = (local_media.is_dtls_udptl() || local_media.is_udptl());
+                args.udptl           = udptl;
                 conn_factory->store_ice_cred(local_media, remote_media);
                 if (tr->isSrtpEnable() && local_media.is_simple_srtp())
                     conn_factory->store_srtp_cred(local_media, remote_media);
                 tr->template updateState<AmMediaIceState>(args);
             });
             getIceContext(RTP_TRANSPORT)->initContext();
-            if (!multiplexing)
+            if (use_rtcp)
                 getIceContext(RTCP_TRANSPORT)->initContext();
         } else if (local_media.is_simple_srtp() && AmConfig.enable_srtp) {
             MEDIA_interface &media_if = AmConfig.getMediaIfaceInfo(l_if);
@@ -1151,6 +1206,8 @@ void AmMediaEndpoint::clearEstablished()
     media_established_fired = false;
     media_setup_start       = std::chrono::steady_clock::now();
     iterateTransports([](AmMediaTransport *tr) { tr->clearEstablish(); });
+    for (auto &p : ice_selected_pair)
+        p = IcePair{};
 }
 
 void AmMediaEndpoint::resetMediaSetupTimer()

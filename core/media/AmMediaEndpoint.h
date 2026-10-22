@@ -65,7 +65,16 @@ class AmMediaEndpoint
     zrtpContext zrtp_context;
 #endif
 
-    // --- transport set (primary = cur_rtp_trans; for a fax endpoint it is FAX_TRANSPORT) ---
+    /** candidate pair as seen by the endpoint: local transport + remote address */
+    struct IcePair {
+        AmMediaTransport *local = nullptr;
+        sockaddr_storage  remote{};
+        bool              operator==(const IcePair &o) const;
+    };
+    IcePair ice_default_pair[MAX_TRANSPORT_TYPE];  // m=/c=/a=rtcp of the last offer/answer (RFC 5245 8.1.2)
+    IcePair ice_selected_pair[MAX_TRANSPORT_TYPE]; // last selection reported with AmIceCompletedEvent
+
+    // --- transport set (primary = cur_rtp_trans) ---
     std::vector<AmMediaTransport *> ip4_transports, ip6_transports;
     AmMediaTransport               *cur_rtp_trans;
     AmMediaTransport               *cur_rtcp_trans;
@@ -85,7 +94,9 @@ class AmMediaEndpoint
     virtual void initIP4Transport();
     virtual void initIP6Transport();
     void         setCurrentTransport(AmMediaTransport *transport);
-    void         initIce();
+    void         initIce(bool use_rtcp);
+    void         setIceDefaultPair(int transport_type, const string &laddr, int lport, const string &raddr, int rport);
+    void         checkIceCompleted();
 
   public:
     AmMediaEndpoint(AmRtpStream *s, AmSession *sess, int iface);

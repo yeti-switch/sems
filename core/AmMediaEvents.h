@@ -36,6 +36,28 @@ class AmIceConnectivityFailedEvent : public AmEvent {
 };
 
 /**
+ * \brief event fired when ICE concludes for a media endpoint: every component has a selected pair
+ * (RFC 5245 8.1.2). Fired again if the selection changes (re-nomination, ICE restart).
+ * default_pair_changed: selected pairs differ from the default destinations (m=/c=/a=rtcp) of the last
+ * offer/answer, the controlling agent has to send an updated offer (RFC 5245 9.1.2.2).
+ */
+class AmIceCompletedEvent : public AmEvent {
+  public:
+    std::vector<int> media_indexes;
+    bool             controlling;
+    bool             default_pair_changed;
+
+    AmIceCompletedEvent(std::vector<int> indexes, bool controlling, bool default_pair_changed)
+        : AmEvent(0)
+        , media_indexes(std::move(indexes))
+        , controlling(controlling)
+        , default_pair_changed(default_pair_changed)
+    {
+    }
+    ~AmIceCompletedEvent() {}
+};
+
+/**
  * \brief event fired once per media endpoint when the transport path becomes usable:
  *  - plain RTP/SRTP/UDPTL: current connection picked on the transport;
  *  - DTLS+RTP / DTLS+UDPTL / ZRTP: after SRTP keys are negotiated;
