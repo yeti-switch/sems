@@ -534,11 +534,15 @@ void AmMediaEndpoint::setIceDefaultPair(int transport_type, const string &laddr,
 
 bool AmMediaEndpoint::getIceSelectedPairs(IcePair selected[MAX_TRANSPORT_TYPE])
 {
+    bool has_context = false; // no contexts before the first init(): ICE is not completed
     for (int t = 0; t < MAX_TRANSPORT_TYPE; t++) {
-        if (ice_context[t] && !ice_context[t]->getSelectedPair(selected[t].local, selected[t].remote))
+        if (!ice_context[t])
+            continue;
+        has_context = true;
+        if (!ice_context[t]->getSelectedPair(selected[t].local, selected[t].remote))
             return false;
     }
-    return true;
+    return has_context;
 }
 
 bool AmMediaEndpoint::iceUpdatedOfferNeeded()
