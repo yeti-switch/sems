@@ -49,6 +49,7 @@ static char *parse_sdp_connection(AmSdp *sdp_msg, char *s, char t);
 static void  parse_sdp_media(AmSdp *sdp_msg, char *s);
 static char *parse_sdp_attr(AmSdp *sdp_msg, char *s);
 static char *parse_ice_candidate(SdpMedia *media, char *s);
+static char *parse_ice_remote_candidates(SdpMedia *media, char *s);
 static void  parse_sdp_origin(AmSdp *sdp_masg, char *s);
 
 inline char *get_next_line(char *s);
@@ -183,6 +184,11 @@ string SdpIceCandidate::print() const
     }
     data += CRLF;
     return data;
+}
+
+string SdpIceRemoteCandidate::print() const
+{
+    return int2str(comp_id) + " " + conn.address + " " + int2str(conn.port);
 }
 
 IceCandidateType SdpIceCandidate::str2type(string str)
@@ -723,6 +729,17 @@ void AmSdp::print(string &body) const
                  c_it != media_it->ice_candidate.end(); c_it++)
             {
                 out_buf += c_it->print();
+            }
+            if (!media_it->ice_remote_candidates.empty()) {
+                out_buf += "a=remote-candidates:";
+                for (auto rc_it = media_it->ice_remote_candidates.begin();
+                     rc_it != media_it->ice_remote_candidates.end(); rc_it++)
+                {
+                    if (rc_it != media_it->ice_remote_candidates.begin())
+                        out_buf += " ";
+                    out_buf += rc_it->print();
+                }
+                out_buf += CRLF;
             }
         }
 
@@ -1725,6 +1742,8 @@ static char *parse_sdp_attr(AmSdp *sdp_msg, char *s)
         DBG("SDP: got ice request media ufrag %s", media.ice_ufrag.c_str());
     } else if (attr == "candidate") {
         next = parse_ice_candidate(&media, attr_line);
+    } else if (attr == "remote-candidates") {
+        next = parse_ice_remote_candidates(&media, attr_line);
     } else if (attr == "setup") {
         if (parsing) {
             size_t dir_len = 0;
@@ -1991,6 +2010,56 @@ static char *parse_ice_candidate(SdpMedia *media, char *s)
         media->ice_candidate.push_back(candidate);
         DBG("SDP: got ice candidate: type %s via %s %s", ice_candidate_2_str(candidate.type).c_str(),
             transport_ice_2_str(candidate.transport).c_str(), candidate.conn.debugPrint().c_str());
+    }
+    return line_end;
+}
+
+// a=remote-candidates:<comp-id> <address> <port> [<comp-id> <address> <port> ...] (rfc5245 15.2)
+static char *parse_ice_remote_candidates(SdpMedia *media, char *s)
+{
+    enum { RC_COMPID, RC_ADDR, RC_PORT } st = RC_COMPID;
+    size_t                line_len;
+    char                 *line_end = skip_till_next_line(s, line_len), *next = s, *param = s;
+    SdpIceRemoteCandidate rc;
+
+    while (param < s + line_len) {
+        next = parse_until(param, line_end, ' ');
+        if ((next - s) > (int)line_len)
+            next -= (next - s) - line_len - 1;
+        if (param == next)
+            break;
+        string data(param, int(next - param) - 1);
+        switch (st) {
+        case RC_COMPID:
+            if (!str2int(data, rc.comp_id)) {
+                ERROR("invalid component id of remote-candidates attribute %s", data.c_str());
+                media->ice_remote_candidates.clear();
+                return line_end;
+            }
+            st = RC_ADDR;
+            break;
+        case RC_ADDR:
+            rc.conn.network  = NT_IN;
+            rc.conn.address  = data;
+            rc.conn.addrType = data.find(':') != string::npos ? AT_V6 : AT_V4;
+            st               = RC_PORT;
+            break;
+        case RC_PORT:
+            if (!str2int(data, rc.conn.port)) {
+                ERROR("invalid port of remote-candidates attribute %s", data.c_str());
+                media->ice_remote_candidates.clear();
+                return line_end;
+            }
+            media->ice_remote_candidates.push_back(rc);
+            DBG("SDP: got ice remote candidate: %s", rc.print().c_str());
+            st = RC_COMPID;
+            break;
+        }
+        param = next;
+    }
+    if (st != RC_COMPID) {
+        ERROR("incomplete remote-candidates attribute");
+        media->ice_remote_candidates.clear();
     }
     return line_end;
 }

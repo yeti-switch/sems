@@ -1558,6 +1558,48 @@ TEST(SdpParser, ICECandidatesParsingTest)
     ASSERT_EQ(sdp_str, sdp_out);
 }
 
+TEST(SdpParser, ICERemoteCandidatesParsingTest)
+{
+    string sdp_str = "v=0\r\n"
+                     "o=- 1 1 IN IP4 192.168.0.110\r\n"
+                     "s=-\r\n"
+                     "c=IN IP4 192.168.0.110\r\n"
+                     "t=0 0\r\n"
+                     "m=audio 11111 RTP/AVP 0\r\n"
+                     "a=ice-pwd:K9jMdzkyw8QdZMLCC+W9Axes\r\n"
+                     "a=ice-ufrag:nkQC\r\n"
+                     "a=candidate:3019838621 1 UDP 2122260223 192.168.0.110 11111 typ host\r\n"
+                     "a=remote-candidates:1 10.0.0.1 20000 2 2001:db8::1 20001\r\n"
+                     "a=ptime:20\r\n"
+                     "a=sendrecv\r\n"
+                     "a=direction:both\r\n";
+    AmSdp  sdp;
+    ASSERT_EQ(sdp.parse(sdp_str.c_str()), 0);
+
+    const auto &rc = sdp.media[0].ice_remote_candidates;
+    ASSERT_EQ(rc.size(), 2);
+    ASSERT_EQ(rc[0].comp_id, 1);
+    ASSERT_EQ(rc[0].conn.address, "10.0.0.1");
+    ASSERT_EQ(rc[0].conn.port, 20000);
+    ASSERT_EQ(rc[0].conn.addrType, AT_V4);
+    ASSERT_EQ(rc[1].comp_id, 2);
+    ASSERT_EQ(rc[1].conn.address, "2001:db8::1");
+    ASSERT_EQ(rc[1].conn.port, 20001);
+    ASSERT_EQ(rc[1].conn.addrType, AT_V6);
+
+    // malformed: not a multiple of three tokens
+    AmSdp bad;
+    ASSERT_EQ(bad.parse("v=0\r\n"
+                        "o=- 1 1 IN IP4 127.0.0.1\r\n"
+                        "s=-\r\n"
+                        "c=IN IP4 127.0.0.1\r\n"
+                        "t=0 0\r\n"
+                        "m=audio 1 RTP/AVP 0\r\n"
+                        "a=remote-candidates:1 10.0.0.1\r\n"),
+              0);
+    ASSERT_TRUE(bad.media[0].ice_remote_candidates.empty());
+}
+
 TEST(SdpParser, ZeroAdvertizedRate)
 {
     string sdp_str = "v=0\r\n"

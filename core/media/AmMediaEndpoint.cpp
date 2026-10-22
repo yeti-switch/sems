@@ -548,6 +548,7 @@ void AmMediaEndpoint::applyIceParams(SdpMedia &sdp_media)
         sdp_media.ice_pwd.clear();
         sdp_media.ice_ufrag.clear();
         sdp_media.ice_candidate.clear();
+        sdp_media.ice_remote_candidates.clear();
     }
 }
 

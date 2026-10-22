@@ -239,6 +239,21 @@ struct SdpIceCandidate {
 };
 
 /**
+ * \brief  sdp remote candidate
+ */
+struct SdpIceRemoteCandidate {
+    int           comp_id;
+    SdpConnection conn;
+
+    SdpIceRemoteCandidate()
+        : comp_id(0)
+    {
+    }
+
+    string print() const;
+};
+
+/**
  * \brief sdp payload
  *
  * this binds together pt, name, rate and parameters
@@ -410,10 +425,11 @@ struct SdpMedia {
     SdpZrtpHash zrtp_hash;
 #endif /*WITH_ZRTP*/
     // ice attribute
-    bool                         is_ice;
-    string                       ice_pwd;
-    string                       ice_ufrag;
-    std::vector<SdpIceCandidate> ice_candidate;
+    bool                               is_ice;
+    string                             ice_pwd;
+    string                             ice_ufrag;
+    std::vector<SdpIceCandidate>       ice_candidate;
+    std::vector<SdpIceRemoteCandidate> ice_remote_candidates;
 
     std::vector<SdpAttribute> attributes; // unknown attributes
 
