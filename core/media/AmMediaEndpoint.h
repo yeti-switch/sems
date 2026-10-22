@@ -199,6 +199,7 @@ class AmMediaEndpoint
     SSLKeyLogger *getSklfile() const { return ssl_key_log_file; }
     void          setSklfile(SSLKeyLogger *l);
     bool          iceUpdatedOfferNeeded();
+    void          onIceSelectionDropped();
 #ifdef WITH_ZRTP
     zrtpContext *getZrtpContext() { return &zrtp_context; }
     void         initZrtp();

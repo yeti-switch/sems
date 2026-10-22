@@ -1459,8 +1459,10 @@ void AmSession::sendIceUpdatedOffer()
 {
     if (!ice_updated_offer_pending || sess_stopped.get())
         return;
-    if (dlg->getUASPendingInv())
+    if (dlg->getUASPendingInv()) {
+        DBG("ICE: updated offer deferred, transaction pending");
         return;
+    }
 
     bool needed = false;
     forEachRtpStream([&](AmRtpAudio *stream, MediaType, TransProt) {
@@ -1472,6 +1474,7 @@ void AmSession::sendIceUpdatedOffer()
     });
 
     if (!needed) { // selection matched the defaults meanwhile (e.g. by the peer's re-INVITE)
+        DBG("ICE: updated offer is not needed anymore");
         ice_updated_offer_pending = false;
         return;
     }

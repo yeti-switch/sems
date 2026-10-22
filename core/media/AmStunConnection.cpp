@@ -262,8 +262,8 @@ bool IceContext::isUseCandidate(AmStunConnection *conn)
 void IceContext::failedCandidate(AmStunConnection *)
 {
     switch (state) {
+    case ICE_KEEP_ALIVE: endpoint->onIceSelectionDropped(); [[fallthrough]];
     case ICE_NOMINATIONS:
-    case ICE_KEEP_ALIVE:
     {
         setState(ICE_NOMINATIONS);
         setCurrentCandidate(nullptr);

@@ -545,6 +545,12 @@ bool AmMediaEndpoint::getIceSelectedPairs(IcePair selected[MAX_TRANSPORT_TYPE])
     return has_context;
 }
 
+void AmMediaEndpoint::onIceSelectionDropped()
+{
+    for (auto &p : ice_selected_pair)
+        p = IcePair{};
+}
+
 bool AmMediaEndpoint::iceUpdatedOfferNeeded()
 {
     IcePair selected[MAX_TRANSPORT_TYPE];
@@ -1250,8 +1256,7 @@ void AmMediaEndpoint::clearEstablished()
     media_established_fired = false;
     media_setup_start       = std::chrono::steady_clock::now();
     iterateTransports([](AmMediaTransport *tr) { tr->clearEstablish(); });
-    for (auto &p : ice_selected_pair)
-        p = IcePair{};
+    onIceSelectionDropped();
 }
 
 void AmMediaEndpoint::resetMediaSetupTimer()
