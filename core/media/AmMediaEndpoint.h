@@ -96,6 +96,7 @@ class AmMediaEndpoint
     void         setCurrentTransport(AmMediaTransport *transport);
     void         initIce(bool use_rtcp);
     void         setIceDefaultPair(int transport_type, const string &laddr, int lport, const string &raddr, int rport);
+    bool         getIceSelectedPairs(IcePair selected[MAX_TRANSPORT_TYPE]);
     void         checkIceCompleted();
 
   public:
@@ -188,7 +189,7 @@ class AmMediaEndpoint
     IceContext   *getIceContext(uint8_t tt);
     DtlsContext  *getDtlsContext(uint8_t tt);
     void          initDtls(uint8_t tt, bool client);
-    void          applyIceParams(SdpMedia &m);
+    void          applyIceParams(SdpMedia &m, bool offer, bool ice_restart = false);
     void          onSrtpKeysAvailable(int tt, uint16_t profile, const string &lk, const string &rk);
     void          allowStunConnection(AmMediaTransport *t, sockaddr_storage *ra, int prio);
     void          allowStunPair(AmMediaTransport *t, sockaddr_storage *ra);
