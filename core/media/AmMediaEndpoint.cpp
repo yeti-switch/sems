@@ -214,6 +214,9 @@ void AmMediaEndpoint::setLocalIP(AddressType addrtype)
         transports = &ip6_transports;
     }
 
+    if (isIceCompleted())
+        return;
+
     for (auto tr : *transports) {
         if (tr->getTransportType() == RTP_TRANSPORT)
             cur_rtp_trans = tr;

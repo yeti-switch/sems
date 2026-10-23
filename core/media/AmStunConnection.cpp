@@ -125,8 +125,14 @@ void IceContext::removeConnection(AmStunConnection *conn)
 void IceContext::useCandidate(AmStunConnection *conn)
 {
     switch (state) {
-    case ICE_NOMINATIONS:
     case ICE_KEEP_ALIVE:
+    {
+        AmLock lock(pairs_mut);
+        if (pair_allowed && conn == current_candidate.get())
+            break;
+    }
+        [[fallthrough]];
+    case ICE_NOMINATIONS:
         setCurrentCandidate(conn);
         allowStunPair();
         break;
@@ -741,9 +747,12 @@ void AmStunConnection::allow_candidate(bool use_candidate)
         state = PAIR_SUCCEEDED;
         recordResult(PAIR_SUCCEEDED);
         break;
-    case PAIR_FAILED:    state = PAIR_WAITING; break;
-    case PAIR_FROZEN:
-    case PAIR_SUCCEEDED: return;
+    case PAIR_FAILED: state = PAIR_WAITING; break;
+    case PAIR_FROZEN: return;
+    case PAIR_SUCCEEDED:
+        if (use_candidate)
+            context->useCandidate(this);
+        return;
     }
     CLASS_DBG("stun pair %s:%d", getRHost().c_str(), getRPort());
     context->allowCandidate(this);
