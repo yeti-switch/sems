@@ -104,9 +104,9 @@ class IceContext {
 
     sockaddr_storage *getAllowedIceAddr(int family);
     bool              isPairAllowed();
-    /** nominated pair in keep-alive; mark_selected remembers it as sent in an offer */
-    bool getSelectedPair(AmMediaTransport *&t, sockaddr_storage &raddr, bool mark_selected = false);
-    void setDefaultPair(const string &laddr, int lport, const string &raddr, int rport);
+    bool              getSelectedPair(AmMediaTransport *t, sockaddr_storage &raddr);
+    void              markSelectedPair();
+    void              setDefaultPair(const string &laddr, int lport, const string &raddr, int rport);
 
     // clang-format off
     using Selection = std::tuple<bool /* completed */,

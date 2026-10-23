@@ -595,33 +595,27 @@ void AmMediaEndpoint::applyIceParams(SdpMedia &sdp_media, bool offer, bool ice_r
         }
         sdp_media.ice_ufrag = ice_ufrag;
 
-        bool              completed = !ice_restart && isIceCompleted();
-        AmMediaTransport *local;
-        sockaddr_storage  remote;
+        bool completed = !ice_restart && isIceCompleted();
         iterateTransports([&](auto tr) {
+            IceContext      *ctx = ice_context[tr->getTransportType()].get();
+            sockaddr_storage remote;
             // ICE completed (RFC 5245 9.1.2.2): only the candidates of the selected pairs
-            if (completed) {
-                auto &ctx = ice_context[tr->getTransportType()];
-                if (!ctx || !ctx->getSelectedPair(local, remote) || local != tr)
-                    return;
-            }
+            if (completed && (!ctx || !ctx->getSelectedPair(tr, remote)))
+                return;
             SdpIceCandidate candidate;
             tr->prepareIceCandidate(candidate);
             sdp_media.ice_candidate.push_back(candidate);
+            if (!completed || !offer || isIceControlled())
+                return;
+            ctx->markSelectedPair();
+            SdpIceRemoteCandidate rc;
+            rc.comp_id       = tr->getTransportType() == RTCP_TRANSPORT ? 2 : 1;
+            rc.conn.network  = NT_IN;
+            rc.conn.addrType = remote.ss_family == AF_INET6 ? AT_V6 : AT_V4;
+            rc.conn.address  = am_inet_ntop(&remote);
+            rc.conn.port     = am_get_port(&remote);
+            sdp_media.ice_remote_candidates.push_back(rc);
         });
-        if (completed && offer && !isIceControlled()) {
-            for (int t = 0; t < MAX_TRANSPORT_TYPE; t++) {
-                if (!ice_context[t] || !ice_context[t]->getSelectedPair(local, remote, true))
-                    continue;
-                SdpIceRemoteCandidate rc;
-                rc.comp_id       = t == RTCP_TRANSPORT ? 2 : 1;
-                rc.conn.network  = NT_IN;
-                rc.conn.addrType = remote.ss_family == AF_INET6 ? AT_V6 : AT_V4;
-                rc.conn.address  = am_inet_ntop(&remote);
-                rc.conn.port     = am_get_port(&remote);
-                sdp_media.ice_remote_candidates.push_back(rc);
-            }
-        }
     } else {
         sdp_media.is_ice = false;
         sdp_media.ice_pwd.clear();

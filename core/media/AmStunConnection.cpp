@@ -208,16 +208,20 @@ bool IceContext::isPairAllowed()
     return pair_allowed;
 }
 
-bool IceContext::getSelectedPair(AmMediaTransport *&t, sockaddr_storage &raddr, bool mark_selected)
+bool IceContext::getSelectedPair(AmMediaTransport *t, sockaddr_storage &raddr)
 {
     AmLock lock(pairs_mut);
-    if (state != ICE_KEEP_ALIVE || !current_candidate)
+    if (state != ICE_KEEP_ALIVE || !current_candidate || current_candidate->getTransport() != t)
         return false;
-    t = current_candidate->getTransport();
     current_candidate->getRAddr(&raddr);
-    if (mark_selected)
-        selected_pair = current_candidate.get();
     return true;
+}
+
+void IceContext::markSelectedPair()
+{
+    AmLock lock(pairs_mut);
+    if (state == ICE_KEEP_ALIVE)
+        selected_pair = current_candidate.get();
 }
 
 void IceContext::setDefaultPair(const string &laddr, int lport, const string &raddr, int rport)
