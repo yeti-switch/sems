@@ -261,11 +261,12 @@ IceContext::Selection IceContext::getSelection()
 AmMediaTransport *IceContext::getCurrentTransport()
 {
     AmLock lock(pairs_mut);
-    for (auto &pair : pairs) {
-        AmStunConnection::PairState state = pair.second->getState();
-        if (state == AmStunConnection::PAIR_SUCCEEDED) {
-            return pair.second->getTransport();
-        }
+    if (current_candidate)
+        return current_candidate->getTransport();
+    // not nominated yet: the succeeded pair of the highest priority, like getNominatedPair()
+    for (auto pair = pairs.rbegin(); pair != pairs.rend(); pair++) {
+        if (pair->second->getState() == AmStunConnection::PAIR_SUCCEEDED)
+            return pair->second->getTransport();
     }
     return nullptr;
 }
