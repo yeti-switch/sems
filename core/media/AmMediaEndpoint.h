@@ -87,6 +87,7 @@ class AmMediaEndpoint
     void         setCurrentTransport(AmMediaTransport *transport);
     void         initIce(bool use_rtcp);
     bool         isIceCompleted();
+    void         fillRtcpConn(SdpMedia &m);
     void         checkIceCompleted();
 
   public:

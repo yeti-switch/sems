@@ -322,7 +322,21 @@ void AmMediaEndpoint::fillSdpOffer(SdpMedia &m)
     if (cur_rtp_trans)
         cur_rtp_trans->getSdpOffer(m);
 
+    fillRtcpConn(m);
     applyIceParams(m, true);
+}
+
+void AmMediaEndpoint::fillRtcpConn(SdpMedia &m)
+{
+    m.rtcp_conn = SdpConnection();
+    if (!m.rtcp_port || !cur_rtp_trans || !cur_rtcp_trans)
+        return;
+    string rtcp_address = cur_rtcp_trans->getLocalAddress();
+    if (rtcp_address == cur_rtp_trans->getLocalAddress())
+        return;
+    m.rtcp_conn.network  = NT_IN;
+    m.rtcp_conn.addrType = cur_rtcp_trans->getLocalAddrType();
+    m.rtcp_conn.address  = rtcp_address;
 }
 
 void AmMediaEndpoint::fillSdpAnswer(const SdpMedia &offer, SdpMedia &answer)
@@ -337,6 +351,7 @@ void AmMediaEndpoint::fillSdpAnswer(const SdpMedia &offer, SdpMedia &answer)
     if (cur_rtp_trans)
         cur_rtp_trans->getSdpAnswer(offer, answer);
 
+    fillRtcpConn(answer);
     bool ice_restart =
         !ice_remote_ufrag.empty() && (offer.ice_ufrag != ice_remote_ufrag || offer.ice_pwd != ice_remote_pwd);
     applyIceParams(answer, false, ice_restart);
@@ -930,9 +945,9 @@ int AmMediaEndpoint::init(const AmSdp &local, const AmSdp &remote, int media_ind
             getIceContext(RTP_TRANSPORT)->setDefaultPair(local_address, local_media.port, address, port);
             if (use_rtcp)
                 getIceContext(RTCP_TRANSPORT)
-                    ->setDefaultPair(local_address,
-                                     local_media.rtcp_port ? local_media.rtcp_port : local_media.port + 1, rtcp_address,
-                                     rtcp_port);
+                    ->setDefaultPair(
+                        local_media.rtcp_conn.address.empty() ? local_address : local_media.rtcp_conn.address,
+                        local_media.rtcp_port ? local_media.rtcp_port : local_media.port + 1, rtcp_address, rtcp_port);
             getIceContext(RTP_TRANSPORT)->initContext();
             if (use_rtcp)
                 getIceContext(RTCP_TRANSPORT)->initContext();
