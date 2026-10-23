@@ -65,15 +65,6 @@ class AmMediaEndpoint
     zrtpContext zrtp_context;
 #endif
 
-    /** candidate pair as seen by the endpoint: local transport + remote address */
-    struct IcePair {
-        AmMediaTransport *local = nullptr;
-        sockaddr_storage  remote{};
-        bool              operator==(const IcePair &o) const;
-    };
-    IcePair ice_default_pair[MAX_TRANSPORT_TYPE];  // m=/c=/a=rtcp of the last offer/answer (RFC 5245 8.1.2)
-    IcePair ice_selected_pair[MAX_TRANSPORT_TYPE]; // last selection reported with AmIceCompletedEvent
-
     // --- transport set (primary = cur_rtp_trans) ---
     std::vector<AmMediaTransport *> ip4_transports, ip6_transports;
     AmMediaTransport               *cur_rtp_trans;
@@ -95,8 +86,7 @@ class AmMediaEndpoint
     virtual void initIP6Transport();
     void         setCurrentTransport(AmMediaTransport *transport);
     void         initIce(bool use_rtcp);
-    void         setIceDefaultPair(int transport_type, const string &laddr, int lport, const string &raddr, int rport);
-    bool         getIceSelectedPairs(IcePair selected[MAX_TRANSPORT_TYPE]);
+    bool         isIceCompleted();
     void         checkIceCompleted();
 
   public:
@@ -199,7 +189,6 @@ class AmMediaEndpoint
     SSLKeyLogger *getSklfile() const { return ssl_key_log_file; }
     void          setSklfile(SSLKeyLogger *l);
     bool          iceUpdatedOfferNeeded();
-    void          onIceSelectionDropped();
 #ifdef WITH_ZRTP
     zrtpContext *getZrtpContext() { return &zrtp_context; }
     void         initZrtp();

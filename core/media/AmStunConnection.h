@@ -8,6 +8,7 @@
 #include <stun/stunreader.h>
 #include <string>
 #include <optional>
+#include <tuple>
 #include <vector>
 #include <sys/time.h>
 
@@ -80,6 +81,9 @@ class IceContext {
     bool               fail_notified;
     bool               pair_allowed;
 
+    // RFC 5245 8.1.2: pair of m=/c= of the last offer/answer and the pair sent in the last controlling offer;
+    AmStunConnection *default_pair, *selected_pair;
+
     /** set deadline (abs-ms in wheeltimer::unix_ms_clock); 0 disarms */
     void setConnectivityCheckTimer(unsigned long long deadline_ms);
     /** post AmIceConnectivityFailedEvent to the session (once per context) */
@@ -98,7 +102,16 @@ class IceContext {
 
     sockaddr_storage *getAllowedIceAddr(int family);
     bool              isPairAllowed();
-    bool              getSelectedPair(AmMediaTransport *&t, sockaddr_storage &raddr);
+    /** nominated pair in keep-alive; mark_selected remembers it as sent in an offer */
+    bool getSelectedPair(AmMediaTransport *&t, sockaddr_storage &raddr, bool mark_selected = false);
+    void setDefaultPair(const string &laddr, int lport, const string &raddr, int rport);
+
+    // clang-format off
+    using Selection = std::tuple<bool /* completed */,
+                                 bool /* default pair changed */,
+                                 bool /* selected pair changed */>;
+    // clang-format on
+    Selection         getSelection();
     AmMediaTransport *getCurrentTransport();
 
     int              getType() { return type; }

@@ -512,75 +512,50 @@ void AmMediaEndpoint::onCloseDtlsSession(uint8_t transport_type)
     });
 }
 
-bool AmMediaEndpoint::IcePair::operator==(const IcePair &o) const
-{
-    return local == o.local && remote.ss_family == o.remote.ss_family &&
-           AmStreamConnection::isSameAddr(&remote, &o.remote);
-}
-
-void AmMediaEndpoint::setIceDefaultPair(int transport_type, const string &laddr, int lport, const string &raddr,
-                                        int rport)
-{
-    IcePair &p = ice_default_pair[transport_type];
-    p.local    = nullptr;
-    iterateTransports([&](AmMediaTransport *tr) {
-        if (tr->getTransportType() == transport_type && tr->getLocalPort() == lport && tr->getLocalAddress() == laddr)
-            p.local = tr;
-    });
-    memset(&p.remote, 0, sizeof(p.remote));
-    if (am_inet_pton(raddr.c_str(), &p.remote)) // FQDN stays unset and never matches
-        am_set_port(&p.remote, rport);
-}
-
-bool AmMediaEndpoint::getIceSelectedPairs(IcePair selected[MAX_TRANSPORT_TYPE])
+bool AmMediaEndpoint::isIceCompleted()
 {
     bool has_context = false; // no contexts before the first init(): ICE is not completed
-    for (int t = 0; t < MAX_TRANSPORT_TYPE; t++) {
-        if (!ice_context[t])
+    for (auto &ctx : ice_context) {
+        if (!ctx)
             continue;
         has_context = true;
-        if (!ice_context[t]->getSelectedPair(selected[t].local, selected[t].remote))
+        if (!std::get<0>(ctx->getSelection()))
             return false;
     }
     return has_context;
 }
 
-void AmMediaEndpoint::onIceSelectionDropped()
-{
-    for (auto &p : ice_selected_pair)
-        p = IcePair{};
-}
-
 bool AmMediaEndpoint::iceUpdatedOfferNeeded()
 {
-    IcePair selected[MAX_TRANSPORT_TYPE];
-    if (isIceControlled() || !getIceSelectedPairs(selected))
+    if (isIceControlled())
         return false;
-    for (int t = 0; t < MAX_TRANSPORT_TYPE; t++)
-        if (ice_context[t] && !(selected[t] == ice_default_pair[t]))
-            return true;
-    return false;
+    bool needed = false;
+    for (auto &ctx : ice_context) {
+        if (!ctx)
+            continue;
+        auto [completed, default_changed, selected_changed] = ctx->getSelection();
+        if (!completed)
+            return false;
+        needed |= default_changed && selected_changed; // not in the last offer yet
+    }
+    return needed;
 }
 
-// post AmIceCompletedEvent once every component has a selected pair; called on each pair selection
+// post AmIceCompletedEvent when every component has a selected pair; called on each pair selection.
 void AmMediaEndpoint::checkIceCompleted()
 {
-    IcePair selected[MAX_TRANSPORT_TYPE];
-    bool    changed = false, default_changed = false;
-    if (!getIceSelectedPairs(selected))
-        return;
-    for (int t = 0; t < MAX_TRANSPORT_TYPE; t++) {
-        if (!ice_context[t])
+    bool has_context = false, default_changed = false;
+    for (auto &ctx : ice_context) {
+        if (!ctx)
             continue;
-        if (!(selected[t] == ice_selected_pair[t]))
-            changed = true;
-        if (!(selected[t] == ice_default_pair[t]))
-            default_changed = true;
+        has_context                                             = true;
+        auto [completed, ctx_default_changed, selected_changed] = ctx->getSelection();
+        if (!completed)
+            return;
+        default_changed |= ctx_default_changed;
     }
-    if (!changed || !session)
+    if (!has_context || !session)
         return;
-
-    std::copy(std::begin(selected), std::end(selected), std::begin(ice_selected_pair));
 
     CLASS_DBG("ICE completed: controlling %d, default pair changed %d", !isIceControlled(), default_changed);
     std::vector<int> indexes;
@@ -620,26 +595,30 @@ void AmMediaEndpoint::applyIceParams(SdpMedia &sdp_media, bool offer, bool ice_r
         }
         sdp_media.ice_ufrag = ice_ufrag;
 
-        IcePair selected[MAX_TRANSPORT_TYPE];
-        bool    completed = !ice_restart && getIceSelectedPairs(selected);
+        bool              completed = !ice_restart && isIceCompleted();
+        AmMediaTransport *local;
+        sockaddr_storage  remote;
         iterateTransports([&](auto tr) {
             // ICE completed (RFC 5245 9.1.2.2): only the candidates of the selected pairs
-            if (completed && tr != selected[RTP_TRANSPORT].local && tr != selected[RTCP_TRANSPORT].local)
-                return;
+            if (completed) {
+                auto &ctx = ice_context[tr->getTransportType()];
+                if (!ctx || !ctx->getSelectedPair(local, remote) || local != tr)
+                    return;
+            }
             SdpIceCandidate candidate;
             tr->prepareIceCandidate(candidate);
             sdp_media.ice_candidate.push_back(candidate);
         });
         if (completed && offer && !isIceControlled()) {
             for (int t = 0; t < MAX_TRANSPORT_TYPE; t++) {
-                if (!ice_context[t])
+                if (!ice_context[t] || !ice_context[t]->getSelectedPair(local, remote, true))
                     continue;
                 SdpIceRemoteCandidate rc;
                 rc.comp_id       = t == RTCP_TRANSPORT ? 2 : 1;
                 rc.conn.network  = NT_IN;
-                rc.conn.addrType = selected[t].remote.ss_family == AF_INET6 ? AT_V6 : AT_V4;
-                rc.conn.address  = am_inet_ntop(&selected[t].remote);
-                rc.conn.port     = am_get_port(&selected[t].remote);
+                rc.conn.addrType = remote.ss_family == AF_INET6 ? AT_V6 : AT_V4;
+                rc.conn.address  = am_inet_ntop(&remote);
+                rc.conn.port     = am_get_port(&remote);
                 sdp_media.ice_remote_candidates.push_back(rc);
             }
         }
@@ -937,13 +916,6 @@ int AmMediaEndpoint::init(const AmSdp &local, const AmSdp &remote, int media_ind
                     getIceContext(RTCP_TRANSPORT)->reset();
             }
 
-            string local_address = local_media.conn.address.empty() ? local.conn.address : local_media.conn.address;
-            setIceDefaultPair(RTP_TRANSPORT, local_address, local_media.port, address, port);
-            if (use_rtcp)
-                setIceDefaultPair(RTCP_TRANSPORT, local_address,
-                                  local_media.rtcp_port ? local_media.rtcp_port : local_media.port + 1, rtcp_address,
-                                  rtcp_port);
-
             iterateTransports([&](auto tr) {
                 CLASS_DBG("init ice endpoint:%p, state:%s", to_void(this), tr->state2str());
                 auto conn_factory    = tr->getConnFactory();
@@ -956,6 +928,14 @@ int AmMediaEndpoint::init(const AmSdp &local, const AmSdp &remote, int media_ind
                     conn_factory->store_srtp_cred(local_media, remote_media);
                 tr->template updateState<AmMediaIceState>(args);
             });
+            // stun connections exist now: remember the pair of m=/c= (RFC 5245 8.1.2)
+            string local_address = local_media.conn.address.empty() ? local.conn.address : local_media.conn.address;
+            getIceContext(RTP_TRANSPORT)->setDefaultPair(local_address, local_media.port, address, port);
+            if (use_rtcp)
+                getIceContext(RTCP_TRANSPORT)
+                    ->setDefaultPair(local_address,
+                                     local_media.rtcp_port ? local_media.rtcp_port : local_media.port + 1, rtcp_address,
+                                     rtcp_port);
             getIceContext(RTP_TRANSPORT)->initContext();
             if (use_rtcp)
                 getIceContext(RTCP_TRANSPORT)->initContext();
@@ -1256,7 +1236,6 @@ void AmMediaEndpoint::clearEstablished()
     media_established_fired = false;
     media_setup_start       = std::chrono::steady_clock::now();
     iterateTransports([](AmMediaTransport *tr) { tr->clearEstablish(); });
-    onIceSelectionDropped();
 }
 
 void AmMediaEndpoint::resetMediaSetupTimer()

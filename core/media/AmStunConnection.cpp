@@ -72,6 +72,8 @@ IceContext::IceContext(AmMediaEndpoint *endpoint, int type)
     , fail_deadline_ms(0)
     , fail_notified(false)
     , pair_allowed(false)
+    , default_pair(nullptr)
+    , selected_pair(nullptr)
 {
     CLASS_DBG("IceContext(): transport type %d", type);
     stun_processor::instance()->add_ice_context(this);
@@ -108,6 +110,10 @@ void IceContext::removeConnection(AmStunConnection *conn)
             break;
         }
     }
+    if (conn == default_pair)
+        default_pair = nullptr;
+    if (conn == selected_pair)
+        selected_pair = nullptr;
 }
 
 void IceContext::useCandidate(AmStunConnection *conn)
@@ -196,14 +202,44 @@ bool IceContext::isPairAllowed()
     return pair_allowed;
 }
 
-bool IceContext::getSelectedPair(AmMediaTransport *&t, sockaddr_storage &raddr)
+bool IceContext::getSelectedPair(AmMediaTransport *&t, sockaddr_storage &raddr, bool mark_selected)
 {
     AmLock lock(pairs_mut);
     if (state != ICE_KEEP_ALIVE || !current_candidate)
         return false;
     t = current_candidate->getTransport();
     current_candidate->getRAddr(&raddr);
+    if (mark_selected)
+        selected_pair = current_candidate.get();
     return true;
+}
+
+void IceContext::setDefaultPair(const string &laddr, int lport, const string &raddr, int rport)
+{
+    AmLock lock(pairs_mut);
+    default_pair = nullptr; // stays unset when c= is not among the candidates (FQDN)
+    for (auto &pair : pairs) {
+        auto conn = pair.second.get();
+        auto tr   = conn->getTransport();
+        if (tr->getLocalPort() == lport && tr->getLocalAddress() == laddr && conn->getRHost() == raddr &&
+            conn->getRPort() == rport)
+        {
+            default_pair = conn;
+            break;
+        }
+    }
+}
+
+IceContext::Selection IceContext::getSelection()
+{
+    AmLock lock(pairs_mut);
+    if (state != ICE_KEEP_ALIVE || !current_candidate)
+        return { false, false, false };
+    return {
+        true,                                    /* nominated pair checked */
+        current_candidate.get() != default_pair, /* differs from the default pair */
+        current_candidate.get() != selected_pair /* differs from the pair sent in the last offer */
+    };
 }
 
 AmMediaTransport *IceContext::getCurrentTransport()
@@ -235,8 +271,10 @@ void IceContext::reset()
         }
         pairs.clear();
         current_candidate.reset(nullptr);
-        pair_allowed = false;
-        state        = ICE_INITIAL;
+        pair_allowed  = false;
+        default_pair  = nullptr;
+        selected_pair = nullptr;
+        state         = ICE_INITIAL;
     }
 
     setConnectivityCheckTimer(0);
@@ -262,7 +300,7 @@ bool IceContext::isUseCandidate(AmStunConnection *conn)
 void IceContext::failedCandidate(AmStunConnection *)
 {
     switch (state) {
-    case ICE_KEEP_ALIVE: endpoint->onIceSelectionDropped(); [[fallthrough]];
+    case ICE_KEEP_ALIVE:
     case ICE_NOMINATIONS:
     {
         setState(ICE_NOMINATIONS);
