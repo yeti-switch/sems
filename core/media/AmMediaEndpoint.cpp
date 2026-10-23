@@ -580,7 +580,7 @@ void AmMediaEndpoint::checkIceCompleted()
     indexes.reserve(streams.size());
     for (auto *s : streams)
         indexes.push_back(s->getSdpMediaIndex());
-    session->postEvent(new AmIceCompletedEvent(std::move(indexes), !isIceControlled(), default_changed));
+    session->postIceCompleted(std::move(indexes), !isIceControlled(), default_changed);
 }
 
 void AmMediaEndpoint::initIce(bool use_rtcp)

@@ -544,6 +544,9 @@ class AmSession : public virtual AmObject,
      */
     virtual void updateUACTransCSeq(unsigned int old_cseq, unsigned int new_cseq) {}
 
+    /** media thread: posts AmIceCompletedEvent when the updated offer is enabled (ice_updated_offer) */
+    virtual void postIceCompleted(std::vector<int> media_indexes, bool controlling, bool default_pair_changed);
+
     /* ----         Householding                              ---- */
 
     /**

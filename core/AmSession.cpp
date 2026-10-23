@@ -1450,6 +1450,13 @@ void AmSession::onIceCompleted(const std::vector<int> &, bool controlling, bool 
     sendIceUpdatedOffer();
 }
 
+void AmSession::postIceCompleted(std::vector<int> media_indexes, bool controlling, bool default_pair_changed)
+{
+    if (!AmConfig.ice_updated_offer)
+        return;
+    postEvent(new AmIceCompletedEvent(std::move(media_indexes), controlling, default_pair_changed));
+}
+
 void AmSession::onTransFinished()
 {
     sendIceUpdatedOffer();
