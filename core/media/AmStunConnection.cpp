@@ -97,11 +97,11 @@ void IceContext::updateConnection(AmStunConnection *conn)
               conn->getTransport()->getLocalPort(), conn->getRHost().c_str(), conn->getRPort(), conn->getPriority());
 
     ReferenceGuard guard(conn);
-    removeConnection(conn);
+    erasePair(conn);
     addConnection(conn);
 }
 
-void IceContext::removeConnection(AmStunConnection *conn)
+void IceContext::erasePair(AmStunConnection *conn)
 {
     AmLock lock(pairs_mut);
     for (auto pair = pairs.begin(); pair != pairs.end(); pair++) {
@@ -110,6 +110,12 @@ void IceContext::removeConnection(AmStunConnection *conn)
             break;
         }
     }
+}
+
+void IceContext::removeConnection(AmStunConnection *conn)
+{
+    erasePair(conn);
+    AmLock lock(pairs_mut);
     if (conn == default_pair)
         default_pair = nullptr;
     if (conn == selected_pair)

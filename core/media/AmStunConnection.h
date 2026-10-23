@@ -84,6 +84,8 @@ class IceContext {
     // RFC 5245 8.1.2: pair of m=/c= of the last offer/answer and the pair sent in the last controlling offer;
     AmStunConnection *default_pair, *selected_pair;
 
+    /** drop the pair from the list, pairs_mut held */
+    void erasePair(AmStunConnection *conn);
     /** set deadline (abs-ms in wheeltimer::unix_ms_clock); 0 disarms */
     void setConnectivityCheckTimer(unsigned long long deadline_ms);
     /** post AmIceConnectivityFailedEvent to the session (once per context) */
