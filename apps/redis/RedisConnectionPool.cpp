@@ -56,7 +56,7 @@ static void redis_request_cb_static(redisAsyncContext *, void *r, void *privdata
         DBG("redis_log: reply: %s", data.print().c_str());
 
     if (ctx->pool)
-        ctx->pool->process_internal_reply(ctx->c, result, ctx->user_data.release(), data);
+        ctx->pool->process_internal_reply(ctx->c, result, ctx->user_data.get(), data);
     else if (ctx->session_id.empty() == false)
         session_container->postEvent(ctx->session_id,
                                      new RedisReply(ctx->conn_id, result, data, ctx->user_data, ctx->user_type_id));
