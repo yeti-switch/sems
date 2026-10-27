@@ -48,6 +48,7 @@ class TesterConfig {
     int            stress_session_pairs_count;
     string         stress_media_codec;
     int            log_level;
+    int            finalize_log_level;
 };
 
 typedef singleton<TesterConfig> test_config;

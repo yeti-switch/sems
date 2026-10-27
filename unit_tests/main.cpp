@@ -121,7 +121,7 @@ int main(int argc, char **argv)
     ::testing::InitGoogleTest(&argc, argv);
     int ret = RUN_ALL_TESTS();
 
-    TesterLogFac::instance().setLogLevel(L_WARN);
+    TesterLogFac::instance().setLogLevel(test_config::instance()->finalize_log_level);
 
     worker_manager::instance()->dispose();
 

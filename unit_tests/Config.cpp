@@ -11,13 +11,16 @@ extern std::optional<int> parse_log_level(const std::string &level);
 #define PARAM_PAIRS_COUNT_NAME      "sessions_pairs_count"
 #define PARAM_ALLOW_PLUGINS_NAME    "allow_plugins"
 #define PARAM_LOG_LEVEL_NAME        "log_level"
+#define PARAM_FIN_LOG_LEVEL_NAME    "finalize_log_level"
 #define PARAM_HTTP_PORT_NAME        "port"
 #define PARAM_HTTP_DEST_NAME        "destination"
 
 #define SECTION_STRESS_NAME "stress"
 #define SECTION_MODULE_NAME "module"
 
-#define DEFAULT_LOG_LEVEL   "info"
+#define DEFAULT_LOG_LEVEL     "info"
+#define DEFAULT_FIN_LOG_LEVEL "warn"
+
 #define DEFAULT_DURATION    100
 #define DEFAULT_PAIRS_COUNT 200
 #define DEFAULT_PORT        6666
@@ -52,6 +55,7 @@ int TesterConfig::readConfiguration(const string &filePath)
     cfg_opt_t opt[] = { CFG_STR(PARAM_SEMS_CONFIG_PATH_NAME, AmLcConfig::instance().config_path.c_str(), CFGF_NONE),
                         CFG_STR(PARAM_SIG_INTERFACE_NAME, "", CFGF_NODEFAULT),
                         CFG_STR(PARAM_LOG_LEVEL_NAME, DEFAULT_LOG_LEVEL, CFGF_NONE),
+                        CFG_STR(PARAM_FIN_LOG_LEVEL_NAME, DEFAULT_FIN_LOG_LEVEL, CFGF_NONE),
                         CFG_STR_LIST(PARAM_ALLOW_PLUGINS_NAME, 0, CFGF_NODEFAULT),
                         CFG_SEC(SECTION_STRESS_NAME, stress, CFGF_NONE),
                         CFG_RAWSEC(SECTION_MODULE_NAME, CFGF_MULTI | CFGF_TITLE),
@@ -60,6 +64,7 @@ int TesterConfig::readConfiguration(const string &filePath)
     cfg_t *m_cfg;
     m_cfg = cfg_init(opt, 0);
     cfg_set_validate_func(m_cfg, PARAM_LOG_LEVEL_NAME, validate_log_func);
+    cfg_set_validate_func(m_cfg, PARAM_FIN_LOG_LEVEL_NAME, validate_log_func);
     if (!m_cfg)
         return -1;
 
@@ -87,6 +92,7 @@ int TesterConfig::readConfiguration(const string &filePath)
     }
     signalling_interface = cfg_getstr(m_cfg, PARAM_SIG_INTERFACE_NAME);
     log_level            = parse_log_level(cfg_getstr(m_cfg, PARAM_LOG_LEVEL_NAME)).value_or(L_INFO);
+    finalize_log_level   = parse_log_level(cfg_getstr(m_cfg, PARAM_FIN_LOG_LEVEL_NAME)).value_or(L_WARN);
 
     cfg_t *m_stress            = cfg_getsec(m_cfg, SECTION_STRESS_NAME);
     stress_session_duration    = cfg_getint(m_stress, PARAM_SESSION_DURATION_NAME);
