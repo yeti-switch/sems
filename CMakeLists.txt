@@ -306,7 +306,7 @@ add_definitions(-D_DEBUG)
 # use AddressSanitizer
 IF(USE_ADDRESS_SANITIZER)
     add_compile_options(-fsanitize=address -fno-omit-frame-pointer -O1)
-    link_libraries(-fsanitize=address)
+    link_libraries(-fsanitize=address -fsanitize-memory-track-origins=2)
 
     add_definitions(-DVALGRIND)
 ELSE(USE_ADDRESS_SANITIZER)
