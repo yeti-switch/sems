@@ -46,7 +46,8 @@ int AmTimerFd::settime(unsigned int usec, unsigned int repeat_usec)
 }
 
 AmThread::AmThread()
-    : _stopped(true)
+    : _td(0)
+    , _stopped(true)
     , _pid(0)
 {
 }
@@ -111,7 +112,7 @@ void AmThread::stop(bool join_afer_stop)
 {
     _m_td.lock();
 
-    if (is_stopped()) {
+    if (is_stopped() || !_td) {
         _m_td.unlock();
         return;
     }
@@ -126,7 +127,12 @@ void AmThread::stop(bool join_afer_stop)
     try {
         on_stop();
     } catch (...) {
+        DBG3("Thread %s %lu (%lu) got exception for on_stop()", thread_name, static_cast<unsigned long int>(_pid),
+             static_cast<unsigned long int>(_td));
     }
+
+    if (is_stopped())
+        return;
 
     if (join_afer_stop) {
         DBG3("join thread %lu", static_cast<unsigned long int>(_td));
