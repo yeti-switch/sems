@@ -268,34 +268,21 @@ RtpSecureContext::RtpSecureContext(AmMediaEndpoint *endpoint, const srtp_fingerp
 
 RtpSecureContext::~RtpSecureContext() noexcept
 {
-    if (pending_handshake_timer) {
-        pending_handshake_timer->invalidate();
-        dec_ref(pending_handshake_timer);
-    }
-
-    if (dtls_channel) {
-        delete dtls_channel;
-    }
+    destroyContext();
 }
 
 void RtpSecureContext::initContext(const string &host, int port, shared_ptr<dtls_conf> settings,
                                    bool reinit) noexcept(false)
 {
+    if (reinit)
+        destroyContext();
+
     AmLock lock(channelMutex);
-    if (!reinit && dtls_channel)
+    if (dtls_channel)
         return;
 
-    CLASS_DBG("init %s dtls context of endpoint(%p), dtls_channel - %p", settings->is_client() ? "client" : "server",
-              endpoint, dtls_channel);
-
-    if (dtls_channel) {
-        if (pending_handshake_timer) {
-            pending_handshake_timer->invalidate();
-            dec_ref(pending_handshake_timer);
-            pending_handshake_timer = nullptr;
-        }
-        delete dtls_channel;
-    }
+    CLASS_DBG("%sinit %s dtls context of endpoint(%p)", reinit ? "re" : "", settings->is_client() ? "client" : "server",
+              endpoint);
 
     try {
         dtls_settings = settings;
@@ -313,6 +300,22 @@ void RtpSecureContext::initContext(const string &host, int port, shared_ptr<dtls
     } catch (Botan::Exception &exc) {
         dtls_channel = 0;
         throw string("unforseen error in dtls: ") + exc.what();
+    }
+}
+
+void RtpSecureContext::destroyContext()
+{
+    if (pending_handshake_timer) {
+        pending_handshake_timer->invalidate();
+        dec_ref(pending_handshake_timer);
+        pending_handshake_timer = nullptr;
+    }
+
+    AmLock lock(channelMutex);
+    activated = false;
+    if (dtls_channel) {
+        delete dtls_channel;
+        dtls_channel = nullptr;
     }
 }
 

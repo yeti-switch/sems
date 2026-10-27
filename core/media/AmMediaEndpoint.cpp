@@ -58,10 +58,14 @@ AmMediaEndpoint::~AmMediaEndpoint()
     for (int i = 0; i < MAX_TRANSPORT_TYPE; i++) {
         if (ice_context[i])
             ice_context[i]->destroyContext();
+        if (dtls_context[i])
+            dtls_context[i]->destroyContext();
     }
     iterateTransports([](auto tr) { delete tr; });
-    for (int i = 0; i < MAX_TRANSPORT_TYPE; i++)
+    for (int i = 0; i < MAX_TRANSPORT_TYPE; i++) {
         ice_context[i].reset(nullptr);
+        dtls_context[i].reset(nullptr);
+    }
     ip4_transports.clear();
     ip6_transports.clear();
     if (ssl_key_log_file)

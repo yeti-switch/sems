@@ -158,6 +158,7 @@ struct DtlsContext {
     static srtp_fingerprint_p gen_fingerprint(class dtls_settings *settings);
     virtual void              initContext(const string &host, int port, shared_ptr<dtls_conf> settings,
                                           bool reinit = false) noexcept(false)                                     = 0;
+    virtual void              destroyContext()                                                                     = 0;
     virtual void              setCurrentConnection(AmDtlsConnection *conn) noexcept(false)                         = 0;
     virtual bool              onRecvData(AmDtlsConnection *conn, uint8_t *data, unsigned int size) noexcept(false) = 0;
     virtual bool              timer_check()                                                                        = 0;
@@ -195,6 +196,7 @@ class RtpSecureContext : public Botan::TLS::Callbacks, public DtlsContext {
 
     void initContext(const string &host, int port, shared_ptr<dtls_conf> settings,
                      bool reinit = false) noexcept(false) override;
+    void destroyContext() override;
     bool onRecvData(AmDtlsConnection *conn, uint8_t *data, unsigned int size) noexcept(false) override;
     bool timer_check() override;
     bool sendData(const uint8_t *data, unsigned int size) noexcept(false) override;
