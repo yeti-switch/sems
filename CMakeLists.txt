@@ -71,7 +71,7 @@ OPTION(SEMS_USE_GTEST         "Build with googletest" ON)
 OPTION(SEMS_USE_AMARG_STAT    "Use AmArg statistic" OFF)
 OPTION(DISABLE_DAEMON_MODE    "Disable daemon mode" ON)
 OPTION(USE_SYSTEMD            "Use systemd instead of SysV" ON)
-OPTION(USE_ADDRESS_SANITIZER  "Use address sanitizer gcc option" OFF)
+OPTION(USE_ADDRESS_SANITIZER  "Use address sanitizer" OFF)
 OPTION(USE_OBJECTS_COUNTERS   "Use objects counters in AmStatistics" ON)
 #OPTION(MAX_RTP_SESSIONS:int   "How many rtp sessions SEMS will handle simultaneously? (default 2048)" 2048)
 
@@ -295,7 +295,7 @@ INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/core/sems.h DESTINATION ${SEMS_EXEC_PR
 # ENDIF(CMAKE_COMPILER_IS_GNUCXX)
 
 add_definitions(-D_THREAD_SAFE -D_REENTRANT)
-add_compile_options(-Wall -Werror -fPIC -g -O2)
+add_compile_options(-Wall -Werror -fPIC -g)
 add_compile_options(-Wno-unknown-warning-option)
 add_compile_options(-Wno-vla-cxx-extension)
 
@@ -305,10 +305,12 @@ add_definitions(-D_DEBUG)
 
 # use AddressSanitizer
 IF(USE_ADDRESS_SANITIZER)
-    add_compile_options(-fsanitize=address)
-    #SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
-    #SET(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -fsanitize=address")
+    add_compile_options(-fsanitize=address -fno-omit-frame-pointer -O1)
+    link_libraries(-fsanitize=address)
+
     add_definitions(-DVALGRIND)
+ELSE(USE_ADDRESS_SANITIZER)
+    add_compile_options(-O2)
 ENDIF(USE_ADDRESS_SANITIZER)
 
 IF(USE_OBJECTS_COUNTERS)
