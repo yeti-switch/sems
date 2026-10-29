@@ -214,11 +214,9 @@ int AmThread::setRealtime()
 
 void AmThread::setThreadName(const char *thread_name)
 {
-    _m_td.lock();
-    if (thread_name != nullptr && (pthread_setname_np(_td, thread_name) != 0)) {
-        WARN("can't set name '%s' for thread %ld[%p] ", thread_name, _td, static_cast<void *>(this));
+    if (thread_name != nullptr && (pthread_setname_np(pthread_self(), thread_name) != 0)) {
+        WARN("can't set name '%s' for thread %ld[%p] ", thread_name, pthread_self(), static_cast<void *>(this));
     }
-    _m_td.unlock();
 }
 
 AmThreadWatcher *AmThreadWatcher::_instance = nullptr;
