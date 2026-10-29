@@ -807,6 +807,7 @@ void PoolWorker::configure(const PGWorkerConfig &e)
             master->runTransactionForPool(trans);
         if (slave)
             slave->runTransactionForPool(trans);
+        delete trans;
     }
 
     if (master)

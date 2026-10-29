@@ -13,6 +13,7 @@ class RedisConnectionPool;
 struct RedisReplyCtx {
     RedisConnection     *c;
     RedisConnectionPool *pool;
+    bool                 internal;
 
     bool                      persistent_ctx;
     string                    conn_id;
@@ -20,9 +21,10 @@ struct RedisReplyCtx {
     std::unique_ptr<AmObject> user_data;
     int                       user_type_id;
 
-    RedisReplyCtx(RedisConnection *c, RedisRequest &r)
+    RedisReplyCtx(RedisConnection *c, RedisRequest &r, RedisConnectionPool *pool)
         : c(c)
-        , pool(nullptr)
+        , pool(pool)
+        , internal(false)
         , persistent_ctx(r.persistent_ctx)
         , conn_id(std::move(r.conn_id))
         , session_id(std::move(r.session_id))
@@ -33,6 +35,7 @@ struct RedisReplyCtx {
     RedisReplyCtx(RedisConnection *c, AmObject *user_data, RedisConnectionPool *pool)
         : c(c)
         , pool(pool)
+        , internal(true)
         , persistent_ctx()
         , conn_id()
         , session_id()
@@ -76,7 +79,7 @@ class RedisConnectionPool : public AmThread,
     virtual void on_retry_reqs_timer() {}
 
     static bool log_cmds;
-    static bool running;
+    bool        running;
 
   public:
     RedisConnectionPool(const char *name, const string &queue_name);
@@ -87,7 +90,7 @@ class RedisConnectionPool : public AmThread,
     string           get_queue_name() { return queue_name; }
     virtual void process_internal_reply(RedisConnection *c, int result, const AmObject *user_data, const AmArg &data) {}
     static bool  is_cmds_logging_enabled() { return log_cmds; }
-    static bool  is_running() { return running; }
+    bool         is_running() { return running; }
 };
 
 #endif /*REDIS_CONNECTION_POOL_H*/

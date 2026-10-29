@@ -93,7 +93,8 @@ void ReuseTimer::onTimer()
 {
     AmEventDispatcher::instance()->post(TIMER_RECEIVER_QUEUE_NAME, new TimerEvent(seq));
     test->timer.seq++;
-    test->timer.set(0);
+    if (test->timer.seq < 2)
+        test->timer.set(0);
 }
 
 TEST_F(TimerTest, ReuseTimer)

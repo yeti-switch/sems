@@ -47,6 +47,7 @@ int AmTimerFd::settime(unsigned int usec, unsigned int repeat_usec)
 
 AmThread::AmThread()
     : _td(0)
+    , _joinable(false)
     , _stopped(true)
     , _pid(0)
 {
@@ -97,11 +98,13 @@ void AmThread::start()
         return;
     }
     this->_stopped.unsafe_set(false);
+    this->_joinable = true;
     this->_stopped.unlock();
 
     res = pthread_create(&_td, &attr, _start, this);
     pthread_attr_destroy(&attr);
     if (res != 0) {
+        _joinable = false;
         ERROR("pthread create failed with code %i", res);
         throw string("thread could not be started");
     }
@@ -137,9 +140,12 @@ void AmThread::stop(bool join_afer_stop)
     if (join_afer_stop) {
         DBG3("join thread %lu", static_cast<unsigned long int>(_td));
         _m_td.unlock();
-        pthread_join(_td, nullptr);
+        join();
+    } else if (!_joinable) {
+        _m_td.unlock();
     } else {
         int res;
+        _joinable = false;
         if ((res = pthread_detach(_td)) != 0) {
             if (res == EINVAL) {
                 WARN("pthread_detach failed with code EINVAL: thread already in detached state");
@@ -173,8 +179,10 @@ void AmThread::cancel()
 
 void AmThread::join()
 {
-    if (!is_stopped())
-        pthread_join(_td, nullptr);
+    if (!_joinable)
+        return;
+    _joinable = false;
+    pthread_join(_td, nullptr);
 }
 
 int AmThread::setRealtime()

@@ -622,13 +622,11 @@ int parse_headers(sip_msg *msg, char **c, char *end, const char *&err_msg)
 {
     list<sip_header *> hdrs;
     int                err = parse_headers(hdrs, c, end);
-    if (!err) {
-        for (auto hdr : hdrs) {
-            err = sip_msg_add_header(msg, hdr, err_msg);
-            if (err)
-                break;
-        }
+    while (!err && !hdrs.empty()) {
+        err = sip_msg_add_header(msg, hdrs.front(), err_msg);
+        hdrs.pop_front();
     }
+    free_headers(hdrs);
 
     return err;
 }

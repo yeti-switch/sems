@@ -352,6 +352,7 @@ class AmTimerFd {
 class AmThread {
     pthread_t _td;
     AmMutex   _m_td;
+    bool      _joinable;
 
     AmSharedVar<bool> _stopped;
 

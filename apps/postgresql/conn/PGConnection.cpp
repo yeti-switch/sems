@@ -14,6 +14,8 @@ PGConnection::PGConnection(const std::string &conn_info, const string &conn_log_
 
 PGConnection::~PGConnection()
 {
+    // nobody to notify about the vanishing connection
+    handler = nullptr;
     PGConnection::close_conn();
 }
 
@@ -128,9 +130,11 @@ PGconn *PGConnection::get_pg_conn()
 void PGConnection::close_conn()
 {
     if (conn) {
-        if (connected)
-            handler->onDisconnect(this);
-        handler->onSock(this, IConnectionHandler::PG_SOCK_DEL);
+        if (handler) {
+            if (connected)
+                handler->onDisconnect(this);
+            handler->onSock(this, IConnectionHandler::PG_SOCK_DEL);
+        }
         status      = CONNECTION_BAD;
         pipe_status = PQ_PIPELINE_OFF;
         connected   = false;

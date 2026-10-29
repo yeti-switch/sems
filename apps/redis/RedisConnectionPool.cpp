@@ -9,7 +9,6 @@
 #define event_dispatcher  AmEventDispatcher::instance()
 
 bool RedisConnectionPool::log_cmds = false;
-bool RedisConnectionPool::running  = false;
 
 int parseReply(redisReply *reply, RedisReply::result_type &result, AmArg &data)
 {
@@ -40,7 +39,7 @@ static void redis_request_cb_static(redisAsyncContext *, void *r, void *privdata
 
     bool access_error = false;
     if (reply == nullptr) {
-        if (!RedisConnectionPool::is_running()) {
+        if (!ctx->pool->is_running()) {
             ERROR("%s: I/O error", ctx->session_id.c_str());
         }
     } else if (redis::isReplyError(reply)) {
@@ -55,7 +54,7 @@ static void redis_request_cb_static(redisAsyncContext *, void *r, void *privdata
     if (RedisConnectionPool::is_cmds_logging_enabled())
         DBG("redis_log: reply: %s", data.print().c_str());
 
-    if (ctx->pool)
+    if (ctx->internal)
         ctx->pool->process_internal_reply(ctx->c, result, ctx->user_data.get(), data);
     else if (ctx->session_id.empty() == false)
         session_container->postEvent(ctx->session_id,
@@ -74,6 +73,7 @@ RedisConnectionPool::RedisConnectionPool(const char *name, const string &queue_n
     , epoll_fd(-1)
     , name(name)
     , queue_name(queue_name)
+    , running(false)
 {
     event_dispatcher->addEventQueue(queue_name, this);
 }
@@ -258,7 +258,7 @@ void RedisConnectionPool::process_request_event(RedisRequest &event, RedisConnec
         return;
     }
 
-    RedisReplyCtx *ctx = new RedisReplyCtx(c, event);
+    RedisReplyCtx *ctx = new RedisReplyCtx(c, event, this);
     int            ret = event.event_id == RedisEvent::RequestMulti ? perform_multi_event(ac, ctx, event.args)
                                                                     : perform_event(ac, ctx, event.args);
 

@@ -64,8 +64,10 @@ class AmMediaTransport : public AmMediaConnectionsHolder,
         if (!state) {
             media_establish = false;
             resetStreamMediaSetupTimer();
-            next_state = new T(this);
-            next_state = next_state->init(args);
+            unique_ptr<AmMediaState> new_state(new T(this));
+            next_state = new_state->init(args);
+            if (next_state == new_state.get())
+                new_state.release();
         } else {
             next_state = state->update(args);
         }
