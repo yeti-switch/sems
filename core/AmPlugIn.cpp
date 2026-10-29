@@ -130,6 +130,7 @@ AmPlugIn::~AmPlugIn()
                       dec_ref(pf.second);
                   });
     std::for_each(name2config.begin(), name2config.end(), delete_plugin_factory);
+    std::for_each(module_objects.begin(), module_objects.end(), delete_plugin_factory);
 
     // if _DEBUG is set do not unload shared libs to allow better debugging
 #ifndef _DEBUG
