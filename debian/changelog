@@ -1,3 +1,9 @@
+sems (1.219.0) stable; urgency=low
+  * AmSdp: add remote-candidates attribute support
+  * add AmIceCompletedEvent and AmSession::onIceCompleted() callback
+  * add general.ice_updated_offer option. default: false
+ -- Michael Furmur <furmur@pm.me>  Sat, 31 Oct 2026 01:13:22 +0200
+
 sems (1.218.1) stable; urgency=low
   * tcp: reset idle-timeout on egress
  -- Michael Furmur <furmur@pm.me>  Wed, 21 Oct 2026 18:55:08 +0300
