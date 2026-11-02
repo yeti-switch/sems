@@ -63,6 +63,7 @@ AmSrtpConnection::AmSrtpConnection(AmMediaTransport *_transport, const string &r
     , use_mki(false)
     , rx_context_initialized(false)
     , tx_context_initialized(false)
+    , rx_resync_pending(false)
     , last_rx_ssrc_net_order(0)
     , rx_ssrc_changes_count(0)
     , srtp_profile(srtp_profile_reserved)
@@ -179,6 +180,8 @@ void AmSrtpConnection::update_keys(srtp_profile_t profile, const string &tx_key,
             break;
         }
 
+        rx_resync_pending = rx_context_initialized;
+
         if (c_rx_keys == rx_keys) {
             CLASS_DBG("rx_keys are not changed. skip srtp_rx_session update");
             break;
@@ -198,17 +201,11 @@ void AmSrtpConnection::update_keys(srtp_profile_t profile, const string &tx_key,
 
         apply_rx_policy_keys();
 
-        /* comment out light update.
-         * replace it with full srtp stream remove/add in handleConnection() -> ensure_rx_stream_context().
-         * we need allowed RTP seq skew detection with explicit replay window clearing
-         * OR artifical monotonic rx rtp seq with explicit replay window clearing otherwise */
-        last_rx_ssrc_net_order = 0;
-
-        /*CLASS_DBG("update srtp_rx_session");
+        // the stream index (ROC, last seq) survives re-keying (RFC 3711 3.3.1)
+        CLASS_DBG("update srtp_rx_session");
         if (auto ret = srtp_update_stream(srtp_rx_session, &rx_policy); ret != srtp_err_status_ok) {
             ERROR("srtp_update_stream error %d", ret);
-            break;
-        }*/
+        }
     } while (0);
 }
 
@@ -361,8 +358,6 @@ int AmSrtpConnection::ensure_rx_stream_context(uint32_t ssrc_net_order)
 
         apply_rx_policy_keys();
     } else {
-        // context changed. remove the old one
-        //! FIXME: maybe we have to keep old ctx in SRTP session
         CLASS_DBG("remove old SRTP context for SSRC: 0x%x", ntohl(last_rx_ssrc_net_order));
         srtp_remove_stream(srtp_rx_session, ntohl(last_rx_ssrc_net_order));
     }
@@ -382,6 +377,38 @@ int AmSrtpConnection::ensure_rx_stream_context(uint32_t ssrc_net_order)
     }
 
     return 0;
+}
+
+srtp_err_status_t AmSrtpConnection::unprotect(uint8_t *data, unsigned int &size)
+{
+    if (getConnType() == RTP_CONN)
+        return srtp_unprotect_mki(srtp_rx_session, data, reinterpret_cast<int *>(&size), use_mki);
+    return srtp_unprotect_rtcp_mki(srtp_rx_session, data, reinterpret_cast<int *>(&size), use_mki);
+}
+
+/* a peer that restarted its numbering (ROC 0, new seq) behind an update fails every packet against the kept
+ * index. retry the packet in a fresh stream context; if it fails there too the peer kept counting (or the
+ * packet is just bad): put the ROC back and wait for the next one */
+srtp_err_status_t AmSrtpConnection::resync_rx_stream_context(uint8_t *data, unsigned int &size,
+                                                             const vector<uint8_t> &orig)
+{
+    uint32_t ssrc = ntohl(last_rx_ssrc_net_order), roc = 0;
+    srtp_get_stream_roc(srtp_rx_session, ssrc, &roc);
+    CLASS_DBG("unprotect failed after keys update, ROC %u. retry in a fresh rx stream context", roc);
+
+    if (ensure_rx_stream_context(last_rx_ssrc_net_order))
+        return srtp_err_status_fail;
+
+    memcpy(data, orig.data(), orig.size());
+    size     = orig.size();
+    auto ret = unprotect(data, size);
+    if (ret == srtp_err_status_ok) {
+        CLASS_DBG("peer restarted its numbering. keep the fresh rx stream context");
+        rx_resync_pending = false;
+    } else if (roc) {
+        srtp_set_stream_roc(srtp_rx_session, ssrc, roc);
+    }
+    return ret;
 }
 
 void AmSrtpConnection::handleConnection(uint8_t *data, unsigned int size, struct sockaddr_storage *recv_addr,
@@ -420,12 +447,20 @@ void AmSrtpConnection::handleConnection(uint8_t *data, unsigned int size, struct
             if (ensure_rx_stream_context(rx_ssrc_net_order)) {
                 return;
             }
+            rx_resync_pending = false;
         }
 
-        if (getConnType() == RTP_CONN)
-            ret = srtp_unprotect_mki(srtp_rx_session, data, reinterpret_cast<int *>(&size), use_mki);
-        else
-            ret = srtp_unprotect_rtcp_mki(srtp_rx_session, data, reinterpret_cast<int *>(&size), use_mki);
+        if (rx_resync_pending) {
+            vector<uint8_t> orig(data, data + size);
+            ret = unprotect(data, size);
+            if (ret == srtp_err_status_ok)
+                rx_resync_pending = false;
+            else if (ret == srtp_err_status_auth_fail || ret == srtp_err_status_replay_fail ||
+                     ret == srtp_err_status_replay_old)
+                ret = resync_rx_stream_context(data, size, orig);
+        } else {
+            ret = unprotect(data, size);
+        }
     }
 
     if (ret == srtp_err_status_ok || getConnType() == RTCP_CONN) {
@@ -511,10 +546,11 @@ void AmSrtpConnection::setPassiveMode(bool p)
 void AmSrtpConnection::getInfo(AmArg &ret)
 {
     AmStreamConnection::getInfo(ret);
-    ret["use_mki"]         = use_mki;
-    ret["rx_initialized"]  = rx_context_initialized;
-    ret["tx_initialized"]  = tx_context_initialized;
-    ret["rx_ssrc"]         = last_rx_ssrc_net_order;
-    ret["rx_ssrc_changed"] = rx_ssrc_changes_count;
-    ret["srtp_profile"]    = SdpCrypto::profile2str(static_cast<CryptoProfile>(srtp_profile));
+    ret["use_mki"]           = use_mki;
+    ret["rx_initialized"]    = rx_context_initialized;
+    ret["tx_initialized"]    = tx_context_initialized;
+    ret["rx_ssrc"]           = last_rx_ssrc_net_order;
+    ret["rx_ssrc_changed"]   = rx_ssrc_changes_count;
+    ret["rx_resync_pending"] = rx_resync_pending;
+    ret["srtp_profile"]      = SdpCrypto::profile2str(static_cast<CryptoProfile>(srtp_profile));
 }

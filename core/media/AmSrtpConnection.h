@@ -67,6 +67,7 @@ class AmSrtpConnection : public AmStreamConnection {
 
     bool          rx_context_initialized;
     bool          tx_context_initialized;
+    bool          rx_resync_pending;
     uint32_t      last_rx_ssrc_net_order;
     unsigned int  rx_ssrc_changes_count;
     srtp_policy_t rx_policy;
@@ -79,9 +80,11 @@ class AmSrtpConnection : public AmStreamConnection {
 
     AmStreamConnection *s_stream;
 
-    void apply_rx_policy_keys();
-    int  ensure_rx_stream_context(uint32_t ssrc_net_order);
-    int  is_valid_keys(srtp_profile_t profile, const string &tx_key, const srtp_master_keys &rx_keys);
+    void              apply_rx_policy_keys();
+    int               ensure_rx_stream_context(uint32_t ssrc_net_order);
+    srtp_err_status_t unprotect(uint8_t *data, unsigned int &size);
+    srtp_err_status_t resync_rx_stream_context(uint8_t *data, unsigned int &size, const vector<uint8_t> &orig);
+    int               is_valid_keys(srtp_profile_t profile, const string &tx_key, const srtp_master_keys &rx_keys);
 
   public:
     AmSrtpConnection(AmMediaTransport *_transport, const string &remote_addr, int remote_port,
