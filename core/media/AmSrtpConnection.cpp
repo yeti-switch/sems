@@ -183,13 +183,12 @@ void AmSrtpConnection::update_keys(srtp_profile_t profile, const string &tx_key,
         rx_resync_pending = rx_context_initialized;
 
         if (c_rx_keys == rx_keys) {
-            CLASS_DBG("rx_keys are not changed. skip srtp_rx_session update");
-            break;
+            CLASS_DBG("rx_keys are not changed");
+        } else {
+            CLASS_DBG("update c_rx_keys");
+            c_rx_keys = rx_keys;
+            use_mki   = rx_keys.has_mki();
         }
-
-        CLASS_DBG("update c_rx_keys");
-        c_rx_keys = rx_keys;
-        use_mki   = rx_keys.has_mki();
 
         if (!rx_context_initialized) {
             CLASS_DBG("no rx_context_initialized. skip srtp_rx_session update");
