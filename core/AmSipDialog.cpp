@@ -29,6 +29,7 @@
 #include "AmSession.h"
 #include "AmUtils.h"
 #include "SipCtrlInterface.h"
+#include "sip/sip_trans.h"
 #include "AmB2BMedia.h" // just because of statistics
 
 static void addTranscoderStats(AmSipHeaderMap &hdrs)
@@ -532,6 +533,16 @@ bool AmSipDialog::checkReply100rel(AmSipReply &reply)
     return rel100.checkReply(reply);
 }
 
+// 2xx received, our ACK still pending: the transaction stays in TS_TERMINATED_200 until timer L
+static bool uacInv2xxReplied(const trans_ticket &tt)
+{
+    tt.lock_bucket();
+    const sip_trans *t   = tt.get_trans();
+    bool             ret = t && (t->state == TS_TERMINATED_200);
+    tt.unlock_bucket();
+    return ret;
+}
+
 bool AmSipDialog::getUACInvTransPending()
 {
     for (auto &t : uac_trans)
@@ -554,13 +565,24 @@ int AmSipDialog::bye(const AmSipHeaderMap &hdrs, int flags, bool final)
     case Disconnecting:
     case Connected:
     {
-        // finish INVITE UAC transactions before sending BYE
-        vector<unsigned int> ack_trans;
-        for (const auto &t : uac_trans)
-            if (t.second.method == SIP_METH_INVITE)
+        vector<unsigned int> ack_trans, cancel_trans;
+        for (const auto &t : uac_trans) {
+            if (t.second.method != SIP_METH_INVITE)
+                continue;
+            if (uacInv2xxReplied(t.second.tt))
                 ack_trans.push_back(t.second.cseq);
+            else
+                cancel_trans.push_back(t.second.cseq);
+        }
         for (const auto &cseq : ack_trans)
             send_200_ack(cseq);
+        for (const auto &cseq : cancel_trans) {
+            auto t = uac_trans.find(cseq);
+            if (t == uac_trans.end())
+                continue;
+            CLASS_DBG("bye(): cancel pending INVITE/%u", cseq);
+            sendCancel(t->second, hdrs);
+        }
 
         // terminate UAS transactions
         if (final) {
@@ -783,14 +805,37 @@ int AmSipDialog::cancel(bool final, const AmSipHeaderMap &hdrs)
                 return 0;
             case Cancelling: ERROR("INVITE transaction has already been cancelled"); return -1;
             default:
+            {
                 setStatus(Cancelling);
-                return SipCtrlInterface::cancel(&t->second.tt, local_tag, t->first, AmConfig.max_forwards,
-                                                headers2string(t->second.hdrs) + headers2string(hdrs), getRoute(true));
+                AmSipHeaderMap h(t->second.hdrs);
+                h.insert(hdrs.begin(), hdrs.end());
+                return sendCancel(t->second, h);
+            }
             } // switch(getStatus())
         }
     }
     ERROR("could not find INVITE transaction to cancel");
     return -1;
+}
+
+int AmSipDialog::sendCancel(AmSipRequest &inv, const AmSipHeaderMap &hdrs)
+{
+    AmSipRequest req(inv);
+    req.method = SIP_METH_CANCEL;
+    req.hdrs   = hdrs;
+    req.body.clear();
+
+    int flags = 0;
+    if (onTxRequest(req, flags) < 0)
+        return -1;
+
+    int res = SipCtrlInterface::cancel(&inv.tt, local_tag, inv.cseq, AmConfig.max_forwards, headers2string(req.hdrs),
+                                       getRoute(true));
+    if (res)
+        return res;
+
+    onRequestTxed(req);
+    return 0;
 }
 
 int AmSipDialog::drop()

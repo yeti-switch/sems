@@ -76,6 +76,8 @@ class AmSipDialog : public AmBasicSipDialog {
     bool onRxReplySanity(const AmSipReply &reply);
     bool onRxReplyStatus(const AmSipReply &reply);
 
+    int sendCancel(AmSipRequest &inv, const AmSipHeaderMap &hdrs);
+
   public:
     AmSipDialog(AmSipDialogEventHandler *h = NULL);
     ~AmSipDialog();

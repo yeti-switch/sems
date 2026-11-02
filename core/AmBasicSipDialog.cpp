@@ -751,6 +751,9 @@ void AmBasicSipDialog::onRequestTxed(const AmSipRequest &req)
     if (hdl)
         hdl->onRequestSent(req);
 
+    if (req.method == SIP_METH_CANCEL)
+        return;
+
     if (req.method != SIP_METH_ACK) {
         uac_trans[req.cseq] = req;
         cseq++;

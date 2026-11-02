@@ -677,6 +677,9 @@ out:
 
 bool UACAuth::onSendRequest(AmSipRequest &req, int &flags)
 {
+    if (req.method == SIP_METH_CANCEL)
+        return false;
+
     // add authentication header if nonce is already there
     string result;
     CLASS_DBG("onSendRequest(). nonce:'%s'", challenge.nonce.data());
