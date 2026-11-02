@@ -962,6 +962,7 @@ int AmMediaTransport::getSrtpCredentialsBySdp(const SdpMedia &local_media, const
     l_key.assign(reinterpret_cast<char *>(local_key), local_key_size);
 
     // get remote key
+    r_keys.clear();
     auto remote_crypto_profile_it = std::find_if(remote_media.crypto.begin(), remote_media.crypto.end(),
                                                  [cprofile](const SdpCrypto &s) { return s.profile == cprofile; });
     if (remote_crypto_profile_it == remote_media.crypto.end()) {

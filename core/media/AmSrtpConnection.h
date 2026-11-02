@@ -39,6 +39,7 @@ class srtp_master_keys {
     srtp_master_keys(srtp_master_keys const &) = delete;
 
     void operator=(srtp_master_keys const &other);
+    void clear();
     void add(const string &key, uint32_t mki_id = 0, uint32_t mki_size = 0);
 
     srtp_master_key_t   **get_ptrs() { return srtp_data_ptrs.data(); }

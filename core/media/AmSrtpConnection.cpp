@@ -23,7 +23,7 @@ bool srtp_master_keys::strp_mater_key_container::operator==(const strp_mater_key
     if (mki_size != other.mki_size)
         return false;
 
-    if (mki_id != other.mki_id)
+    if (mki_id_data != other.mki_id_data)
         return false;
 
     if (key_data != other.key_data)
@@ -39,8 +39,15 @@ srtp_master_keys::srtp_master_keys(const string &key, uint32_t mki_id, uint32_t 
 
 void srtp_master_keys::operator=(srtp_master_keys const &other)
 {
+    clear();
     for (const auto &d : other.get_data())
         add(d.key_data, d.mki_id_data, d.mki_size);
+}
+
+void srtp_master_keys::clear()
+{
+    srtp_data_ptrs.clear();
+    data.clear();
 }
 
 void srtp_master_keys::add(const string &key, uint32_t mki_id, uint32_t mki_size)
