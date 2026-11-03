@@ -1,3 +1,8 @@
+sems (1.220.0) stable; urgency=low
+  * fix more SRTP seq/ROC change cases on reINVITEs
+  * AmSipDialog: fix bye() behavior to send CANCEL instead of ACK for pending UAC INVITE
+ -- Michael Furmur <furmur@pm.me>  Tue, 03 Nov 2026 12:07:55 +0200
+
 sems (1.219.0) stable; urgency=low
   * AmSdp: add remote-candidates attribute support
   * add AmIceCompletedEvent and AmSession::onIceCompleted() callback
