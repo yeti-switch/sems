@@ -64,18 +64,6 @@ PoolWorker::~PoolWorker()
 {
     workTimer.unlink(epoll_fd);
     resetConnections.clear();
-    for (auto &trans : transactions)
-        delete trans.trans;
-    transactions.clear();
-    for (auto &trans : queue)
-        delete trans.trans;
-    queue.clear();
-    for (auto &trans : retransmit_q)
-        delete trans.trans;
-    retransmit_q.clear();
-    for (auto &tr : erased)
-        delete tr;
-    erased.clear();
 
     ConnectionPool *destroyed = 0;
     if (master) {
@@ -89,6 +77,19 @@ PoolWorker::~PoolWorker()
         slave     = 0;
         delete destroyed;
     }
+
+    for (auto &trans : transactions)
+        delete trans.trans;
+    transactions.clear();
+    for (auto &trans : queue)
+        delete trans.trans;
+    queue.clear();
+    for (auto &trans : retransmit_q)
+        delete trans.trans;
+    retransmit_q.clear();
+    for (auto &tr : erased)
+        delete tr;
+    erased.clear();
 }
 
 void PoolWorker::init()

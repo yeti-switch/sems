@@ -56,8 +56,10 @@ ConnectionPool::~ConnectionPool()
 {
     auto connections_copy = connections;
     connections.clear();
-    for (auto &conn : connections_copy)
+    for (auto &conn : connections_copy) {
+        conn->stopTransaction();
         delete conn;
+    }
 }
 
 bool ConnectionPool::processEvent(void *p)
