@@ -134,8 +134,10 @@ void AmThread::stop(bool join_afer_stop)
              static_cast<unsigned long int>(_td));
     }
 
-    if (is_stopped())
+    if (is_stopped()) {
+        _m_td.unlock();
         return;
+    }
 
     if (join_afer_stop) {
         DBG3("join thread %lu", static_cast<unsigned long int>(_td));
