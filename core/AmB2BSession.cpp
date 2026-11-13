@@ -480,7 +480,7 @@ void AmB2BSession::onRequestSent(const AmSipRequest &req)
     AmSession::onRequestSent(req);
 }
 
-void AmB2BSession::updateLocalSdp(AmSdp &sdp, const string &, unsigned int)
+void AmB2BSession::updateLocalSdp(AmSdp &sdp, const string &sip_msg_method, unsigned int sip_msg_cseq)
 {
     if (rtp_relay_mode == RTP_Direct)
         return; // nothing to do
@@ -493,7 +493,8 @@ void AmB2BSession::updateLocalSdp(AmSdp &sdp, const string &, unsigned int)
 
     auto atype = dlg->getOutboundAddrType();
 
-    if (dlg->getOAState() == AmOfferAnswer::OA_OfferRecved) {
+    // the answer may be repeated within the same INVITE transaction (183 and 200 with SDP)
+    if (dlg->getOAState() == AmOfferAnswer::OA_OfferRecved || dlg->isOASubsequentSDP(sip_msg_cseq, sip_msg_method)) {
         // RFC 6157: the answer must use the address family of the offer,
         // which may differ from the family of the signaling transport
         AddressType offer_atype = AT_NONE;

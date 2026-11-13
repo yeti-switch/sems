@@ -1190,7 +1190,8 @@ void AmB2BMedia::replaceConnectionAddress(AmSdp &parser_sdp, bool a_leg, Address
 
     // place relay_address in connection address
     if (!parser_sdp.conn.address.empty() && (parser_sdp.conn.address != zero_ip)) {
-        parser_sdp.conn.address = public_address;
+        parser_sdp.conn.address  = public_address;
+        parser_sdp.conn.addrType = addr_type;
         DBG("new connection address: %s", parser_sdp.conn.address.c_str());
     }
 
