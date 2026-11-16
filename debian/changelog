@@ -1,3 +1,7 @@
+sems (1.220.1) stable; urgency=low
+  * AmB2BSession: fix SDP offer address family following in 200ok when early media present
+ -- Michael Furmur <furmur@pm.me>  Mon, 16 Nov 2026 10:42:26 +0200
+
 sems (1.220.0) stable; urgency=low
   * fix more SRTP seq/ROC change cases on reINVITEs
   * AmSipDialog: fix bye() behavior to send CANCEL instead of ACK for pending UAC INVITE
