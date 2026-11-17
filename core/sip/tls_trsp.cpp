@@ -19,6 +19,7 @@
 #include <botan/data_src.h>
 #include <botan/tls_exceptn.h>
 #include <botan/tls_alert.h>
+#include <botan/tls_extensions.h>
 
 tls_conf::tls_conf(tls_settings *settings)
     : certificates(settings->getCertificateCopy())
@@ -543,15 +544,9 @@ void tls_trsp_socket::tls_verify_cert_chain(const std::vector<Botan::X509_Certif
 void tls_trsp_socket::tls_examine_extensions(const Botan::TLS::Extensions &extn, Botan::TLS::Connection_Side which_side,
                                              Botan::TLS::Handshake_Type which_message)
 {
-    for (auto &ext : extn.all()) {
-        if (ext->type() == Botan::TLS::Extension_Code::ServerNameIndication) {
-            auto sni_ext = dynamic_cast<Botan::TLS::Server_Name_Indicator *>(ext.get());
-            if (sni_ext && !sni_ext->empty()) {
-                sni = sni_ext->host_name();
-                break;
-            }
-        }
-    }
+    auto sni_ext = extn.get<Botan::TLS::Server_Name_Indicator>();
+    if (sni_ext && !sni_ext->empty())
+        sni = sni_ext->host_name();
 }
 
 void tls_trsp_socket::set_connected(bool val)

@@ -47,15 +47,17 @@ class dtls_conf : public Botan::TLS::Datagram_Policy, public Botan::Credentials_
     bool is_client();
 
     // Datagram_Policy functions
-    bool             allow_ssl_key_log_file() const override { return true; }
-    vector<string>   allowed_key_exchange_methods() const override;
-    vector<string>   allowed_signature_methods() const override;
-    vector<string>   allowed_ciphers() const override;
-    vector<string>   allowed_macs() const override;
-    bool             allow_dtls12() const override;
-    bool             require_cert_revocation_info() const override { return false; }
-    bool             require_client_certificate_authentication() const override { return true; }
-    vector<uint16_t> srtp_profiles() const override;
+    bool                  allow_ssl_key_log_file() const override { return true; }
+    vector<string>        allowed_key_exchange_methods() const override;
+    vector<string>        allowed_signature_methods() const override;
+    vector<string>        allowed_ciphers() const override;
+    vector<string>        allowed_macs() const override;
+    bool                  allow_dtls12() const override;
+    bool                  require_cert_revocation_info() const override { return false; }
+    bool                  require_client_certificate_authentication() const override { return true; }
+    vector<uint16_t>      srtp_profiles() const override;
+    bool                  dtls_server_require_cookie_exchange() const override { return false; }
+    std::optional<size_t> dtls_maximum_retransmissions() const override { return std::nullopt; }
 
     // Credentials_Manager functions
     vector<Botan::Certificate_Store *> trusted_certificate_authorities(const string &type,
