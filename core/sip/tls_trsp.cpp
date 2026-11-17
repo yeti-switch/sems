@@ -497,11 +497,11 @@ void tls_trsp_socket::tls_session_established(const Botan::TLS::Session_Summary 
         auto &cert = session.peer_certs().front();
         auto &san  = cert.subject_alt_name();
         if (san.has_items()) {
-            peer_names.assign(san.dns().begin(), san.dns().end());
-            for (auto ip : san.ipv4_address()) {
-                in_addr a = { .s_addr = htonl(ip) };
-                peer_names.push_back(inet_ntoa(a));
-            }
+            peer_names.clear();
+            for (auto &dns : san.dns_names())
+                peer_names.push_back(dns.to_string());
+            for (auto &ip : san.ipv4_addresses())
+                peer_names.push_back(ip.to_string());
         } else {
             peer_names = cert.subject_info("X520.CommonName");
         }
