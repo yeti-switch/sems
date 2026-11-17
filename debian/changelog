@@ -1,3 +1,7 @@
+sems (1.221.1) stable; urgency=low
+  * tls_trsp: fix peer_names collecting with botan 3.14.1
+ -- Michael Furmur <furmur@pm.me>  Tue, 17 Nov 2026 15:29:43 +0200
+
 sems (1.221.0) stable; urgency=low
   * sems-external-libs 0.4.15 (botan 3.14.1)
  -- Michael Furmur <furmur@pm.me>  Tue, 17 Nov 2026 13:11:08 +0200
